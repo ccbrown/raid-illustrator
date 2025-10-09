@@ -5,6 +5,8 @@ import { PropsWithChildren } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { getPersistor } from '@rematch/persist';
 import { PersistGate } from 'redux-persist/integration/react';
+import { PrimeReactProvider } from 'primereact/api';
+import { twMerge } from 'tailwind-merge';
 
 import { store } from '@/store';
 
@@ -18,7 +20,15 @@ export const Providers = ({ children }: PropsWithChildren) => {
     return (
         <ReduxProvider store={store}>
             <PersistGate loading={null} persistor={persistor}>
-                {children}
+                <PrimeReactProvider
+                    value={{
+                        unstyled: true,
+                        pt: {},
+                        ptOptions: { mergeSections: true, mergeProps: true, classNameMergeFunction: twMerge },
+                    }}
+                >
+                    {children}
+                </PrimeReactProvider>
             </PersistGate>
         </ReduxProvider>
     );

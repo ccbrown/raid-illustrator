@@ -46,6 +46,14 @@ interface RaidsState {
     steps: Record<string, RaidStep>;
 }
 
+export interface RaidBatchOperation {
+    putMetadata?: RaidMetadata;
+    putScenes?: RaidScene[];
+    removeScenes?: string[];
+    putSteps?: RaidStep[];
+    removeSteps?: string[];
+}
+
 export const raids = createModel<RootModel>()({
     state: {
         metadata: {},
@@ -99,6 +107,95 @@ export const raids = createModel<RootModel>()({
             }
             dispatch.raids.putMetadata({ ...existing, ...payload });
         },
+        // performs a batch operation and returns the inverse operation to undo it
+        batchOperation(payload: RaidBatchOperation, state) {
+            const undo: RaidBatchOperation = {};
+
+            if (payload.putMetadata) {
+                const existing = state.raids.metadata[payload.putMetadata.id];
+                if (existing) {
+                    undo.putMetadata = existing;
+                }
+                dispatch.raids.putMetadata(payload.putMetadata);
+            }
+
+            if (payload.putScenes) {
+                for (const scene of payload.putScenes) {
+                    const existing = state.raids.scenes[scene.id];
+                    if (existing) {
+                        if (!undo.putScenes) {
+                            undo.putScenes = [];
+                        }
+                        undo.putScenes.push(existing);
+                    } else {
+                        undo.removeScenes = undo.removeScenes || [];
+                        undo.removeScenes.push(scene.id);
+                    }
+                    dispatch.raids.putScene(scene);
+                }
+            }
+
+            if (payload.removeScenes) {
+                for (const sceneId of payload.removeScenes) {
+                    const existing = state.raids.scenes[sceneId];
+                    if (existing) {
+                        if (!undo.putScenes) {
+                            undo.putScenes = [];
+                        }
+                        undo.putScenes.push(existing);
+                        dispatch.raids.removeScene(sceneId);
+                    }
+                }
+            }
+
+            if (payload.putSteps) {
+                for (const step of payload.putSteps) {
+                    const existing = state.raids.steps[step.id];
+                    if (existing) {
+                        if (!undo.putSteps) {
+                            undo.putSteps = [];
+                        }
+                        undo.putSteps.push(existing);
+                    } else {
+                        undo.removeSteps = undo.removeSteps || [];
+                        undo.removeSteps.push(step.id);
+                    }
+                    dispatch.raids.putStep(step);
+                }
+            }
+
+            if (payload.removeSteps) {
+                for (const stepId of payload.removeSteps) {
+                    const existing = state.raids.steps[stepId];
+                    if (existing) {
+                        if (!undo.putSteps) {
+                            undo.putSteps = [];
+                        }
+                        undo.putSteps.push(existing);
+                        dispatch.raids.removeStep(stepId);
+                    }
+                }
+            }
+
+            return undo;
+        },
+        undoableBatchOperation(
+            payload: {
+                name: string;
+                raidId: string;
+                operation: RaidBatchOperation;
+            },
+            _state,
+        ) {
+            const undoOp = dispatch.raids.batchOperation(payload.operation);
+            dispatch.workspaces.pushUndo({
+                raidId: payload.raidId,
+                action: {
+                    name: payload.name,
+                    operation: undoOp,
+                },
+            });
+        },
         createScene(
             payload: {
                 name: string;
@@ -107,16 +204,23 @@ export const raids = createModel<RootModel>()({
             },
             _state,
         ) {
-            const id = crypto.randomUUID();
-            const creationTime = Date.now();
-            dispatch.raids.putScene({
-                id,
+            const newScene = {
+                id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 name: payload.name,
-                creationTime,
+                creationTime: Date.now(),
                 shape: payload.shape,
+            };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Create Scene',
+                raidId: payload.raidId,
+                operation: {
+                    putScenes: [newScene],
+                },
             });
-            return id;
+
+            return newScene.id;
         },
         updateScene(
             payload: {
@@ -130,7 +234,16 @@ export const raids = createModel<RootModel>()({
             if (!existing) {
                 return;
             }
-            dispatch.raids.putScene({ ...existing, ...payload });
+
+            const newScene = { ...existing, ...payload };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Update Scene',
+                raidId: existing.raidId,
+                operation: {
+                    putScenes: [newScene],
+                },
+            });
         },
         deleteScene(
             payload: {
@@ -138,8 +251,21 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            dispatch.raids.removeScene(payload.id);
-            dispatch.workspaces.removeScene(payload.id);
+            const existing = state.raids.scenes[payload.id];
+            if (!existing) {
+                return;
+            }
+
+            const stepsToRemove = Object.values(state.raids.steps).filter((s) => s.sceneId === payload.id);
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Delete Scene',
+                raidId: existing.raidId,
+                operation: {
+                    removeScenes: [payload.id],
+                    removeSteps: stepsToRemove.map((s) => s.id),
+                },
+            });
         },
         createStep(
             payload: {
@@ -149,19 +275,27 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            const id = crypto.randomUUID();
-            const creationTime = Date.now();
             const stepsInScene = Object.values(state.raids.steps).filter((s) => s.sceneId === payload.sceneId);
             const maxOrder = stepsInScene.reduce((max, step) => (step.order > max ? step.order : max), 0);
-            dispatch.raids.putStep({
-                id,
+
+            const newStep = {
+                id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 sceneId: payload.sceneId,
                 name: payload.name,
                 order: maxOrder + 1,
-                creationTime,
+                creationTime: Date.now(),
+            };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Create Step',
+                raidId: payload.raidId,
+                operation: {
+                    putSteps: [newStep],
+                },
             });
-            return id;
+
+            return newStep.id;
         },
         updateStep(
             payload: {
@@ -174,7 +308,16 @@ export const raids = createModel<RootModel>()({
             if (!existing) {
                 return;
             }
-            dispatch.raids.putStep({ ...existing, ...payload });
+
+            const newStep = { ...existing, ...payload };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Update Step',
+                raidId: existing.raidId,
+                operation: {
+                    putSteps: [newStep],
+                },
+            });
         },
         deleteStep(
             payload: {
@@ -182,7 +325,18 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            dispatch.raids.removeStep(payload.id);
+            const existing = state.raids.steps[payload.id];
+            if (!existing) {
+                return;
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Delete Step',
+                raidId: existing.raidId,
+                operation: {
+                    removeSteps: [payload.id],
+                },
+            });
         },
     }),
 });

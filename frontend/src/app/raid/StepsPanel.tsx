@@ -40,10 +40,12 @@ const StepSettings = (props: StepSettingsProps) => {
             dispatch.raids.updateStep({ id: props.existing.id, ...update });
         } else {
             const id = dispatch.raids.createStep({ raidId: props.raidId, sceneId: props.sceneId, ...update });
-            dispatch.workspaces.openStep({ id, raidId: props.raidId, sceneId: props.sceneId });
+            dispatch.workspaces.openStep({ id, sceneId: props.sceneId });
         }
 
-        props.onClose && props.onClose();
+        if (props.onClose) {
+            props.onClose();
+        }
     };
 
     return (

@@ -33,7 +33,7 @@ export const Editor = () => {
         if (raidId) {
             dispatch.workspaces.open({ id: raidId });
         }
-    }, [raidId]);
+    }, [raidId, dispatch]);
 
     return (
         <div className="relative w-full h-full">

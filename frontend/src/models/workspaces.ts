@@ -1,6 +1,7 @@
 import { createModel } from '@rematch/core';
 
 import { RootModel } from '.';
+import { RaidBatchOperation } from './raids';
 
 interface SceneWorkspace {
     id: string;
@@ -8,11 +9,19 @@ interface SceneWorkspace {
     openStepId?: string;
 }
 
+interface UndoRedoStackAction {
+    name: string;
+    operation: RaidBatchOperation;
+}
+
 interface RaidWorkspace {
     id: string;
     lastActivityTime: number;
 
     openSceneId?: string;
+
+    undoStack?: UndoRedoStackAction[];
+    redoStack?: UndoRedoStackAction[];
 }
 
 interface WorkspacesState {
@@ -54,6 +63,41 @@ export const workspaces = createModel<RootModel>()({
                 }
             });
         },
+        pushUndo(state, payload: { raidId: string; action: UndoRedoStackAction }) {
+            const raid = state.raids[payload.raidId];
+            if (!raid) {
+                return;
+            }
+            if (!raid.undoStack) {
+                raid.undoStack = [];
+            }
+            raid.undoStack.push(payload.action);
+            raid.redoStack = [];
+        },
+        popUndo(state, raidId: string) {
+            const raid = state.raids[raidId];
+            if (!raid || !raid.undoStack || raid.undoStack.length === 0) {
+                return;
+            }
+            raid.undoStack.pop();
+        },
+        pushRedo(state, payload: { raidId: string; action: UndoRedoStackAction }) {
+            const raid = state.raids[payload.raidId];
+            if (!raid) {
+                return;
+            }
+            if (!raid.redoStack) {
+                raid.redoStack = [];
+            }
+            raid.redoStack.push(payload.action);
+        },
+        popRedo(state, raidId: string) {
+            const raid = state.raids[raidId];
+            if (!raid || !raid.redoStack || raid.redoStack.length === 0) {
+                return;
+            }
+            raid.redoStack.pop();
+        },
     },
     effects: (dispatch) => ({
         // Ensures the workspace exists and updates its last open time.
@@ -61,7 +105,7 @@ export const workspaces = createModel<RootModel>()({
             payload: {
                 id: string;
             },
-            state,
+            _state,
         ) {
             dispatch.workspaces.ensureRaid(payload.id);
         },
@@ -90,6 +134,36 @@ export const workspaces = createModel<RootModel>()({
             if (existing) {
                 dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
             }
+        },
+        undo(
+            payload: {
+                raidId: string;
+            },
+            state,
+        ) {
+            const raid = state.workspaces.raids[payload.raidId];
+            if (!raid || !raid.undoStack || raid.undoStack.length === 0) {
+                return;
+            }
+            const item = raid.undoStack[raid.undoStack.length - 1];
+            dispatch.workspaces.popUndo(payload.raidId);
+            const redoOp = dispatch.raids.batchOperation(item.operation);
+            dispatch.workspaces.pushRedo({ raidId: payload.raidId, action: { name: item.name, operation: redoOp } });
+        },
+        redo(
+            payload: {
+                raidId: string;
+            },
+            state,
+        ) {
+            const raid = state.workspaces.raids[payload.raidId];
+            if (!raid || !raid.redoStack || raid.redoStack.length === 0) {
+                return;
+            }
+            const item = raid.redoStack[raid.redoStack.length - 1];
+            dispatch.workspaces.popRedo(payload.raidId);
+            const undoOp = dispatch.raids.batchOperation(item.operation);
+            dispatch.workspaces.pushUndo({ raidId: payload.raidId, action: { name: item.name, operation: undoOp } });
         },
     }),
 });

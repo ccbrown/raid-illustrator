@@ -69,7 +69,9 @@ const SceneSettings = (props: SceneSettingsProps) => {
             dispatch.workspaces.openScene({ id, raidId: props.raidId });
         }
 
-        props.onClose && props.onClose();
+        if (props.onClose) {
+            props.onClose();
+        }
     };
 
     return (

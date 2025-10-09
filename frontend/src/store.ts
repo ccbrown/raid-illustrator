@@ -1,0 +1,40 @@
+import { init, Plugin, RematchDispatch, RematchRootState } from '@rematch/core';
+import { produce } from 'immer';
+import Redux from 'redux';
+import { TypedUseSelectorHook, useDispatch as useDispatchImpl, useSelector as useSelectorImpl } from 'react-redux';
+import persistPlugin from '@rematch/persist';
+import storage from 'redux-persist/lib/storage';
+
+import { models, RootModel } from './models';
+
+function wrapReducerWithImmer(reducer: Redux.Reducer) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (state: any, payload: any): any => {
+        if (state === undefined) return reducer(state, payload);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return produce(state, (draft: any) => reducer(draft, payload));
+    };
+}
+
+const immerPlugin: Plugin<RootModel, RootModel> = {
+    onReducer(reducer: Redux.Reducer, _model: string): Redux.Reducer | void {
+        return wrapReducerWithImmer(reducer);
+    },
+};
+
+const persistConfig = {
+    key: 'root',
+    storage,
+};
+
+export const store = init<RootModel, RootModel>({
+    models,
+    plugins: [immerPlugin, persistPlugin(persistConfig)],
+});
+
+export type Store = typeof store;
+export type Dispatch = RematchDispatch<RootModel>;
+export type RootState = RematchRootState<RootModel, RootModel>;
+
+export const useDispatch = () => useDispatchImpl<Dispatch>();
+export const useSelector: TypedUseSelectorHook<RootState> = useSelectorImpl;

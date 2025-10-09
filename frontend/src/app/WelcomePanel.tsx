@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import Link from 'next/link';
 
-import { Panel, PanelButton } from '@/components';
+import { Button } from '@/components';
 import { useDispatch, useSelector } from '@/store';
 
 export const WelcomePanel = () => {
@@ -21,7 +21,7 @@ export const WelcomePanel = () => {
     };
 
     return (
-        <Panel>
+        <div className="bg-elevation-1 rounded-lg w-full max-w-3xl shadow-lg p-6">
             <div className="flex flex-row gap-8">
                 <div className="flex flex-col gap-4 flex-1">
                     <h1>Welcome!</h1>
@@ -31,7 +31,7 @@ export const WelcomePanel = () => {
                         <div>Create a raid to get started.</div>
                     )}
                     <div>
-                        <PanelButton disabled={isBusy} text="New Raid" icon={SwordIcon} onClick={createProject} />
+                        <Button disabled={isBusy} text="New Raid" icon={SwordIcon} onClick={createProject} />
                     </div>
                 </div>
                 {raids.length > 0 && (
@@ -44,6 +44,6 @@ export const WelcomePanel = () => {
                     </div>
                 )}
             </div>
-        </Panel>
+        </div>
     );
 };

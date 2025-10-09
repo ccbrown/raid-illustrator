@@ -4,6 +4,7 @@ import Redux from 'redux';
 import { TypedUseSelectorHook, useDispatch as useDispatchImpl, useSelector as useSelectorImpl } from 'react-redux';
 import persistPlugin from '@rematch/persist';
 import storage from 'redux-persist/lib/storage';
+import { createMigrate } from 'redux-persist';
 
 import { models, RootModel } from './models';
 
@@ -22,9 +23,20 @@ const immerPlugin: Plugin<RootModel, RootModel> = {
     },
 };
 
+const migrations = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    1: (state: any) => ({ ...state, raids: { ...state.raids, scenes: {} } }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    2: (state: any) => ({ ...state, raids: { ...state.raids, steps: {} } }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    3: (state: any) => ({ ...state, workspaces: { ...state.workspaces, scenes: {} } }),
+};
+
 const persistConfig = {
     key: 'root',
+    version: 3,
     storage,
+    migrate: createMigrate(migrations, { debug: false }),
 };
 
 export const store = init<RootModel, RootModel>({

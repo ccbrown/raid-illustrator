@@ -7,6 +7,8 @@ interface RaidMetadata {
     id: string;
     name: string;
     creationTime: number;
+
+    sceneIds: string[];
 }
 
 type RaidSceneShape = ShapeRectangle | ShapeCircle;
@@ -18,6 +20,9 @@ export interface RaidScene {
     name: string;
     creationTime: number;
     shape: RaidSceneShape;
+
+    stepIds: string[];
+    entityIds: string[];
 }
 
 export interface RaidStep {
@@ -26,7 +31,6 @@ export interface RaidStep {
     sceneId: string;
 
     name: string;
-    order: number;
     creationTime: number;
 }
 
@@ -64,7 +68,6 @@ export interface RaidEntity {
     sceneId: string;
 
     name: string;
-    order: number;
     creationTime: number;
     properties: RaidEntityProperties;
 }
@@ -128,10 +131,15 @@ export const raids = createModel<RootModel>()({
             },
             _state,
         ) {
-            const id = crypto.randomUUID();
-            const creationTime = Date.now();
-            dispatch.raids.putMetadata({ id, name: payload.name, creationTime });
-            return id;
+            const newRaid = {
+                id: crypto.randomUUID(),
+                name: payload.name,
+                creationTime: Date.now(),
+                sceneIds: [],
+            };
+
+            dispatch.raids.putMetadata(newRaid);
+            return newRaid.id;
         },
         update(
             payload: {
@@ -272,18 +280,31 @@ export const raids = createModel<RootModel>()({
             },
             _state,
         ) {
+            const raid = _state.raids.metadata[payload.raidId];
+            if (!raid) {
+                throw new Error('Raid not found');
+            }
+
             const newScene = {
                 id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 name: payload.name,
                 creationTime: Date.now(),
                 shape: payload.shape,
+                stepIds: [],
+                entityIds: [],
+            };
+
+            const newRaid = {
+                ...raid,
+                sceneIds: [...raid.sceneIds, newScene.id],
             };
 
             dispatch.raids.undoableBatchOperation({
                 name: 'Create Scene',
                 raidId: payload.raidId,
                 operation: {
+                    putMetadata: newRaid,
                     putScenes: [newScene],
                 },
             });
@@ -343,22 +364,29 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            const stepsInScene = Object.values(state.raids.steps).filter((s) => s.sceneId === payload.sceneId);
-            const maxOrder = stepsInScene.reduce((max, step) => (step.order > max ? step.order : max), 0);
+            const scene = state.raids.scenes[payload.sceneId];
+            if (!scene) {
+                throw new Error('Scene not found');
+            }
 
             const newStep = {
                 id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 sceneId: payload.sceneId,
                 name: payload.name,
-                order: maxOrder + 1,
                 creationTime: Date.now(),
+            };
+
+            const newScene = {
+                ...scene,
+                stepIds: [...scene.stepIds, newStep.id],
             };
 
             dispatch.raids.undoableBatchOperation({
                 name: 'Create Step',
                 raidId: payload.raidId,
                 operation: {
+                    putScenes: [newScene],
                     putSteps: [newStep],
                 },
             });
@@ -415,17 +443,23 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            const entitiesInScene = Object.values(state.raids.entities).filter((e) => e.sceneId === payload.sceneId);
-            const maxOrder = entitiesInScene.reduce((max, entity) => (entity.order > max ? entity.order : max), 0);
+            const scene = state.raids.scenes[payload.sceneId];
+            if (!scene) {
+                throw new Error('Scene not found');
+            }
 
             const newEntity = {
                 id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 sceneId: payload.sceneId,
                 name: payload.name,
-                order: maxOrder + 1,
                 creationTime: Date.now(),
                 properties: payload.properties,
+            };
+
+            const newScene = {
+                ...scene,
+                entityIds: [...scene.entityIds, newEntity.id],
             };
 
             dispatch.raids.undoableBatchOperation({
@@ -433,6 +467,7 @@ export const raids = createModel<RootModel>()({
                 raidId: payload.raidId,
                 operation: {
                     putEntities: [newEntity],
+                    putScenes: [newScene],
                 },
             });
 

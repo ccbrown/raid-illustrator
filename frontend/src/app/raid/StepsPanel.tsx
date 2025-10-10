@@ -1,39 +1,75 @@
 import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
+import { useRaidId } from './hooks';
 import { StepSettingsDialog } from './StepSettingsDialog';
 import { Button } from '@/components';
-import { useHashParam } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
+import { useRaidWorkspace, useSceneWorkspace, useScene, useStep } from '@/hooks';
+import { useDispatch } from '@/store';
 
-export const StepsPanel = () => {
-    const raidId = useHashParam('id');
+interface ListItemProps {
+    id: string;
+    onSettingsClick: () => void;
+    openStepId?: string;
+}
 
-    const workspace = useSelector((state) => (raidId ? state.workspaces.raids[raidId] : undefined));
-
-    const scene = useSelector((state) =>
-        workspace?.openSceneId ? state.raids.scenes[workspace.openSceneId] : undefined,
-    );
-
-    const sceneWorkspace = useSelector((state) => (scene ? state.workspaces.scenes[scene.id] : undefined));
-
-    const steps = Object.values(useSelector((state) => state.raids.steps)).filter((step) => step.sceneId === scene?.id);
-    steps.sort((a, b) => a.order - b.order);
-
-    const [settingsDialogStepId, setSettingsDialogStepId] = useState<string | null>(null);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-
+const ListItem = ({ id, onSettingsClick, openStepId }: ListItemProps) => {
+    const step = useStep(id);
     const dispatch = useDispatch();
 
-    const openStep = (id: string) => {
-        if (scene) {
-            dispatch.workspaces.openStep({ id, sceneId: scene.id });
+    if (!step) {
+        return null;
+    }
+
+    const openStep = () => {
+        if (step) {
+            dispatch.workspaces.openStep({ id, sceneId: step.sceneId });
         }
     };
 
-    const deleteStep = (id: string) => {
+    const deleteStep = () => {
         dispatch.raids.deleteStep({ id });
     };
+
+    return (
+        <div
+            className={`flex flex-row gap-2 px-4 py-2 transition ${step.id === openStepId ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            onClick={() => {
+                openStep();
+            }}
+        >
+            <div className="pr-2">{step.name}</div>
+            <div className="flex-grow" />
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSettingsClick();
+                }}
+            >
+                <GearSixIcon size={20} />
+            </button>
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    deleteStep();
+                }}
+            >
+                <TrashIcon size={18} />
+            </button>
+        </div>
+    );
+};
+
+export const StepsPanel = () => {
+    const raidId = useRaidId();
+    const workspace = useRaidWorkspace(raidId || '');
+    const scene = useScene(workspace?.openSceneId || '');
+    const sceneWorkspace = useSceneWorkspace(scene?.id || '');
+
+    const [settingsDialogStepId, setSettingsDialogStepId] = useState<string | null>(null);
+    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
@@ -60,36 +96,16 @@ export const StepsPanel = () => {
                     />
                 </div>
             </div>
-            {steps.map((step) => (
-                <div
-                    key={step.id}
-                    className={`flex flex-row gap-2 px-4 py-2 transition ${step.id === sceneWorkspace?.openStepId ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
-                    onClick={() => {
-                        openStep(step.id);
+            {scene?.stepIds.map((id) => (
+                <ListItem
+                    key={id}
+                    id={id}
+                    onSettingsClick={() => {
+                        setSettingsDialogStepId(id);
+                        setSettingsDialogOpen(true);
                     }}
-                >
-                    <div className="pr-2">{step.name}</div>
-                    <div className="flex-grow" />
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSettingsDialogStepId(step.id);
-                            setSettingsDialogOpen(true);
-                        }}
-                    >
-                        <GearSixIcon size={20} />
-                    </button>
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            deleteStep(step.id);
-                        }}
-                    >
-                        <TrashIcon size={18} />
-                    </button>
-                </div>
+                    openStepId={sceneWorkspace?.openStepId}
+                />
             ))}
         </div>
     );

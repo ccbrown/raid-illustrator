@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { Button, Dialog, Dropdown, TextField } from '@/components';
-import { useDispatch, useSelector } from '@/store';
+import { useEntity } from '@/hooks';
+import { useDispatch } from '@/store';
 import { RaidEntity, RaidEntityType } from '@/models/raids';
 import { shapeDimensions } from '@/shapes';
 
@@ -165,7 +166,7 @@ interface Props {
 }
 
 export const EntitySettingsDialog = (props: Props) => {
-    const entity = useSelector((state) => state.raids.entities[props.entityId || '']);
+    const entity = useEntity(props.entityId || '');
 
     return (
         <Dialog

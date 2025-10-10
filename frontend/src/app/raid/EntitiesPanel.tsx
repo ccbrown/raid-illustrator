@@ -1,41 +1,75 @@
 import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
+import { useRaidId } from './hooks';
+import { useEntity, useRaidWorkspace, useSceneWorkspace, useScene } from '@/hooks';
 import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { useCommands } from './commands';
 import { Button } from '@/components';
-import { useHashParam } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
+import { useDispatch } from '@/store';
+
+interface ListItemProps {
+    id: string;
+    onSettingsClick: () => void;
+    selectedEntityIds: string[];
+}
+
+const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => {
+    const entity = useEntity(id);
+    const dispatch = useDispatch();
+
+    const selectEntity = () => {
+        if (entity) {
+            dispatch.workspaces.selectEntities({ sceneId: entity.sceneId, ids: [id] });
+        }
+    };
+
+    const deleteEntity = () => {
+        dispatch.raids.deleteEntity({ id });
+    };
+
+    if (!entity) {
+        return null;
+    }
+
+    return (
+        <div
+            className={`flex flex-row gap-2 px-4 py-2 transition ${selectedEntityIds.includes(entity.id) ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            onClick={() => {
+                selectEntity();
+            }}
+        >
+            <div className="pr-2">{entity.name}</div>
+            <div className="flex-grow" />
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSettingsClick();
+                }}
+            >
+                <GearSixIcon size={20} />
+            </button>
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    deleteEntity();
+                }}
+            >
+                <TrashIcon size={18} />
+            </button>
+        </div>
+    );
+};
 
 export const EntitiesPanel = () => {
     const commands = useCommands();
 
-    const dispatch = useDispatch();
-
-    const raidId = useHashParam('id');
-
-    const workspace = useSelector((state) => (raidId ? state.workspaces.raids[raidId] : undefined));
-
-    const scene = useSelector((state) =>
-        workspace?.openSceneId ? state.raids.scenes[workspace.openSceneId] : undefined,
-    );
-
-    const sceneWorkspace = useSelector((state) => (scene ? state.workspaces.scenes[scene.id] : undefined));
-
-    const entities = Object.values(useSelector((state) => state.raids.entities)).filter(
-        (step) => step.sceneId === scene?.id,
-    );
-    entities.sort((a, b) => a.order - b.order);
-
-    const selectEntity = (id: string) => {
-        if (scene) {
-            dispatch.workspaces.selectEntities({ sceneId: scene.id, ids: [id] });
-        }
-    };
-
-    const deleteEntity = (id: string) => {
-        dispatch.raids.deleteEntity({ id });
-    };
+    const raidId = useRaidId();
+    const workspace = useRaidWorkspace(raidId || '');
+    const scene = useScene(workspace?.openSceneId || '');
+    const sceneWorkspace = useSceneWorkspace(scene?.id || '');
 
     const selectedEntityIds = sceneWorkspace?.selectedEntityIds || [];
 
@@ -66,36 +100,16 @@ export const EntitiesPanel = () => {
                     />
                 </div>
             </div>
-            {entities.map((entity) => (
-                <div
-                    key={entity.id}
-                    className={`flex flex-row gap-2 px-4 py-2 transition ${selectedEntityIds.includes(entity.id) ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
-                    onClick={() => {
-                        selectEntity(entity.id);
+            {scene?.entityIds.map((id) => (
+                <ListItem
+                    key={id}
+                    id={id}
+                    onSettingsClick={() => {
+                        setSettingsDialogEntityId(id);
+                        setSettingsDialogOpen(true);
                     }}
-                >
-                    <div className="pr-2">{entity.name}</div>
-                    <div className="flex-grow" />
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSettingsDialogEntityId(entity.id);
-                            setSettingsDialogOpen(true);
-                        }}
-                    >
-                        <GearSixIcon size={20} />
-                    </button>
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            deleteEntity(entity.id);
-                        }}
-                    >
-                        <TrashIcon size={18} />
-                    </button>
-                </div>
+                    selectedEntityIds={selectedEntityIds}
+                />
             ))}
         </div>
     );

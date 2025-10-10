@@ -1,32 +1,74 @@
 import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
+import { useRaidId } from './hooks';
 import { SceneSettingsDialog } from './SceneSettingsDialog';
 import { Button } from '@/components';
-import { useHashParam } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
+import { useRaid, useRaidWorkspace, useScene } from '@/hooks';
+import { useDispatch } from '@/store';
 
-export const ScenesPanel = () => {
-    const raidId = useHashParam('id');
-    const scenes = Object.values(useSelector((state) => state.raids.scenes)).filter((scene) => scene.raidId === raidId);
-    scenes.sort((a, b) => a.name.localeCompare(b.name));
+interface ListItemProps {
+    id: string;
+    onSettingsClick: () => void;
+    openSceneId?: string;
+}
 
-    const workspace = useSelector((state) => (raidId ? state.workspaces.raids[raidId] : undefined));
-
-    const [settingsDialogSceneId, setSettingsDialogSceneId] = useState<string | null>(null);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-
+const ListItem = ({ id, onSettingsClick, openSceneId }: ListItemProps) => {
+    const scene = useScene(id);
     const dispatch = useDispatch();
 
-    const openScene = (id: string) => {
-        if (raidId) {
-            dispatch.workspaces.openScene({ id, raidId });
+    if (!scene) {
+        return null;
+    }
+
+    const openScene = () => {
+        if (scene) {
+            dispatch.workspaces.openScene({ id, raidId: scene.raidId });
         }
     };
 
-    const deleteScene = (id: string) => {
+    const deleteScene = () => {
         dispatch.raids.deleteScene({ id });
     };
+
+    return (
+        <div
+            className={`flex flex-row gap-2 px-4 py-2 transition ${scene.id === openSceneId ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            onClick={() => {
+                openScene();
+            }}
+        >
+            <div className="pr-2">{scene.name}</div>
+            <div className="flex-grow" />
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSettingsClick();
+                }}
+            >
+                <GearSixIcon size={18} />
+            </button>
+            <button
+                className="subtle"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    deleteScene();
+                }}
+            >
+                <TrashIcon size={18} />
+            </button>
+        </div>
+    );
+};
+
+export const ScenesPanel = () => {
+    const raidId = useRaidId();
+    const raid = useRaid(raidId || '');
+    const raidWorkspace = useRaidWorkspace(raidId || '');
+
+    const [settingsDialogSceneId, setSettingsDialogSceneId] = useState<string | null>(null);
+    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
@@ -52,36 +94,16 @@ export const ScenesPanel = () => {
                     />
                 </div>
             </div>
-            {scenes.map((scene) => (
-                <div
-                    key={scene.id}
-                    className={`flex flex-row gap-2 px-4 py-2 transition ${scene.id === workspace?.openSceneId ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
-                    onClick={() => {
-                        openScene(scene.id);
+            {raid?.sceneIds.map((id) => (
+                <ListItem
+                    key={id}
+                    id={id}
+                    openSceneId={raidWorkspace?.openSceneId}
+                    onSettingsClick={() => {
+                        setSettingsDialogSceneId(id);
+                        setSettingsDialogOpen(true);
                     }}
-                >
-                    <div className="pr-2">{scene.name}</div>
-                    <div className="flex-grow" />
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSettingsDialogSceneId(scene.id);
-                            setSettingsDialogOpen(true);
-                        }}
-                    >
-                        <GearSixIcon size={18} />
-                    </button>
-                    <button
-                        className="subtle"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            deleteScene(scene.id);
-                        }}
-                    >
-                        <TrashIcon size={18} />
-                    </button>
-                </div>
+                />
             ))}
         </div>
     );

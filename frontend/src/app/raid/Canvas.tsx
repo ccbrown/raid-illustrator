@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Draggable, { DraggableEventHandler } from 'react-draggable';
 
-import { useHashParam } from '@/hooks';
+import { useRaidId } from './hooks';
+import { useRaidWorkspace, useSceneWorkspace, useScene } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
 import { Shape as ShapeDef, shapeDimensions } from '@/shapes';
 
@@ -136,27 +137,12 @@ const Entities = ({ ids, zoom }: EntitiesProps) => {
 };
 
 export const Canvas = () => {
-    const raidId = useHashParam('id');
-    const raidWorkspace = useSelector((state) => state.workspaces.raids[raidId || '']);
-    const scene = useSelector((state) => state.raids.scenes[raidWorkspace?.openSceneId || '']);
-    const sceneWorkspace = useSelector((state) => state.workspaces.scenes[scene?.id || '']);
+    const raidId = useRaidId();
+    const raidWorkspace = useRaidWorkspace(raidId || '');
+    const scene = useScene(raidWorkspace?.openSceneId || '');
+    const sceneWorkspace = useSceneWorkspace(scene?.id || '');
+
     const containerRef = useRef<HTMLDivElement>(null);
-
-    const entities = Object.values(useSelector((state) => state.raids.entities)).filter(
-        (step) => step.sceneId === scene?.id,
-    );
-
-    const nestedEntityIds = new Set();
-    for (const entity of entities) {
-        if (entity.properties.type === 'group') {
-            for (const id of entity.properties.children) {
-                nestedEntityIds.add(id);
-            }
-        }
-    }
-
-    const topLevelEntities = entities.filter((e) => !nestedEntityIds.has(e.id));
-    topLevelEntities.sort((a, b) => b.order - a.order);
 
     const [canvasWidth, setCanvasWidth] = useState(0);
     const [canvasHeight, setCanvasHeight] = useState(0);
@@ -197,7 +183,7 @@ export const Canvas = () => {
                 <Group translation={{ x: -sceneDimensions.width * 0.5, y: -sceneDimensions.height * 0.5 }}>
                     <Shape shape={scene.shape} fill="#44475a" />
                 </Group>
-                <Entities ids={topLevelEntities.map((e) => e.id)} zoom={zoom} />
+                <Entities ids={scene.entityIds} zoom={zoom} />
             </Group>
             <div className="absolute bottom-0 w-full flex flex-row justify-center">
                 <div className="px-6 py-1 bg-elevation-1/80 rounded-t-md text-xs text-white/80 backdrop-blur-sm">

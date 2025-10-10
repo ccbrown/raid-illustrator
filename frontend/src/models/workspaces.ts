@@ -124,6 +124,7 @@ export const workspaces = createModel<RootModel>()({
             state,
         ) {
             dispatch.workspaces.ensureRaid(payload.raidId);
+            dispatch.workspaces.ensureScene(payload.id);
             const existing = state.workspaces.raids[payload.raidId];
             if (existing) {
                 dispatch.workspaces.putRaid({ ...existing, openSceneId: payload.id });

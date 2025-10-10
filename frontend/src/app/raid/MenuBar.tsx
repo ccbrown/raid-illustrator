@@ -1,70 +1,24 @@
 'use client';
 
-import { ArrowUUpRightIcon, ArrowUUpLeftIcon, Icon, XIcon } from '@phosphor-icons/react';
+import { ArrowUUpRightIcon, ArrowUUpLeftIcon, Icon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import { Menubar as PrimeMenuBar } from 'primereact/menubar';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
 import { useState } from 'react';
 import { clsx } from 'clsx';
-import { useRouter } from 'next/navigation';
 
+import { Command, HotKey, useCommands } from './commands';
 import { disablePasswordManagers } from '@/components/TextField';
-import { useHashParam, useKeyPressEvents } from '@/hooks';
+import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
-
-interface HotKey {
-    key: string;
-    alt?: boolean;
-    shift?: boolean;
-    meta?: boolean;
-    control?: boolean;
-}
 
 interface MenuItem extends PrimeMenuItem {
     icon?: Icon;
-    hotKey?: {
-        key: string;
-        alt?: boolean;
-        shift?: boolean;
-        meta?: boolean;
-        control?: boolean;
-    };
+    hotKey?: HotKey;
 }
 
 interface TopLevelMenuItem extends MenuItem {
     items: MenuItem[];
 }
-
-const findMenuItemByHotKey = (items: MenuItem[] | MenuItem[][], hotKey: HotKey): MenuItem | null => {
-    for (const item of items) {
-        if (Array.isArray(item)) {
-            const found = findMenuItemByHotKey(item, hotKey);
-            if (found) {
-                return found;
-            }
-        } else {
-            if (item.hotKey) {
-                const matches =
-                    item.hotKey.key.toLowerCase() === hotKey.key.toLowerCase() &&
-                    !!item.hotKey.alt === !!hotKey.alt &&
-                    !!item.hotKey.shift === !!hotKey.shift &&
-                    !!item.hotKey.meta === !!hotKey.meta &&
-                    !!item.hotKey.control === !!hotKey.control;
-                if (matches) {
-                    return item;
-                }
-            }
-            if (item.items) {
-                const found = findMenuItemByHotKey(item.items, hotKey);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-    }
-    return null;
-};
-
-const shouldUseMacLikeHotKeys = () => window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 const menuItemRenderer = (item: MenuItem) => {
     return (
@@ -85,17 +39,25 @@ const menuItemRenderer = (item: MenuItem) => {
     );
 };
 
+const menuItemForCommand = (command: Command, icon: Icon): MenuItem => ({
+    label: command.name,
+    disabled: command.disabled,
+    hotKey: command.hotKey,
+    icon,
+    template: menuItemRenderer,
+    command: () => {
+        command.execute();
+    },
+});
+
 export const MenuBar = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState('');
 
     const raidId = useHashParam('id');
     const raid = useSelector((state) => state.raids.metadata[raidId || '']);
-    const raidWorkspace = useSelector((state) => state.workspaces.raids[raidId || '']);
 
     const dispatch = useDispatch();
-
-    const router = useRouter();
 
     const saveName = () => {
         const trimmedName = editedName.trim();
@@ -105,97 +67,40 @@ export const MenuBar = () => {
         setIsEditingName(false);
     };
 
-    const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
-    const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
-
-    const useMacLikeHotKeys = shouldUseMacLikeHotKeys();
-    const hotKeyBase = useMacLikeHotKeys
-        ? {
-              meta: true,
-          }
-        : {
-              control: true,
-          };
+    const commands = useCommands();
 
     const menuItems: TopLevelMenuItem[] = [
         {
             label: 'File',
-            items: [
-                {
-                    label: 'Close',
-                    icon: XIcon,
-                    template: menuItemRenderer,
-                    command: () => {
-                        router.push('/');
-                    },
-                },
-            ],
+            items: [menuItemForCommand(commands.close, XIcon)],
         },
         {
             label: 'Edit',
             items: [
-                {
-                    label: `Undo ${undoAction?.name || ''}`,
-                    disabled: !undoAction,
-                    icon: ArrowUUpLeftIcon,
-                    hotKey: { ...hotKeyBase, key: 'z' },
-                    template: menuItemRenderer,
-                    command: () => {
-                        if (raidId) {
-                            dispatch.workspaces.undo({ raidId });
-                        }
-                    },
-                },
-                {
-                    label: `Redo ${redoAction?.name || ''}`,
-                    disabled: !redoAction,
-                    icon: ArrowUUpRightIcon,
-                    hotKey: useMacLikeHotKeys ? { ...hotKeyBase, key: 'z', shift: true } : { ...hotKeyBase, key: 'y' },
-                    template: menuItemRenderer,
-                    command: () => {
-                        if (raidId) {
-                            dispatch.workspaces.redo({ raidId });
-                        }
-                    },
-                },
+                menuItemForCommand(commands.undo, ArrowUUpLeftIcon),
+                menuItemForCommand(commands.redo, ArrowUUpRightIcon),
+            ],
+        },
+        {
+            label: 'Scene',
+            items: [menuItemForCommand(commands.newScene, PlusIcon)],
+        },
+        {
+            label: 'Step',
+            items: [menuItemForCommand(commands.newStep, PlusIcon)],
+        },
+        {
+            label: 'Entity',
+            items: [menuItemForCommand(commands.newEntity, PlusIcon)],
+        },
+        {
+            label: 'View',
+            items: [
+                menuItemForCommand(commands.zoomIn, ArrowUUpLeftIcon),
+                menuItemForCommand(commands.zoomOut, ArrowUUpRightIcon),
             ],
         },
     ];
-
-    useKeyPressEvents((e) => {
-        const item = findMenuItemByHotKey(menuItems, {
-            key: e.key,
-            alt: e.altKey,
-            shift: e.shiftKey,
-            meta: e.metaKey,
-            control: e.ctrlKey,
-        });
-        if (!item) {
-            return;
-        }
-
-        // don't steal the key press if we're focused on an input
-        const target = e.target as HTMLElement;
-        const targetTagName = target.tagName?.toLowerCase();
-        if (targetTagName === 'input' || targetTagName === 'textarea' || target.isContentEditable) {
-            return;
-        }
-
-        e.preventDefault();
-
-        if (item.disabled) {
-            return;
-        }
-
-        if (item.command) {
-            item.command({
-                // XXX: this isn't quite right, but it's pretty close and we don't actually use the
-                // event in our commands
-                originalEvent: e as unknown as React.SyntheticEvent,
-                item,
-            });
-        }
-    });
 
     return (
         <div className="w-full bg-elevation-1 shadow-lg flex items-center py-2 px-4">
@@ -264,7 +169,7 @@ export const MenuBar = () => {
                                 className: 'hidden',
                             },
                             root: {
-                                className: 'flex flex-row outline-none',
+                                className: 'flex flex-row outline-none z-100',
                             },
                             submenu: {
                                 className:

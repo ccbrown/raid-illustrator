@@ -1,6 +1,7 @@
 import { createModel } from '@rematch/core';
 
 import { RootModel } from '.';
+import { Shape, ShapeCircle, ShapeRectangle } from '@/shapes';
 
 interface RaidMetadata {
     id: string;
@@ -8,18 +9,7 @@ interface RaidMetadata {
     creationTime: number;
 }
 
-interface RaidSceneShapeRectangle {
-    type: 'rectangle';
-    width: number;
-    height: number;
-}
-
-interface RaidSceneShapeCircle {
-    type: 'circle';
-    radius: number;
-}
-
-type RaidSceneShape = RaidSceneShapeRectangle | RaidSceneShapeCircle;
+type RaidSceneShape = ShapeRectangle | ShapeCircle;
 
 export interface RaidScene {
     id: string;
@@ -40,10 +30,50 @@ export interface RaidStep {
     creationTime: number;
 }
 
+interface Keyable<T> {
+    unkeyed: T;
+    steps?: Record<string, T>;
+}
+
+interface RaidEntityPropertiesBase {
+    position: Keyable<{ x: number; y: number }>;
+}
+
+interface RaidEntityPropertiesGroup extends RaidEntityPropertiesBase {
+    type: 'group';
+    children: string[];
+}
+
+interface RaidEntityPropertiesShape extends RaidEntityPropertiesBase {
+    type: 'shape';
+    shape: Shape;
+}
+
+export type RaidEntityType = 'group' | 'shape';
+type RaidEntityProperties = RaidEntityPropertiesGroup | RaidEntityPropertiesShape;
+
+type PartialRaidEntityPropertiesGroup = Partial<Omit<RaidEntityPropertiesGroup, 'type'>> &
+    Pick<RaidEntityPropertiesGroup, 'type'>;
+type PartialRaidEntityPropertiesShape = Partial<Omit<RaidEntityPropertiesShape, 'type'>> &
+    Pick<RaidEntityPropertiesShape, 'type'>;
+type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
+
+export interface RaidEntity {
+    id: string;
+    raidId: string;
+    sceneId: string;
+
+    name: string;
+    order: number;
+    creationTime: number;
+    properties: RaidEntityProperties;
+}
+
 interface RaidsState {
     metadata: Record<string, RaidMetadata>;
     scenes: Record<string, RaidScene>;
     steps: Record<string, RaidStep>;
+    entities: Record<string, RaidEntity>;
 }
 
 export interface RaidBatchOperation {
@@ -52,6 +82,8 @@ export interface RaidBatchOperation {
     removeScenes?: string[];
     putSteps?: RaidStep[];
     removeSteps?: string[];
+    putEntities?: RaidEntity[];
+    removeEntities?: string[];
 }
 
 export const raids = createModel<RootModel>()({
@@ -59,6 +91,7 @@ export const raids = createModel<RootModel>()({
         metadata: {},
         scenes: {},
         steps: {},
+        entities: {},
     } as RaidsState,
     reducers: {
         putMetadata(state, metadata: RaidMetadata) {
@@ -80,6 +113,12 @@ export const raids = createModel<RootModel>()({
         },
         removeStep(state, stepId: string) {
             delete state.steps[stepId];
+        },
+        putEntity(state, entity: RaidEntity) {
+            state.entities[entity.id] = entity;
+        },
+        removeEntity(state, entityId: string) {
+            delete state.entities[entityId];
         },
     },
     effects: (dispatch) => ({
@@ -173,6 +212,35 @@ export const raids = createModel<RootModel>()({
                         }
                         undo.putSteps.push(existing);
                         dispatch.raids.removeStep(stepId);
+                    }
+                }
+            }
+
+            if (payload.putEntities) {
+                for (const entity of payload.putEntities) {
+                    const existing = state.raids.entities[entity.id];
+                    if (existing) {
+                        if (!undo.putEntities) {
+                            undo.putEntities = [];
+                        }
+                        undo.putEntities.push(existing);
+                    } else {
+                        undo.removeEntities = undo.removeEntities || [];
+                        undo.removeEntities.push(entity.id);
+                    }
+                    dispatch.raids.putEntity(entity);
+                }
+            }
+
+            if (payload.removeEntities) {
+                for (const entityId of payload.removeEntities) {
+                    const existing = state.raids.entities[entityId];
+                    if (existing) {
+                        if (!undo.putEntities) {
+                            undo.putEntities = [];
+                        }
+                        undo.putEntities.push(existing);
+                        dispatch.raids.removeEntity(entityId);
                     }
                 }
             }
@@ -335,6 +403,95 @@ export const raids = createModel<RootModel>()({
                 raidId: existing.raidId,
                 operation: {
                     removeSteps: [payload.id],
+                },
+            });
+        },
+        createEntity(
+            payload: {
+                name: string;
+                raidId: string;
+                sceneId: string;
+                properties: RaidEntityProperties;
+            },
+            state,
+        ) {
+            const entitiesInScene = Object.values(state.raids.entities).filter((e) => e.sceneId === payload.sceneId);
+            const maxOrder = entitiesInScene.reduce((max, entity) => (entity.order > max ? entity.order : max), 0);
+
+            const newEntity = {
+                id: crypto.randomUUID(),
+                raidId: payload.raidId,
+                sceneId: payload.sceneId,
+                name: payload.name,
+                order: maxOrder + 1,
+                creationTime: Date.now(),
+                properties: payload.properties,
+            };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Create Entity',
+                raidId: payload.raidId,
+                operation: {
+                    putEntities: [newEntity],
+                },
+            });
+
+            return newEntity.id;
+        },
+        updateEntity(
+            payload: {
+                id: string;
+                name?: string;
+                properties?: PartialRaidEntityProperties;
+            },
+            state,
+        ) {
+            const existing = state.raids.entities[payload.id];
+            if (!existing) {
+                return;
+            }
+
+            const newEntity = {
+                ...existing,
+                ...{ ...payload, properties: existing.properties },
+            };
+
+            if (payload.properties) {
+                if (existing.properties.type !== payload.properties.type) {
+                    throw new Error('Cannot change entity type');
+                }
+                // The typechecker isn't smart enough to handle this narrowing here for each case.
+                if (existing.properties.type === 'shape' && payload.properties.type === 'shape') {
+                    newEntity.properties = { ...existing.properties, ...payload.properties };
+                } else {
+                    throw new Error('Unsupported entity properties update');
+                }
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Update Entity',
+                raidId: existing.raidId,
+                operation: {
+                    putEntities: [newEntity],
+                },
+            });
+        },
+        deleteEntity(
+            payload: {
+                id: string;
+            },
+            state,
+        ) {
+            const existing = state.raids.entities[payload.id];
+            if (!existing) {
+                return;
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Delete Entity',
+                raidId: existing.raidId,
+                operation: {
+                    removeEntities: [payload.id],
                 },
             });
         },

@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { Canvas } from './Canvas';
+import { CommandsProvider } from './commands';
 import { EntitiesPanel } from './EntitiesPanel';
 import { ScenesPanel } from './ScenesPanel';
 import { StepsPanel } from './StepsPanel';
@@ -36,20 +38,27 @@ export const Editor = () => {
     }, [raidId, dispatch]);
 
     return (
-        <div className="relative w-full h-full">
-            <div className="absolute inset-0 flex flex-col">
-                <MenuBar />
-                <div className="flex flex-row gap-4 p-4">
-                    <div className="flex flex-col gap-4 w-64">
-                        <ScenesPanel />
-                        <StepsPanel />
-                    </div>
-                    <div className="flex-grow" />
-                    <div className="flex flex-col gap-4 w-64">
-                        <EntitiesPanel />
+        <CommandsProvider>
+            <div className="flex flex-col w-full h-screen">
+                <div className="flex flex-col h-full">
+                    <MenuBar />
+                    <div className="relative flex flex-grow overflow-hidden">
+                        <div className="absolute inset-0">
+                            <Canvas />
+                        </div>
+                        <div className="absolute inset-0 flex flex-row gap-4 p-4 pointer-events-none">
+                            <div className="flex flex-col gap-4 w-64 [&>*]:pointer-events-auto">
+                                <ScenesPanel />
+                                <StepsPanel />
+                            </div>
+                            <div className="flex-grow" />
+                            <div className="flex flex-col gap-4 w-64 [&>*]:pointer-events-auto">
+                                <EntitiesPanel />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </CommandsProvider>
     );
 };

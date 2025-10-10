@@ -1,0 +1,273 @@
+import React, { createContext, useContext, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { EntitySettingsDialog } from './EntitySettingsDialog';
+import { SceneSettingsDialog } from './SceneSettingsDialog';
+import { StepSettingsDialog } from './StepSettingsDialog';
+import { useHashParam, useKeyPressEvents } from '@/hooks';
+import { useDispatch, useSelector } from '@/store';
+
+export interface HotKey {
+    key: string;
+    alt?: boolean;
+    shift?: boolean;
+    meta?: boolean;
+    control?: boolean;
+}
+
+export interface Command {
+    name: string;
+    disabled?: boolean;
+    hotKey?: HotKey;
+    additionalHotKeys?: HotKey[];
+    execute: () => void;
+}
+
+interface Commands {
+    close: Command;
+    undo: Command;
+    redo: Command;
+    zoomIn: Command;
+    zoomOut: Command;
+    newScene: Command;
+    newStep: Command;
+    newEntity: Command;
+}
+
+const findCommandByHotKey = (commands: Commands, hotKey: HotKey): Command | null => {
+    for (const key in commands) {
+        const command = commands[key as keyof Commands];
+        if (command.hotKey) {
+            const hk = command.hotKey;
+            if (
+                hk.key.toLowerCase() === hotKey.key.toLowerCase() &&
+                !!hk.alt === !!hotKey.alt &&
+                !!hk.shift === !!hotKey.shift &&
+                !!hk.meta === !!hotKey.meta &&
+                !!hk.control === !!hotKey.control
+            ) {
+                return command;
+            }
+        }
+        for (const additionalHotKey of command.additionalHotKeys || []) {
+            if (
+                additionalHotKey.key.toLowerCase() === hotKey.key.toLowerCase() &&
+                !!additionalHotKey.alt === !!hotKey.alt &&
+                !!additionalHotKey.shift === !!hotKey.shift &&
+                !!additionalHotKey.meta === !!hotKey.meta &&
+                !!additionalHotKey.control === !!hotKey.control
+            ) {
+                return command;
+            }
+        }
+    }
+    return null;
+};
+
+const CommandsContext = createContext<Commands | null>(null);
+
+interface CommandProviderProps {
+    children: React.ReactNode;
+}
+
+const shouldUseMacLikeHotKeys = () => window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+export const CommandsProvider = (props: CommandProviderProps) => {
+    const raidId = useHashParam('id');
+    const router = useRouter();
+    const dispatch = useDispatch();
+    const useMacLikeHotKeys = shouldUseMacLikeHotKeys();
+    const raidWorkspace = useSelector((state) => state.workspaces.raids[raidId || '']);
+
+    const sceneId = raidWorkspace?.openSceneId;
+    const sceneWorkspace = useSelector((state) => state.workspaces.scenes[sceneId || '']);
+
+    const [newSceneDialogOpen, setNewSceneDialogOpen] = useState(false);
+    const [newStepDialogOpen, setNewStepDialogOpen] = useState(false);
+    const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
+
+    const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
+    const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
+
+    const hotKeyBase = useMacLikeHotKeys
+        ? {
+              meta: true,
+          }
+        : {
+              control: true,
+          };
+
+    const commands: Commands = {
+        close: {
+            name: 'Close',
+            execute: () => {
+                router.push('/');
+            },
+        },
+        undo: {
+            name: `Undo ${undoAction?.name || ''}`,
+            disabled: !undoAction,
+            hotKey: {
+                ...hotKeyBase,
+                key: 'z',
+            },
+            execute: () => {
+                if (raidId) {
+                    dispatch.workspaces.undo({ raidId });
+                }
+            },
+        },
+        redo: {
+            name: `Redo ${redoAction?.name || ''}`,
+            disabled: !redoAction,
+            hotKey: useMacLikeHotKeys
+                ? {
+                      ...hotKeyBase,
+                      key: 'z',
+                      shift: true,
+                  }
+                : {
+                      ...hotKeyBase,
+                      key: 'y',
+                  },
+            execute: () => {
+                if (raidId) {
+                    dispatch.workspaces.redo({ raidId });
+                }
+            },
+        },
+        newScene: {
+            name: 'New Scene',
+            disabled: !raidId,
+            execute: () => {
+                setNewSceneDialogOpen(true);
+            },
+        },
+        newStep: {
+            name: 'New Step',
+            disabled: !sceneId,
+            execute: () => {
+                setNewStepDialogOpen(true);
+            },
+        },
+        newEntity: {
+            name: 'New Entity',
+            disabled: !sceneId,
+            execute: () => {
+                setNewEntityDialogOpen(true);
+            },
+        },
+        zoomIn: {
+            name: 'Zoom In',
+            disabled: !sceneWorkspace || (sceneWorkspace.zoom || 1) >= 4,
+            hotKey: {
+                ...hotKeyBase,
+                key: '+',
+            },
+            additionalHotKeys: [
+                {
+                    ...hotKeyBase,
+                    key: '=',
+                },
+                {
+                    ...hotKeyBase,
+                    key: '=',
+                    shift: true,
+                },
+            ],
+            execute: () => {
+                if (sceneWorkspace) {
+                    const newZoom = Math.min((sceneWorkspace.zoom || 1) * 1.2, 4);
+                    dispatch.workspaces.updateScene({ id: sceneWorkspace.id, zoom: newZoom });
+                }
+            },
+        },
+        zoomOut: {
+            name: 'Zoom Out',
+            disabled: !sceneWorkspace || (sceneWorkspace.zoom || 1) <= 0.1,
+            hotKey: {
+                ...hotKeyBase,
+                key: '-',
+            },
+            additionalHotKeys: [
+                {
+                    ...hotKeyBase,
+                    key: '-',
+                    shift: true,
+                },
+            ],
+            execute: () => {
+                if (sceneWorkspace) {
+                    const newZoom = Math.max((sceneWorkspace.zoom || 1) / 1.2, 0.1);
+                    dispatch.workspaces.updateScene({ id: sceneWorkspace.id, zoom: newZoom });
+                }
+            },
+        },
+    };
+
+    useKeyPressEvents((e) => {
+        const command = findCommandByHotKey(commands, {
+            key: e.key,
+            alt: e.altKey,
+            shift: e.shiftKey,
+            meta: e.metaKey,
+            control: e.ctrlKey,
+        });
+        if (!command) {
+            return;
+        }
+
+        // don't steal the key press if we're focused on an input
+        const target = e.target as HTMLElement;
+        const targetTagName = target.tagName?.toLowerCase();
+        if (targetTagName === 'input' || targetTagName === 'textarea' || target.isContentEditable) {
+            return;
+        }
+
+        e.preventDefault();
+
+        if (!command.disabled) {
+            command.execute();
+        }
+    });
+
+    return (
+        <CommandsContext.Provider value={commands}>
+            {raidId && (
+                <SceneSettingsDialog
+                    isOpen={newSceneDialogOpen}
+                    onClose={() => setNewSceneDialogOpen(false)}
+                    raidId={raidId}
+                />
+            )}
+
+            {raidId && sceneId && (
+                <StepSettingsDialog
+                    isOpen={newStepDialogOpen}
+                    onClose={() => setNewStepDialogOpen(false)}
+                    raidId={raidId}
+                    sceneId={sceneId}
+                />
+            )}
+
+            {raidId && sceneId && (
+                <EntitySettingsDialog
+                    isOpen={newEntityDialogOpen}
+                    onClose={() => setNewEntityDialogOpen(false)}
+                    raidId={raidId}
+                    sceneId={sceneId}
+                />
+            )}
+
+            {props.children}
+        </CommandsContext.Provider>
+    );
+};
+
+export const useCommands = () => {
+    const context = useContext(CommandsContext);
+    if (!context) {
+        throw new Error('useCommands must be used within a CommandProvider');
+    }
+    return context;
+};

@@ -1,68 +1,10 @@
 import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { Button, Dialog, TextField } from '@/components';
+import { StepSettingsDialog } from './StepSettingsDialog';
+import { Button } from '@/components';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
-import { RaidStep } from '@/models/raids';
-
-interface StepSettingsProps {
-    existing?: RaidStep;
-    raidId: string;
-    sceneId: string;
-    onClose?: () => void;
-}
-
-const StepSettings = (props: StepSettingsProps) => {
-    const dispatch = useDispatch();
-
-    const [populatedFromId, setPopulatedFromId] = useState('');
-    const [name, setName] = useState('New Step');
-
-    useEffect(() => {
-        if (props.existing && props.existing.id !== populatedFromId) {
-            setPopulatedFromId(props.existing.id);
-            setName(props.existing.name);
-        }
-    }, [props.existing, populatedFromId]);
-
-    const hasValidInput = !!name.trim();
-
-    const submit = () => {
-        if (!hasValidInput) {
-            return;
-        }
-
-        const update = {
-            name,
-        };
-        if (props.existing) {
-            dispatch.raids.updateStep({ id: props.existing.id, ...update });
-        } else {
-            const id = dispatch.raids.createStep({ raidId: props.raidId, sceneId: props.sceneId, ...update });
-            dispatch.workspaces.openStep({ id, sceneId: props.sceneId });
-        }
-
-        if (props.onClose) {
-            props.onClose();
-        }
-    };
-
-    return (
-        <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-                e.preventDefault();
-                submit();
-            }}
-        >
-            <TextField label="Name" value={name} onChange={setName} />
-            <div className="flex flex-row justify-end">
-                <Button text={props.existing ? 'Update Step' : 'Add Step'} type="submit" disabled={!hasValidInput} />
-            </div>
-        </form>
-    );
-};
 
 export const StepsPanel = () => {
     const raidId = useHashParam('id');
@@ -81,8 +23,6 @@ export const StepsPanel = () => {
     const [settingsDialogStepId, setSettingsDialogStepId] = useState<string | null>(null);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
-    const settingsDialogStep = settingsDialogStepId ? steps.find((s) => s.id === settingsDialogStepId) : undefined;
-
     const dispatch = useDispatch();
 
     const openStep = (id: string) => {
@@ -92,27 +32,20 @@ export const StepsPanel = () => {
     };
 
     const deleteStep = (id: string) => {
-        if (confirm('Are you sure you want to delete this step? This action cannot be undone.')) {
-            dispatch.raids.deleteStep({ id });
-        }
+        dispatch.raids.deleteStep({ id });
     };
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
-            <Dialog
-                isOpen={settingsDialogOpen}
-                onClose={() => setSettingsDialogOpen(false)}
-                title={settingsDialogStepId ? 'Step Settings' : 'New Step'}
-            >
-                {raidId && scene && (
-                    <StepSettings
-                        onClose={() => setSettingsDialogOpen(false)}
-                        raidId={raidId}
-                        sceneId={scene.id}
-                        existing={settingsDialogStep}
-                    />
-                )}
-            </Dialog>
+            {raidId && scene && (
+                <StepSettingsDialog
+                    isOpen={settingsDialogOpen}
+                    onClose={() => setSettingsDialogOpen(false)}
+                    raidId={raidId}
+                    sceneId={scene.id}
+                    stepId={settingsDialogStepId}
+                />
+            )}
             <div className="flex flex-row items-center mb-2">
                 <div className="px-4 font-semibold">Steps</div>
                 <div className="flex-grow" />

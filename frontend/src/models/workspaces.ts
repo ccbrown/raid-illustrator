@@ -7,6 +7,13 @@ interface SceneWorkspace {
     id: string;
 
     openStepId?: string;
+    selectedEntityIds?: string[];
+
+    zoom?: number;
+    center?: {
+        x: number;
+        y: number;
+    };
 }
 
 interface UndoRedoStackAction {
@@ -122,6 +129,20 @@ export const workspaces = createModel<RootModel>()({
                 dispatch.workspaces.putRaid({ ...existing, openSceneId: payload.id });
             }
         },
+        updateScene(
+            payload: {
+                id: string;
+                zoom?: number;
+                center?: { x: number; y: number };
+            },
+            state,
+        ) {
+            dispatch.workspaces.ensureScene(payload.id);
+            const existing = state.workspaces.scenes[payload.id];
+            if (existing) {
+                dispatch.workspaces.putScene({ ...existing, ...payload });
+            }
+        },
         openStep(
             payload: {
                 id: string;
@@ -133,6 +154,19 @@ export const workspaces = createModel<RootModel>()({
             const existing = state.workspaces.scenes[payload.sceneId];
             if (existing) {
                 dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
+            }
+        },
+        selectEntities(
+            payload: {
+                ids: string[];
+                sceneId: string;
+            },
+            state,
+        ) {
+            dispatch.workspaces.ensureScene(payload.sceneId);
+            const existing = state.workspaces.scenes[payload.sceneId];
+            if (existing) {
+                dispatch.workspaces.putScene({ ...existing, selectedEntityIds: payload.ids });
             }
         },
         undo(

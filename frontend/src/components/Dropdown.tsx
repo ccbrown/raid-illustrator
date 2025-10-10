@@ -9,6 +9,7 @@ interface Option {
 interface Props {
     options: Option[];
     label?: string;
+    disabled?: boolean;
 
     selectedOptionKey?: string;
     onChange: (option: Option) => void;
@@ -21,7 +22,10 @@ export const Dropdown = (props: Props) => {
                 {props.label && <Label className="block leading-6 font-semibold">{props.label}</Label>}
             </div>
             <Popover>
-                <PopoverButton className="inline-flex items-center gap-2 bg-black/20 rounded-full mt-1 py-1.5 px-3 cursor-pointer focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500">
+                <PopoverButton
+                    disabled={props.disabled}
+                    className={`inline-flex items-center gap-2 bg-black/20 rounded-full mt-1 py-1.5 px-3 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}
+                >
                     <div className="text-sm/6">
                         {props.options.find((opt) => opt.key === props.selectedOptionKey)?.label}
                     </div>

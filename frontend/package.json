@@ -20,6 +20,7 @@
         "primereact": "^10.9.7",
         "react": "19.1.0",
         "react-dom": "19.1.0",
+        "react-draggable": "^4.5.0",
         "react-redux": "^9.2.0",
         "redux": "^5.0.1",
         "redux-persist": "^6.0.0",

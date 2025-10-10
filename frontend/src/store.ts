@@ -30,11 +30,13 @@ const migrations = {
     2: (state: any) => ({ ...state, raids: { ...state.raids, steps: {} } }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     3: (state: any) => ({ ...state, workspaces: { ...state.workspaces, scenes: {} } }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    4: (state: any) => ({ ...state, raids: { ...state.raids, entities: {} } }),
 };
 
 const persistConfig = {
     key: 'root',
-    version: 3,
+    version: 4,
     storage,
     migrate: createMigrate(migrations, { debug: false }),
 };

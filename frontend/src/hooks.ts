@@ -47,3 +47,4 @@ export const useScene = (sceneId: string) => useSelector((state) => state.raids.
 export const useSceneWorkspace = (sceneId: string) => useSelector((state) => state.workspaces.scenes[sceneId]);
 export const useStep = (stepId: string) => useSelector((state) => state.raids.steps[stepId]);
 export const useEntity = (entityId: string) => useSelector((state) => state.raids.entities[entityId]);
+export const useSelection = (raidId: string) => useSelector((state) => state.workspaces.raids[raidId]?.selection);

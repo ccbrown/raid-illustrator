@@ -7,7 +7,6 @@ interface SceneWorkspace {
     id: string;
 
     openStepId?: string;
-    selectedEntityIds?: string[];
 
     zoom?: number;
     center?: {
@@ -21,11 +20,16 @@ interface UndoRedoStackAction {
     operation: RaidBatchOperation;
 }
 
+export interface Selection {
+    entityIds?: string[];
+}
+
 interface RaidWorkspace {
     id: string;
     lastActivityTime: number;
 
     openSceneId?: string;
+    selection?: Selection;
 
     undoStack?: UndoRedoStackAction[];
     redoStack?: UndoRedoStackAction[];
@@ -157,17 +161,17 @@ export const workspaces = createModel<RootModel>()({
                 dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
             }
         },
-        selectEntities(
+        select(
             payload: {
-                ids: string[];
-                sceneId: string;
+                raidId: string;
+                selection: Selection | undefined;
             },
             state,
         ) {
-            dispatch.workspaces.ensureScene(payload.sceneId);
-            const existing = state.workspaces.scenes[payload.sceneId];
+            dispatch.workspaces.ensureRaid(payload.raidId);
+            const existing = state.workspaces.raids[payload.raidId];
             if (existing) {
-                dispatch.workspaces.putScene({ ...existing, selectedEntityIds: payload.ids });
+                dispatch.workspaces.putRaid({ ...existing, selection: payload.selection });
             }
         },
         undo(

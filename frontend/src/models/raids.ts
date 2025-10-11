@@ -2,6 +2,7 @@ import { createModel } from '@rematch/core';
 
 import { RootModel } from '.';
 import { Shape, ShapeCircle, ShapeRectangle } from '@/shapes';
+import { Keyable, keyableValueAtStep, keyableWithValueAtStep } from '@/keyable';
 
 interface RaidMetadata {
     id: string;
@@ -34,23 +35,15 @@ export interface RaidStep {
     creationTime: number;
 }
 
-interface Keyable<T> {
-    unkeyed: T;
-    steps?: Record<string, T>;
-}
-
-interface RaidEntityPropertiesBase {
-    position: Keyable<{ x: number; y: number }>;
-}
-
-interface RaidEntityPropertiesGroup extends RaidEntityPropertiesBase {
+interface RaidEntityPropertiesGroup {
     type: 'group';
     children: string[];
 }
 
-interface RaidEntityPropertiesShape extends RaidEntityPropertiesBase {
+interface RaidEntityPropertiesShape {
     type: 'shape';
     shape: Shape;
+    position: Keyable<{ x: number; y: number }>;
 }
 
 export type RaidEntityType = 'group' | 'shape';
@@ -508,6 +501,74 @@ export const raids = createModel<RootModel>()({
                 raidId: existing.raidId,
                 operation: {
                     putEntities: [newEntity],
+                },
+            });
+        },
+        moveEntities(
+            payload: {
+                stepId: string;
+                entityIds: string[];
+                offset: { x: number; y: number };
+            },
+            state,
+        ) {
+            const step = state.raids.steps[payload.stepId];
+            if (!step) {
+                return;
+            }
+
+            const scene = state.raids.scenes[step.sceneId];
+            if (!scene) {
+                return;
+            }
+
+            const entitiesToUpdate: RaidEntity[] = [];
+            const toGather = [...payload.entityIds];
+
+            while (toGather.length > 0) {
+                const id = toGather.pop()!;
+                const entity = state.raids.entities[id];
+                if (!entity) {
+                    continue;
+                }
+
+                switch (entity.properties.type) {
+                    case 'shape':
+                        entitiesToUpdate.push(entity);
+                        break;
+                    case 'group':
+                        toGather.push(...entity.properties.children);
+                        break;
+                }
+            }
+
+            const updatedEntities: RaidEntity[] = [];
+
+            for (const entity of entitiesToUpdate) {
+                const ep = entity.properties;
+                if (ep.type !== 'shape') {
+                    continue;
+                }
+
+                const currentPosition = keyableValueAtStep(ep.position, scene.stepIds, payload.stepId);
+                const newPosition = {
+                    x: currentPosition.x + payload.offset.x,
+                    y: currentPosition.y + payload.offset.y,
+                };
+
+                const newEntity = {
+                    ...entity,
+                    properties: { ...ep, position: keyableWithValueAtStep(ep.position, newPosition, payload.stepId) },
+                };
+
+                updatedEntities.push(newEntity);
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: `Move Entit${payload.entityIds.length > 1 ? 'ies' : 'y'}`,
+                raidId: scene.raidId,
+                operation: {
+                    putEntities: updatedEntities,
                 },
             });
         },

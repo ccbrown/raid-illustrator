@@ -1,151 +1,74 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Draggable, { DraggableEventHandler } from 'react-draggable';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAnimationFrame } from 'motion/react';
 
 import { useRaidId } from './hooks';
-import { useRaidWorkspace, useSceneWorkspace, useScene } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
-import { Shape as ShapeDef, shapeDimensions } from '@/shapes';
+import { useRaidWorkspace, useSceneWorkspace, useScene, useSelection } from '@/hooks';
+import { shapeDimensions } from '@/shapes';
+import { useDispatch } from '@/store';
+import { useSceneRenderer } from '@/renderer';
 
 const PIXELS_PER_METER = 100;
-
-interface GroupProps {
-    children: React.ReactNode;
-    scale?: number;
-    translation?: { x: number; y: number };
-}
-
-const Group = ({ children, scale = 1, translation = { x: 0, y: 0 } }: GroupProps) => {
-    return (
-        <div
-            className="absolute origin-top-left"
-            style={{
-                transform: `scale(${scale}) translate(${translation.x * PIXELS_PER_METER}px, ${translation.y * PIXELS_PER_METER}px)`,
-            }}
-        >
-            {children}
-        </div>
-    );
-};
-
-interface ShapeProps {
-    shape: ShapeDef;
-    fill?: string;
-}
-
-const Shape = ({ shape, fill }: ShapeProps) => {
-    switch (shape.type) {
-        case 'rectangle':
-            return (
-                <div
-                    style={{
-                        width: shape.width * PIXELS_PER_METER,
-                        height: shape.height * PIXELS_PER_METER,
-                        backgroundColor: fill,
-                    }}
-                />
-            );
-        case 'circle':
-            return (
-                <div
-                    style={{
-                        width: shape.radius * 2 * PIXELS_PER_METER,
-                        height: shape.radius * 2 * PIXELS_PER_METER,
-                        backgroundColor: fill,
-                        borderRadius: '50%',
-                    }}
-                />
-            );
-        default:
-            return null;
-    }
-};
-
-interface EntityProps {
-    id: string;
-    zoom: number;
-}
-
-const Entity = ({ id, zoom }: EntityProps) => {
-    const entity = useSelector((state) => state.raids.entities[id]);
-    const nodeRef = useRef(null);
-    const dispatch = useDispatch();
-
-    const isSelected = useSelector((state) => {
-        const sceneWorkspace = state.workspaces.scenes[entity?.sceneId || ''];
-        return !!sceneWorkspace?.selectedEntityIds?.includes(id);
-    });
-
-    const handleMouseDown = useCallback(() => {
-        if (entity) {
-            dispatch.workspaces.selectEntities({ sceneId: entity.sceneId, ids: [entity.id] });
-        }
-    }, [entity, dispatch]);
-
-    const handleDragStop = useCallback<DraggableEventHandler>(
-        (_e, data) => {
-            if (entity) {
-                dispatch.raids.updateEntity({
-                    id: entity.id,
-                    properties: {
-                        type: entity.properties.type,
-                        position: { unkeyed: { x: data.x / PIXELS_PER_METER, y: data.y / PIXELS_PER_METER } },
-                    },
-                });
-            }
-        },
-        [dispatch, entity],
-    );
-
-    if (!entity) {
-        return null;
-    }
-
-    const ep = entity.properties;
-    const position = entity.properties.position.unkeyed;
-
-    return (
-        <Draggable
-            nodeRef={nodeRef}
-            onMouseDown={handleMouseDown}
-            onStop={handleDragStop}
-            scale={zoom}
-            position={{ x: position.x * PIXELS_PER_METER, y: position.y * PIXELS_PER_METER }}
-        >
-            <div ref={nodeRef} className="relative inline-block">
-                {isSelected && (
-                    <div className="absolute inset-0 inline-block outline outline-4 outline-offset-2 outline-cyan-500" />
-                )}
-                {ep.type === 'shape' && <Shape shape={ep.shape} fill="#ff79c6" />}
-            </div>
-        </Draggable>
-    );
-};
-
-interface EntitiesProps {
-    ids: string[];
-    zoom: number;
-}
-
-const Entities = ({ ids, zoom }: EntitiesProps) => {
-    return (
-        <>
-            {ids.map((id) => (
-                <Entity key={id} id={id} zoom={zoom} />
-            ))}
-        </>
-    );
-};
 
 export const Canvas = () => {
     const raidId = useRaidId();
     const raidWorkspace = useRaidWorkspace(raidId || '');
     const scene = useScene(raidWorkspace?.openSceneId || '');
     const sceneWorkspace = useSceneWorkspace(scene?.id || '');
+    const stepId = sceneWorkspace?.openStepId;
+
+    const dispatch = useDispatch();
+    const selection = useSelection(raidId || '');
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const [canvasWidth, setCanvasWidth] = useState(0);
     const [canvasHeight, setCanvasHeight] = useState(0);
+
+    const [canvasContext, setCanvasContext] = useState<CanvasRenderingContext2D | null>(null);
+
+    const renderer = useSceneRenderer(scene?.id || '', stepId || '');
+
+    const zoom = sceneWorkspace?.zoom || 1;
+    const center = useMemo(() => sceneWorkspace?.center || { x: 0, y: 0 }, [sceneWorkspace]);
+    const pixelsPerMeterZoomed = zoom * PIXELS_PER_METER;
+    const sceneDimensions = scene ? shapeDimensions(scene.shape) : { width: 0, height: 0 };
+
+    const mouseDown = useRef<{
+        brokeDragThreshold: boolean;
+        hitEntity: boolean;
+        scenePosition: { x: number; y: number };
+        pixelPosition: { x: number; y: number };
+    } | null>(null);
+
+    const pixelToSceneCoordinate = useCallback(
+        ({ x, y }: { x: number; y: number }) => {
+            return {
+                x: (x - 0.5 * canvasWidth) / pixelsPerMeterZoomed + center.x,
+                y: (0.5 * canvasHeight - y) / pixelsPerMeterZoomed + center.y,
+            };
+        },
+        [canvasWidth, canvasHeight, pixelsPerMeterZoomed, center],
+    );
+
+    useAnimationFrame(() => {
+        if (canvasContext) {
+            if (canvasRef.current && canvasWidth !== canvasRef.current.width) {
+                canvasRef.current.width = canvasWidth * window.devicePixelRatio;
+            }
+            if (canvasRef.current && canvasHeight !== canvasRef.current.height) {
+                canvasRef.current.height = canvasHeight * window.devicePixelRatio;
+            }
+            renderer.render(canvasContext, pixelsPerMeterZoomed * window.devicePixelRatio, center);
+        }
+    });
+
+    useEffect(() => {
+        if (canvasRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            setCanvasContext(context);
+        }
+    }, []);
 
     useEffect(() => {
         const updateSize = () => {
@@ -161,34 +84,132 @@ export const Canvas = () => {
         };
     }, []);
 
-    const zoom = sceneWorkspace?.zoom || 1;
-    const center = sceneWorkspace?.center || { x: 0, y: 0 };
+    const mouseDownHandler = useCallback(
+        (e: React.MouseEvent) => {
+            if (e.button !== 0) {
+                return;
+            }
 
-    if (!raidWorkspace || !scene || !sceneWorkspace) {
-        return null;
-    }
+            const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+            const entity = renderer.hitTest(pos);
 
-    const pixelsPerMeterZoomed = PIXELS_PER_METER * zoom;
+            mouseDown.current = {
+                brokeDragThreshold: false,
+                hitEntity: !!entity,
+                scenePosition: pos,
+                pixelPosition: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
+            };
 
-    const canvasWidthMeters = canvasWidth / pixelsPerMeterZoomed;
-    const canvasHeightMeters = canvasHeight / pixelsPerMeterZoomed;
-    const sceneDimensions = shapeDimensions(scene.shape);
+            // select the clicked entity
+            if (entity) {
+                const isSelected = selection?.entityIds?.includes(entity.id);
+                if (!isSelected) {
+                    dispatch.workspaces.select({ raidId: raidId || '', selection: { entityIds: [entity.id] } });
+                }
+            }
+        },
+        [renderer, pixelToSceneCoordinate, dispatch, raidId, selection],
+    );
+
+    const mouseMoveHandler = useCallback(
+        (e: React.MouseEvent) => {
+            if (e.buttons === 1 && mouseDown.current) {
+                if (!mouseDown.current.brokeDragThreshold) {
+                    // figure out if we've moved enough to start a drag
+                    const xPixelDistance = e.nativeEvent.offsetX - mouseDown.current.pixelPosition.x;
+                    const yPixelDistance = e.nativeEvent.offsetY - mouseDown.current.pixelPosition.y;
+                    const distanceSquared = xPixelDistance * xPixelDistance + yPixelDistance * yPixelDistance;
+                    if (distanceSquared >= 4) {
+                        mouseDown.current.brokeDragThreshold = true;
+                    } else {
+                        return;
+                    }
+                }
+
+                const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+                const movement = {
+                    x: pos.x - mouseDown.current.scenePosition.x,
+                    y: pos.y - mouseDown.current.scenePosition.y,
+                };
+
+                // apply drag movement for selected entities
+                if (mouseDown.current.hitEntity && selection?.entityIds && selection.entityIds.length > 0) {
+                    for (const entityId of selection.entityIds) {
+                        renderer.setEntityDragMovement(entityId, movement);
+                    }
+                }
+
+                // apply drag movement for scene panning
+                if (!mouseDown.current.hitEntity) {
+                    renderer.setSceneDragMovement(movement);
+                }
+            }
+        },
+        [selection, pixelToSceneCoordinate, renderer],
+    );
+
+    const mouseUpHandler = useCallback(
+        (e: React.MouseEvent) => {
+            if (!mouseDown.current) {
+                return;
+            }
+
+            if (mouseDown.current.brokeDragThreshold) {
+                const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+                const movement = {
+                    x: pos.x - mouseDown.current.scenePosition.x,
+                    y: pos.y - mouseDown.current.scenePosition.y,
+                };
+
+                // apply the drag movement to the entities' positions
+                if (mouseDown.current.hitEntity) {
+                    if (
+                        selection?.entityIds &&
+                        selection.entityIds.length > 0 &&
+                        (movement.x !== 0 || movement.y !== 0)
+                    ) {
+                        dispatch.raids.moveEntities({
+                            stepId: stepId || '',
+                            entityIds: selection.entityIds,
+                            offset: movement,
+                        });
+                    }
+                }
+
+                // apply the drag movement to the scene's center
+                if (!mouseDown.current.hitEntity) {
+                    if (movement.x !== 0 || movement.y !== 0) {
+                        const newCenter = {
+                            x: center.x - movement.x,
+                            y: center.y - movement.y,
+                        };
+                        dispatch.workspaces.updateScene({ id: scene?.id || '', center: newCenter });
+                    }
+                }
+            } else if (!mouseDown.current.hitEntity) {
+                // click on empty space clears selection
+                dispatch.workspaces.select({ raidId: raidId || '', selection: undefined });
+            }
+
+            renderer.resetDragMovement();
+            mouseDown.current = null;
+        },
+        [renderer, pixelToSceneCoordinate, selection, dispatch, stepId, center, scene, raidId],
+    );
 
     return (
         <div className="relative w-full h-full" ref={containerRef}>
-            <Group
-                scale={zoom}
-                translation={{ x: -center.x + canvasWidthMeters / 2, y: -center.y + canvasHeightMeters / 2 }}
-            >
-                <Group translation={{ x: -sceneDimensions.width * 0.5, y: -sceneDimensions.height * 0.5 }}>
-                    <Shape shape={scene.shape} fill="#44475a" />
-                </Group>
-                <Entities ids={scene.entityIds} zoom={zoom} />
-            </Group>
-            <div className="absolute bottom-0 w-full flex flex-row justify-center">
-                <div className="px-6 py-1 bg-elevation-1/80 rounded-t-md text-xs text-white/80 backdrop-blur-sm">
+            <canvas
+                ref={canvasRef}
+                className="w-full h-full"
+                onMouseDown={mouseDownHandler}
+                onMouseMove={mouseMoveHandler}
+                onMouseUp={mouseUpHandler}
+            />
+            <div className="absolute bottom-0 w-full flex flex-row justify-center pointer-events-none">
+                <div className="px-6 py-1 bg-elevation-1/80 rounded-t-md text-xs text-white/80 backdrop-blur-sm pointer-events-auto">
                     Scene: {sceneDimensions.width}m × {sceneDimensions.height}m, Zoom:{' '}
-                    {Math.round(pixelsPerMeterZoomed)}px/m, Center: ({center.x.toFixed(1)}m, {center.y.toFixed(1)}m)
+                    {Math.round(pixelsPerMeterZoomed)}px/m
                 </div>
             </div>
         </div>

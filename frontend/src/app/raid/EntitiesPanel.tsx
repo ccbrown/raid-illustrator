@@ -2,7 +2,7 @@ import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { useRaidId } from './hooks';
-import { useEntity, useRaidWorkspace, useSceneWorkspace, useScene } from '@/hooks';
+import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
 import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { useCommands } from './commands';
 import { Button } from '@/components';
@@ -20,7 +20,7 @@ const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => 
 
     const selectEntity = () => {
         if (entity) {
-            dispatch.workspaces.selectEntities({ sceneId: entity.sceneId, ids: [id] });
+            dispatch.workspaces.select({ raidId: entity.raidId, selection: { entityIds: [entity.id] } });
         }
     };
 
@@ -69,9 +69,9 @@ export const EntitiesPanel = () => {
     const raidId = useRaidId();
     const workspace = useRaidWorkspace(raidId || '');
     const scene = useScene(workspace?.openSceneId || '');
-    const sceneWorkspace = useSceneWorkspace(scene?.id || '');
 
-    const selectedEntityIds = sceneWorkspace?.selectedEntityIds || [];
+    const selection = useSelection(raidId || '');
+    const selectedEntityIds = selection?.entityIds || [];
 
     const [settingsDialogEntityId, setSettingsDialogEntityId] = useState<string | null>(null);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);

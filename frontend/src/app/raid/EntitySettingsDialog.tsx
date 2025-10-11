@@ -4,7 +4,6 @@ import { Button, Dialog, Dropdown, TextField } from '@/components';
 import { useEntity } from '@/hooks';
 import { useDispatch } from '@/store';
 import { RaidEntity, RaidEntityType } from '@/models/raids';
-import { shapeDimensions } from '@/shapes';
 
 interface EntitySettingsProps {
     existing?: RaidEntity;
@@ -75,7 +74,6 @@ const EntitySettings = (props: EntitySettingsProps) => {
             if (props.existing) {
                 dispatch.raids.updateEntity({ id: props.existing.id, ...update });
             } else {
-                const dimensions = shapeDimensions(shape);
                 const entity = {
                     raidId: props.raidId,
                     sceneId: props.sceneId,
@@ -83,12 +81,12 @@ const EntitySettings = (props: EntitySettingsProps) => {
                         ...update,
                         properties: {
                             ...update.properties,
-                            position: { unkeyed: { x: -dimensions.width * 0.5, y: -dimensions.height * 0.5 } },
+                            position: { keyed: false as const, value: { x: 0.0, y: 0.0 } },
                         },
                     },
                 };
                 const id = dispatch.raids.createEntity(entity);
-                dispatch.workspaces.selectEntities({ ids: [id], sceneId: props.sceneId });
+                dispatch.workspaces.select({ raidId: props.raidId, selection: { entityIds: [id] } });
             }
         } else if (props.existing) {
             dispatch.raids.updateEntity({ id: props.existing.id, name });

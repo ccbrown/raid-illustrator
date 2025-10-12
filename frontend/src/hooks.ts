@@ -41,6 +41,22 @@ export const useKeyPressEvents = (callback: (e: KeyboardEvent) => void) => {
     }, []);
 };
 
+export const useKeyDownEvents = (callback: (e: KeyboardEvent) => void) => {
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            callbackRef.current(e);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+};
+
 export const useRaid = (raidId: string) => useSelector((state) => state.raids.metadata[raidId]);
 export const useRaidWorkspace = (raidId: string) => useSelector((state) => state.workspaces.raids[raidId]);
 export const useScene = (sceneId: string) => useSelector((state) => state.raids.scenes[sceneId]);

@@ -16,6 +16,7 @@ interface RendererEntityVisualEffect {
 }
 
 interface RenderEntityStep {
+    id: string;
     position: { x: number; y: number };
     bounds: { x: number; y: number; width: number; height: number };
     effectProperties: Record<string, AnyProperties>;
@@ -24,7 +25,10 @@ interface RenderEntityStep {
 class RendererEntity {
     entity: RaidEntity;
     visualEffects: RendererEntityVisualEffect[] = [];
-    currentStep: RenderEntityStep;
+
+    private currentStep: RenderEntityStep;
+    private previousStep?: RenderEntityStep;
+    private stepChangeTime?: number;
 
     dragMovement: { x: number; y: number } = { x: 0, y: 0 };
 
@@ -36,7 +40,12 @@ class RendererEntity {
 
     update(entity: RaidEntity, sceneStepIds: string[], currentStepId: string) {
         this.entity = entity;
-        this.currentStep = this.step(entity, sceneStepIds, currentStepId);
+        const currentStep = this.step(entity, sceneStepIds, currentStepId);
+        if (currentStep.id !== this.currentStep.id) {
+            this.previousStep = this.currentStep;
+            this.stepChangeTime = Date.now();
+        }
+        this.currentStep = currentStep;
         this.createVisualEffects();
     }
 
@@ -68,7 +77,7 @@ class RendererEntity {
             }
         }
 
-        return { position, bounds, effectProperties };
+        return { id: currentStepId, position, bounds, effectProperties };
     }
 
     private createVisualEffects() {
@@ -96,19 +105,65 @@ class RendererEntity {
         this.visualEffects = newEffects;
     }
 
+    renderEffectProperties(effectId: string): AnyProperties | undefined {
+        return this.currentStep.effectProperties[effectId];
+    }
+
+    stepTransitionProgress(): number {
+        if (!this.stepChangeTime) {
+            return 1;
+        }
+        const linear = Math.min(1, (Date.now() - this.stepChangeTime) / 300);
+        return linear * linear * (3 - 2 * linear);
+    }
+
     renderPosition(): { x: number; y: number } {
+        if (!this.previousStep || !this.stepChangeTime) {
+            return {
+                x: this.currentStep.position.x + this.dragMovement.x,
+                y: this.currentStep.position.y + this.dragMovement.y,
+            };
+        }
+
+        const transitionProgress = this.stepTransitionProgress();
         return {
-            x: this.currentStep.position.x + this.dragMovement.x,
-            y: this.currentStep.position.y + this.dragMovement.y,
+            x:
+                this.previousStep.position.x +
+                (this.currentStep.position.x - this.previousStep.position.x) * transitionProgress +
+                this.dragMovement.x,
+            y:
+                this.previousStep.position.y +
+                (this.currentStep.position.y - this.previousStep.position.y) * transitionProgress +
+                this.dragMovement.y,
         };
     }
 
     renderBounds(): { x: number; y: number; width: number; height: number } {
+        if (!this.previousStep || !this.stepChangeTime) {
+            return {
+                x: this.currentStep.bounds.x + this.dragMovement.x,
+                y: this.currentStep.bounds.y + this.dragMovement.y,
+                width: this.currentStep.bounds.width,
+                height: this.currentStep.bounds.height,
+            };
+        }
+
+        const transitionProgress = this.stepTransitionProgress();
         return {
-            x: this.currentStep.bounds.x + this.dragMovement.x,
-            y: this.currentStep.bounds.y + this.dragMovement.y,
-            width: this.currentStep.bounds.width,
-            height: this.currentStep.bounds.height,
+            x:
+                this.previousStep.bounds.x +
+                (this.currentStep.bounds.x - this.previousStep.bounds.x) * transitionProgress +
+                this.dragMovement.x,
+            y:
+                this.previousStep.bounds.y +
+                (this.currentStep.bounds.y - this.previousStep.bounds.y) * transitionProgress +
+                this.dragMovement.y,
+            width:
+                this.previousStep.bounds.width +
+                (this.currentStep.bounds.width - this.previousStep.bounds.width) * transitionProgress,
+            height:
+                this.previousStep.bounds.height +
+                (this.currentStep.bounds.height - this.previousStep.bounds.height) * transitionProgress,
         };
     }
 }
@@ -118,12 +173,58 @@ interface ColorMaterial {
     color: string;
 }
 
-export type Material = ColorMaterial;
+interface ImageMaterial {
+    type: 'image';
+    url: string;
+}
+
+export type Material = ColorMaterial | ImageMaterial;
+
+interface ImageManagerImage {
+    used: boolean;
+    broken?: boolean;
+    img: HTMLImageElement;
+}
+
+class ImageManager {
+    private images: Map<string, ImageManagerImage> = new Map();
+
+    use(url: string): HTMLImageElement | undefined {
+        let entry = this.images.get(url);
+        if (!entry) {
+            const img = new Image();
+            entry = { used: true, img };
+            img.src = url;
+            img.onerror = () => {
+                console.error(`failed to load image: ${url}`);
+                entry!.broken = true;
+            };
+            this.images.set(url, entry);
+        } else {
+            entry.used = true;
+        }
+        if (entry.broken) {
+            return undefined;
+        }
+        return entry.img;
+    }
+
+    cleanup() {
+        for (const [url, entry] of this.images) {
+            if (!entry.used) {
+                this.images.delete(url);
+            } else {
+                entry.used = false;
+            }
+        }
+    }
+}
 
 class Renderer {
     scene?: RaidScene;
     selection?: Selection;
 
+    private images = new ImageManager();
     private sceneDragMovement: { x: number; y: number } = { x: 0, y: 0 };
     private entities: Map<string, RendererEntity> = new Map();
     private entityDrawOrder: string[] = [];
@@ -168,7 +269,7 @@ class Renderer {
 
                 visualEffect.renderGround({
                     ctx,
-                    properties: entity.currentStep.effectProperties[id] || {},
+                    properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
                     center: pos,
@@ -226,6 +327,8 @@ class Renderer {
                 color: '#ffffff80',
             });
         }
+
+        this.images.cleanup();
     }
 
     showDropIndicator(indicator?: { position: { x: number; y: number }; shape: Shape }) {
@@ -268,8 +371,9 @@ class Renderer {
                     const shape = ep.shape;
                     switch (shape.type) {
                         case 'circle': {
-                            const dx = position.x - entity.currentStep.position.x;
-                            const dy = position.y - entity.currentStep.position.y;
+                            const entityPosition = entity.renderPosition();
+                            const dx = position.x - entityPosition.x;
+                            const dy = position.y - entityPosition.y;
                             if (dx * dx + dy * dy < shape.radius * shape.radius) {
                                 return entity.entity;
                             }
@@ -279,11 +383,12 @@ class Renderer {
                 }
             }
 
+            const bounds = entity.renderBounds();
             if (
-                position.x >= entity.currentStep.bounds.x &&
-                position.x <= entity.currentStep.bounds.x + entity.currentStep.bounds.width &&
-                position.y >= entity.currentStep.bounds.y &&
-                position.y <= entity.currentStep.bounds.y + entity.currentStep.bounds.height
+                position.x >= bounds.x &&
+                position.x <= bounds.x + bounds.width &&
+                position.y >= bounds.y &&
+                position.y <= bounds.y + bounds.height
             ) {
                 return entity.entity;
             }
@@ -301,25 +406,52 @@ class Renderer {
     ) {
         if (fill) {
             switch (fill.type) {
-                case 'color':
+                case 'color': {
                     ctx.fillStyle = fill.color;
-                    break;
-            }
 
-            switch (shape.type) {
-                case 'rectangle': {
-                    ctx.fillRect(
-                        (center.x - shape.width / 2) * scale,
-                        (center.y - shape.height / 2) * scale,
-                        shape.width * scale,
-                        shape.height * scale,
-                    );
+                    switch (shape.type) {
+                        case 'rectangle': {
+                            ctx.fillRect(
+                                (center.x - shape.width / 2) * scale,
+                                (center.y - shape.height / 2) * scale,
+                                shape.width * scale,
+                                shape.height * scale,
+                            );
+                            break;
+                        }
+                        case 'circle': {
+                            ctx.beginPath();
+                            ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
+                            ctx.fill();
+                            break;
+                        }
+                    }
                     break;
                 }
-                case 'circle': {
-                    ctx.beginPath();
-                    ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
-                    ctx.fill();
+                case 'image': {
+                    const img = this.images.use(fill.url);
+                    if (img) {
+                        ctx.save();
+
+                        const dimensions = shapeDimensions(shape);
+                        switch (shape.type) {
+                            case 'circle': {
+                                ctx.beginPath();
+                                ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
+                                ctx.clip();
+                                break;
+                            }
+                        }
+                        ctx.drawImage(
+                            img,
+                            (center.x - dimensions.width / 2) * scale,
+                            (center.y - dimensions.height / 2) * scale,
+                            dimensions.width * scale,
+                            dimensions.height * scale,
+                        );
+
+                        ctx.restore();
+                    }
                     break;
                 }
             }

@@ -1,13 +1,22 @@
 'use client';
 
-import { ArrowUUpRightIcon, ArrowUUpLeftIcon, Icon, PlusIcon, SparkleIcon, XIcon } from '@phosphor-icons/react';
+import {
+    ArrowFatLeftIcon,
+    ArrowFatRightIcon,
+    ArrowUUpRightIcon,
+    ArrowUUpLeftIcon,
+    Icon,
+    PlusIcon,
+    SparkleIcon,
+    TrashIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { Menubar as PrimeMenuBar } from 'primereact/menubar';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
-import { useState } from 'react';
 import { clsx } from 'clsx';
 
+import { EditableText } from '@/components';
 import { Command, HotKey, useCommands } from './commands';
-import { disablePasswordManagers } from '@/components/TextField';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
 
@@ -19,6 +28,14 @@ interface MenuItem extends PrimeMenuItem {
 interface TopLevelMenuItem extends MenuItem {
     items: MenuItem[];
 }
+
+const KEY_STRINGS: { [key: string]: string } = {
+    ArrowRight: '→',
+    ArrowLeft: '←',
+    ArrowUp: '↑',
+    ArrowDown: '↓',
+    Backspace: '⌫',
+};
 
 const menuItemRenderer = (item: MenuItem) => {
     return (
@@ -32,7 +49,7 @@ const menuItemRenderer = (item: MenuItem) => {
                     {item.hotKey.alt ? '⌥' : ''}
                     {item.hotKey.shift ? '⇧' : ''}
                     {item.hotKey.meta ? '⌘' : ''}
-                    {item.hotKey.key.toUpperCase()}
+                    {KEY_STRINGS[item.hotKey.key] || item.hotKey.key.toUpperCase()}
                 </div>
             )}
         </div>
@@ -51,20 +68,16 @@ const menuItemForCommand = (command: Command, icon: Icon): MenuItem => ({
 });
 
 export const MenuBar = () => {
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editedName, setEditedName] = useState('');
-
     const raidId = useHashParam('id');
     const raid = useSelector((state) => state.raids.metadata[raidId || '']);
 
     const dispatch = useDispatch();
 
-    const saveName = () => {
-        const trimmedName = editedName.trim();
+    const saveName = (newName: string) => {
+        const trimmedName = newName.trim();
         if (raidId && raid && trimmedName && trimmedName !== raid.name) {
             dispatch.raids.update({ id: raidId, name: trimmedName });
         }
-        setIsEditingName(false);
     };
 
     const commands = useCommands();
@@ -79,6 +92,7 @@ export const MenuBar = () => {
             items: [
                 menuItemForCommand(commands.undo, ArrowUUpLeftIcon),
                 menuItemForCommand(commands.redo, ArrowUUpRightIcon),
+                menuItemForCommand(commands.delete, TrashIcon),
             ],
         },
         {
@@ -87,7 +101,11 @@ export const MenuBar = () => {
         },
         {
             label: 'Step',
-            items: [menuItemForCommand(commands.newStep, PlusIcon)],
+            items: [
+                menuItemForCommand(commands.newStep, PlusIcon),
+                menuItemForCommand(commands.openNextStep, ArrowFatRightIcon),
+                menuItemForCommand(commands.openPreviousStep, ArrowFatLeftIcon),
+            ],
         },
         {
             label: 'Entity',
@@ -109,33 +127,10 @@ export const MenuBar = () => {
         <div className="w-full bg-elevation-1 shadow-lg flex items-center py-2 px-4">
             <div className="flex flex-col">
                 <div className="flex flex-row items-center">
-                    <input
-                        className={`border-0 text-xl font-bold rounded-md shadow-none px-2 py-1 hover:bg-black/20 focus:bg-black/20 focus:outline-1 outline-cyan-500 ring-none`}
-                        autoComplete="off"
-                        type="text"
-                        onFocus={() => {
-                            setEditedName(raid?.name || '');
-                            setIsEditingName(true);
-                        }}
-                        onChange={(e) => {
-                            setEditedName(e.target.value);
-                        }}
-                        onBlur={() => {
-                            saveName();
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                saveName();
-                                e.currentTarget.blur();
-                            } else if (e.key === 'Escape') {
-                                e.preventDefault();
-                                setIsEditingName(false);
-                                e.currentTarget.blur();
-                            }
-                        }}
-                        value={isEditingName ? editedName : raid?.name || ''}
-                        {...disablePasswordManagers}
+                    <EditableText
+                        value={raid?.name || ''}
+                        onChange={saveName}
+                        className="text-xl font-bold hover:bg-black/20"
                     />
                 </div>
                 <div className="flex flex-row">

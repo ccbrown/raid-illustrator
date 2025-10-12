@@ -6,7 +6,15 @@ import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { SceneSettingsDialog } from './SceneSettingsDialog';
 import { StepSettingsDialog } from './StepSettingsDialog';
 import { useRaidId } from './hooks';
-import { useEntity, useKeyPressEvents, useRaidWorkspace, useSceneWorkspace, useSelection } from '@/hooks';
+import {
+    useEntity,
+    useKeyDownEvents,
+    useKeyPressEvents,
+    useRaidWorkspace,
+    useScene,
+    useSceneWorkspace,
+    useSelection,
+} from '@/hooks';
 import { useDispatch } from '@/store';
 
 export interface HotKey {
@@ -29,10 +37,13 @@ interface Commands {
     close: Command;
     undo: Command;
     redo: Command;
+    delete: Command;
     zoomIn: Command;
     zoomOut: Command;
     newScene: Command;
     newStep: Command;
+    openNextStep: Command;
+    openPreviousStep: Command;
     newEntity: Command;
     addEntityEffect: Command;
 }
@@ -83,6 +94,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const raidWorkspace = useRaidWorkspace(raidId || '');
 
     const sceneId = raidWorkspace?.openSceneId;
+    const scene = useScene(sceneId || '');
     const sceneWorkspace = useSceneWorkspace(sceneId || '');
     const selection = useSelection(raidId || '');
     const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
@@ -94,6 +106,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
     const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
+
+    const openStepIndex = scene?.stepIds.indexOf(sceneWorkspace?.openStepId || '');
+    const nextStepId = scene?.stepIds[openStepIndex === undefined ? 0 : openStepIndex + 1];
+    const previousStepId = scene?.stepIds[openStepIndex === undefined ? scene?.stepIds.length - 1 : openStepIndex - 1];
 
     const hotKeyBase = useMacLikeHotKeys
         ? {
@@ -142,6 +158,27 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 }
             },
         },
+        delete: {
+            name: 'Delete',
+            disabled:
+                (!selection?.entityIds || selection.entityIds.length === 0) &&
+                (!selection?.stepIds || selection.stepIds.length === 0) &&
+                (!selection?.sceneIds || selection.sceneIds.length === 0),
+            hotKey: {
+                key: 'Backspace',
+            },
+            additionalHotKeys: [
+                {
+                    ...hotKeyBase,
+                    key: 'Backspace',
+                },
+            ],
+            execute: () => {
+                dispatch.raids.deleteEntities({ ids: selection?.entityIds || [] });
+                dispatch.raids.deleteSteps({ ids: selection?.stepIds || [] });
+                dispatch.raids.deleteScenes({ ids: selection?.sceneIds || [] });
+            },
+        },
         newScene: {
             name: 'New Scene',
             disabled: !raidId,
@@ -154,6 +191,34 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !sceneId,
             execute: () => {
                 setNewStepDialogOpen(true);
+            },
+        },
+        openNextStep: {
+            name: 'Next Step',
+            disabled: !nextStepId,
+            hotKey: {
+                ...hotKeyBase,
+                key: 'ArrowRight',
+                shift: true,
+            },
+            execute: () => {
+                if (raidId && sceneId && nextStepId) {
+                    dispatch.workspaces.openStep({ sceneId, id: nextStepId });
+                }
+            },
+        },
+        openPreviousStep: {
+            name: 'Previous Step',
+            disabled: !previousStepId,
+            hotKey: {
+                ...hotKeyBase,
+                key: 'ArrowLeft',
+                shift: true,
+            },
+            execute: () => {
+                if (raidId && sceneId && previousStepId) {
+                    dispatch.workspaces.openStep({ sceneId, id: previousStepId });
+                }
             },
         },
         newEntity: {
@@ -218,7 +283,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
     };
 
-    useKeyPressEvents((e) => {
+    const handleKeyEvent = (e: KeyboardEvent) => {
         const command = findCommandByHotKey(commands, {
             key: e.key,
             alt: e.altKey,
@@ -241,6 +306,20 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
         if (!command.disabled) {
             command.execute();
+        }
+    };
+
+    const KEY_DOWN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+    useKeyPressEvents((e) => {
+        if (!KEY_DOWN_KEYS.includes(e.key)) {
+            handleKeyEvent(e);
+        }
+    });
+
+    useKeyDownEvents((e) => {
+        if (KEY_DOWN_KEYS.includes(e.key)) {
+            handleKeyEvent(e);
         }
     });
 

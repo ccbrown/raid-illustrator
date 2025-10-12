@@ -27,7 +27,7 @@ class Waymark extends VisualEffect {
         img.src = params.markerImageUrl;
         this.markerImage = img;
         this.markerImage.onerror = () => {
-            console.log(`failed to load waymark image: ${params.markerImageUrl}`);
+            console.error(`failed to load waymark image: ${params.markerImageUrl}`);
             this.markerImage = undefined;
         };
         this.markerImageScale = params.markerImageScale;

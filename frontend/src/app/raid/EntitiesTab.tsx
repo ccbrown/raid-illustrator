@@ -1,6 +1,7 @@
-import { GearSixIcon, TrashIcon } from '@phosphor-icons/react';
+import { GearSixIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
+import { EditableText } from '@/components';
 import { useRaidId } from './hooks';
 import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
 import { EntitySettingsDialog } from './EntitySettingsDialog';
@@ -22,40 +23,35 @@ const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => 
         }
     };
 
-    const deleteEntity = () => {
-        dispatch.raids.deleteEntity({ id });
-    };
-
     if (!entity) {
         return null;
     }
 
+    const isSelected = selectedEntityIds.includes(entity.id);
     return (
         <div
-            className={`flex flex-row gap-2 px-4 py-2 transition ${selectedEntityIds.includes(entity.id) ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            className={`flex flex-row gap-2 px-2 py-2 transition ${isSelected ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
             onClick={() => {
                 selectEntity();
             }}
         >
-            <div className="pr-2">{entity.name}</div>
+            <EditableText
+                className="text-sm"
+                disabled={!isSelected}
+                value={entity.name}
+                onChange={(newName) => {
+                    dispatch.raids.updateEntity({ id: entity.id, name: newName });
+                }}
+            />
             <div className="flex-grow" />
             <button
-                className="subtle"
+                className="subtle pr-2"
                 onClick={(e) => {
                     e.stopPropagation();
                     onSettingsClick();
                 }}
             >
                 <GearSixIcon size={20} />
-            </button>
-            <button
-                className="subtle"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    deleteEntity();
-                }}
-            >
-                <TrashIcon size={18} />
             </button>
         </div>
     );
@@ -73,7 +69,7 @@ export const EntitiesTab = () => {
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
     return (
-        <div className="py-2 flex flex-col">
+        <div className="py-2 flex flex-col max-h-[400px] overflow-y-auto">
             {raidId && scene && (
                 <EntitySettingsDialog
                     isOpen={settingsDialogOpen}

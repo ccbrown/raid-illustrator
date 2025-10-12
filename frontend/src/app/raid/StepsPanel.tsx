@@ -1,19 +1,21 @@
-import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { GearSixIcon, PlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import clsx from 'clsx';
 
 import { useRaidId } from './hooks';
 import { StepSettingsDialog } from './StepSettingsDialog';
-import { Button } from '@/components';
-import { useRaidWorkspace, useSceneWorkspace, useScene, useStep } from '@/hooks';
+import { Button, EditableText } from '@/components';
+import { useRaidWorkspace, useSceneWorkspace, useScene, useStep, useSelection } from '@/hooks';
 import { useDispatch } from '@/store';
 
 interface ListItemProps {
     id: string;
     onSettingsClick: () => void;
     openStepId?: string;
+    selectedStepIds?: string[];
 }
 
-const ListItem = ({ id, onSettingsClick, openStepId }: ListItemProps) => {
+const ListItem = ({ id, onSettingsClick, openStepId, selectedStepIds }: ListItemProps) => {
     const step = useStep(id);
     const dispatch = useDispatch();
 
@@ -24,39 +26,42 @@ const ListItem = ({ id, onSettingsClick, openStepId }: ListItemProps) => {
     const openStep = () => {
         if (step) {
             dispatch.workspaces.openStep({ id, sceneId: step.sceneId });
+            dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: [step.id] } });
         }
     };
 
-    const deleteStep = () => {
-        dispatch.raids.deleteStep({ id });
-    };
+    const isOpen = step.id === openStepId;
+    const isSelected = selectedStepIds?.includes(step.id);
 
     return (
         <div
-            className={`flex flex-row gap-2 px-4 py-2 transition ${step.id === openStepId ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            className={clsx('flex flex-row gap-2 px-2 py-2 transition', {
+                'bg-indigo-500': isSelected,
+                'cursor-pointer': !isSelected,
+                'bg-white/10 hover:bg-white/20': isOpen && !isSelected,
+                'hover:bg-white/10': !isOpen && !isSelected,
+            })}
             onClick={() => {
                 openStep();
             }}
         >
-            <div className="pr-2">{step.name}</div>
+            <EditableText
+                className="text-sm"
+                disabled={!isSelected}
+                value={step.name}
+                onChange={(newName) => {
+                    dispatch.raids.updateStep({ id: step.id, name: newName });
+                }}
+            />
             <div className="flex-grow" />
             <button
-                className="subtle"
+                className="subtle pr-2"
                 onClick={(e) => {
                     e.stopPropagation();
                     onSettingsClick();
                 }}
             >
                 <GearSixIcon size={20} />
-            </button>
-            <button
-                className="subtle"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    deleteStep();
-                }}
-            >
-                <TrashIcon size={18} />
             </button>
         </div>
     );
@@ -67,6 +72,7 @@ export const StepsPanel = () => {
     const workspace = useRaidWorkspace(raidId || '');
     const scene = useScene(workspace?.openSceneId || '');
     const sceneWorkspace = useSceneWorkspace(scene?.id || '');
+    const selection = useSelection(raidId || '');
 
     const [settingsDialogStepId, setSettingsDialogStepId] = useState<string | null>(null);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -105,6 +111,7 @@ export const StepsPanel = () => {
                         setSettingsDialogOpen(true);
                     }}
                     openStepId={sceneWorkspace?.openStepId}
+                    selectedStepIds={selection?.stepIds}
                 />
             ))}
         </div>

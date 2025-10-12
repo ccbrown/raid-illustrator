@@ -58,8 +58,20 @@ export const EntitiesPanel = () => {
                     </div>
                 )}
             </div>
-            {tab === 'entities' && <EntitiesTab />}
-            {tab === 'presets' && <EntityPresetsTab />}
+            <div
+                className={clsx({
+                    hidden: tab !== 'entities',
+                })}
+            >
+                <EntitiesTab />
+            </div>
+            <div
+                className={clsx({
+                    hidden: tab !== 'presets',
+                })}
+            >
+                <EntityPresetsTab />
+            </div>
         </div>
     );
 };

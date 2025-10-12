@@ -22,6 +22,8 @@ interface UndoRedoStackAction {
 
 export interface Selection {
     entityIds?: string[];
+    sceneIds?: string[];
+    stepIds?: string[];
 }
 
 export interface EntityPresetDragData {
@@ -80,6 +82,16 @@ export const workspaces = createModel<RootModel>()({
                     raid.openSceneId = undefined;
                 }
             });
+        },
+        removeEntitiesFromSelection(state, payload: { raidId: string; entityIds: string[] }) {
+            const raid = state.raids[payload.raidId];
+            if (!raid || !raid.selection || !raid.selection.entityIds) {
+                return;
+            }
+            raid.selection.entityIds = raid.selection.entityIds.filter((id) => !payload.entityIds.includes(id));
+            if (raid.selection.entityIds.length === 0) {
+                raid.selection = undefined;
+            }
         },
         pushUndo(state, payload: { raidId: string; action: UndoRedoStackAction; preserveRedo?: boolean }) {
             const raid = state.raids[payload.raidId];

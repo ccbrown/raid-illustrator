@@ -14,6 +14,29 @@ interface Preset {
     generate: () => EntityPresetDragData;
 }
 
+const basicImagePreset = (name: string, shape: Shape, imageUrl: string): Preset => {
+    return {
+        name,
+        iconUrl: imageUrl,
+        generate: () => ({
+            name,
+            properties: {
+                type: 'shape',
+                shape,
+                position: { initial: { x: 0, y: 0 } },
+                fill: {
+                    type: 'image',
+                    url: imageUrl,
+                },
+            },
+        }),
+    };
+};
+
+const ffxivRoleFramePreset = (name: string, imageName: string): Preset => {
+    return basicImagePreset(name, { type: 'rectangle', width: 1, height: 1 }, `/images/ffxiv/role-frames/${imageName}`);
+};
+
 const generateBasicEffectEntity = (name: string, shape: Shape, effectFactoryId: string): EntityPresetDragData => {
     const effectFactory = visualEffectFactories[effectFactoryId];
     if (!effectFactory) {
@@ -78,6 +101,56 @@ const presets: Preset[] = [
         iconUrl: '/images/ffxiv/waymarks/icons/4.png',
         generate: () => generateBasicEffectEntity('Waymark 4', { type: 'circle', radius: 1 }, 'ffxiv-waymark-4'),
     },
+    ffxivRoleFramePreset('DPS', 'dps.png'),
+    ffxivRoleFramePreset('Melee DPS', 'melee-dps.png'),
+    ffxivRoleFramePreset('Ranged DPS', 'ranged-dps.png'),
+    ffxivRoleFramePreset('Physical Ranged DPS', 'physical-ranged-dps.png'),
+    ffxivRoleFramePreset('Magical Ranged DPS', 'magical-ranged-dps.png'),
+    ffxivRoleFramePreset('Healer', 'healer.png'),
+    ffxivRoleFramePreset('Pure Healer', 'pure-healer.png'),
+    ffxivRoleFramePreset('Barrier Healer', 'barrier-healer.png'),
+    ffxivRoleFramePreset('Tank', 'tank.png'),
+    ffxivRoleFramePreset('Multi-Role', 'multi-role.png'),
+    ffxivRoleFramePreset('Pet', 'pet.png'),
+    ffxivRoleFramePreset('Mount', 'mount.png'),
+    ffxivRoleFramePreset('Arcanist', 'arcanist.png'),
+    ffxivRoleFramePreset('Archer', 'archer.png'),
+    ffxivRoleFramePreset('Astrologian', 'astrologian.png'),
+    ffxivRoleFramePreset('Bard', 'bard.png'),
+    ffxivRoleFramePreset('Black Mage', 'black-mage.png'),
+    ffxivRoleFramePreset('Blue Mage', 'blue-mage.png'),
+    ffxivRoleFramePreset('Conjurer', 'conjurer.png'),
+    ffxivRoleFramePreset('Dancer', 'dancer.png'),
+    ffxivRoleFramePreset('Dark Knight', 'dark-knight.png'),
+    ffxivRoleFramePreset('Dragoon', 'dragoon.png'),
+    ffxivRoleFramePreset('Gladiator', 'gladiator.png'),
+    ffxivRoleFramePreset('Gunbreaker', 'gunbreaker.png'),
+    ffxivRoleFramePreset('Lancer', 'lancer.png'),
+    ffxivRoleFramePreset('Machinist', 'machinist.png'),
+    ffxivRoleFramePreset('Marauder', 'marauder.png'),
+    ffxivRoleFramePreset('Monk', 'monk.png'),
+    ffxivRoleFramePreset('Ninja', 'ninja.png'),
+    ffxivRoleFramePreset('Paladin', 'paladin.png'),
+    ffxivRoleFramePreset('Person', 'person.png'),
+    ffxivRoleFramePreset('Pictomancer', 'pictomancer.png'),
+    ffxivRoleFramePreset('Pugilist', 'pugilist.png'),
+    ffxivRoleFramePreset('Reaper', 'reaper.png'),
+    ffxivRoleFramePreset('Red-mage', 'red-mage.png'),
+    ffxivRoleFramePreset('Rogue', 'rogue.png'),
+    ffxivRoleFramePreset('Sage', 'sage.png'),
+    ffxivRoleFramePreset('Samurai', 'samurai.png'),
+    ffxivRoleFramePreset('Scholar', 'scholar.png'),
+    ffxivRoleFramePreset('Summoner', 'summoner.png'),
+    ffxivRoleFramePreset('Thaumaturge', 'thaumaturge.png'),
+    ffxivRoleFramePreset('Viper', 'viper.png'),
+    ffxivRoleFramePreset('Warrior', 'warrior.png'),
+    ffxivRoleFramePreset('White Mage', 'white-mage.png'),
+    ffxivRoleFramePreset('Blank DPS', 'blank-dps.png'),
+    ffxivRoleFramePreset('Blank Healer', 'blank-healer.png'),
+    ffxivRoleFramePreset('Blank Tank', 'blank-tank.png'),
+    ffxivRoleFramePreset('Blank Multi-Role', 'blank-multi-role.png'),
+    ffxivRoleFramePreset('Blank Summon', 'blank-summon.png'),
+    ffxivRoleFramePreset('Blank Neutral', 'blank-neutral.png'),
 ];
 
 const PresetButton = ({ preset }: { preset: Preset }) => {
@@ -86,7 +159,7 @@ const PresetButton = ({ preset }: { preset: Preset }) => {
 
     return (
         <div
-            className="bg-elevation-2 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-elevation-3 hover:shadow-md"
+            className="bg-elevation-2 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-elevation-3 hover:border-1 hover:border-white/70 hover:shadow-md"
             draggable="true"
             onDragStart={(e) => {
                 const data = preset.generate();
@@ -104,7 +177,7 @@ const PresetButton = ({ preset }: { preset: Preset }) => {
 
 export const EntityPresetsTab = () => {
     return (
-        <div className="p-2 grid grid-cols-5 gap-1">
+        <div className="p-2 grid grid-cols-5 gap-1 max-h-[400px] overflow-y-auto">
             {presets.map((preset, idx) => (
                 <PresetButton key={idx} preset={preset} />
             ))}

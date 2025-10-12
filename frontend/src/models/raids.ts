@@ -337,24 +337,35 @@ export const raids = createModel<RootModel>()({
                 },
             });
         },
-        deleteScene(
+        deleteScenes(
             payload: {
-                id: string;
+                ids: string[];
             },
             state,
         ) {
-            const existing = state.raids.scenes[payload.id];
-            if (!existing) {
+            if (payload.ids.length === 0) {
                 return;
             }
 
-            const stepsToRemove = Object.values(state.raids.steps).filter((s) => s.sceneId === payload.id);
+            const existingScenes = payload.ids.map((id) => state.raids.scenes[id]).filter((s) => !!s);
+            if (existingScenes.length === 0) {
+                return;
+            }
+
+            const raidId = existingScenes[0].raidId;
+            if (existingScenes.some((s) => s.raidId !== raidId)) {
+                throw new Error('Can only delete scenes from one raid at a time');
+            }
+
+            const stepsToRemove = Object.values(state.raids.steps).filter((s) => payload.ids.includes(s.sceneId));
+            const entitiesToRemove = Object.values(state.raids.entities).filter((e) => payload.ids.includes(e.sceneId));
 
             dispatch.raids.undoableBatchOperation({
-                name: 'Delete Scene',
-                raidId: existing.raidId,
+                name: `Delete Scene${existingScenes.length > 1 ? 's' : ''}`,
+                raidId,
                 operation: {
-                    removeScenes: [payload.id],
+                    removeEntities: entitiesToRemove.map((e) => e.id),
+                    removeScenes: existingScenes.map((s) => s.id),
                     removeSteps: stepsToRemove.map((s) => s.id),
                 },
             });
@@ -418,22 +429,31 @@ export const raids = createModel<RootModel>()({
                 },
             });
         },
-        deleteStep(
+        deleteSteps(
             payload: {
-                id: string;
+                ids: string[];
             },
             state,
         ) {
-            const existing = state.raids.steps[payload.id];
-            if (!existing) {
+            if (payload.ids.length === 0) {
                 return;
             }
 
+            const existingSteps = payload.ids.map((id) => state.raids.steps[id]).filter((s) => !!s);
+            if (existingSteps.length === 0) {
+                return;
+            }
+
+            const raidId = existingSteps[0].raidId;
+            if (existingSteps.some((s) => s.raidId !== raidId)) {
+                throw new Error('Can only delete steps from one raid at a time');
+            }
+
             dispatch.raids.undoableBatchOperation({
-                name: 'Delete Step',
-                raidId: existing.raidId,
+                name: `Delete Step${existingSteps.length > 1 ? 's' : ''}`,
+                raidId,
                 operation: {
-                    removeSteps: [payload.id],
+                    removeSteps: existingSteps.map((s) => s.id),
                 },
             });
         },
@@ -585,24 +605,35 @@ export const raids = createModel<RootModel>()({
                 },
             });
         },
-        deleteEntity(
+        deleteEntities(
             payload: {
-                id: string;
+                ids: string[];
             },
             state,
         ) {
-            const existing = state.raids.entities[payload.id];
-            if (!existing) {
+            if (payload.ids.length === 0) {
                 return;
             }
 
+            const existingEntities = payload.ids.map((id) => state.raids.entities[id]).filter((e) => !!e);
+            if (existingEntities.length === 0) {
+                return;
+            }
+
+            const raidId = existingEntities[0].raidId;
+            if (existingEntities.some((e) => e.raidId !== raidId)) {
+                throw new Error('Can only delete entities from one raid at a time');
+            }
+
             dispatch.raids.undoableBatchOperation({
-                name: 'Delete Entity',
-                raidId: existing.raidId,
+                name: `Delete Entit${existingEntities.length > 1 ? 'ies' : 'y'}`,
+                raidId,
                 operation: {
-                    removeEntities: [payload.id],
+                    removeEntities: existingEntities.map((e) => e.id),
                 },
             });
+
+            dispatch.workspaces.removeEntitiesFromSelection({ raidId, entityIds: payload.ids });
         },
     }),
 });

@@ -6,14 +6,18 @@ import { useRaidWorkspace, useSceneWorkspace, useScene, useSelection } from '@/h
 import { shapeDimensions } from '@/shapes';
 import { useDispatch } from '@/store';
 import { useSceneRenderer } from '@/renderer';
+import { EntityPresetDragData } from '@/models/workspaces';
 
 const PIXELS_PER_METER = 100;
+
+export const ENTITY_PRESET_DRAG_MIME_TYPE = 'application/x-raid-illustrator-new-shape-entity';
 
 export const Canvas = () => {
     const raidId = useRaidId();
     const raidWorkspace = useRaidWorkspace(raidId || '');
     const scene = useScene(raidWorkspace?.openSceneId || '');
-    const sceneWorkspace = useSceneWorkspace(scene?.id || '');
+    const sceneId = scene?.id;
+    const sceneWorkspace = useSceneWorkspace(sceneId || '');
     const stepId = sceneWorkspace?.openStepId;
 
     const dispatch = useDispatch();
@@ -27,12 +31,13 @@ export const Canvas = () => {
 
     const [canvasContext, setCanvasContext] = useState<CanvasRenderingContext2D | null>(null);
 
-    const renderer = useSceneRenderer(scene?.id || '', stepId || '');
+    const renderer = useSceneRenderer(sceneId || '', stepId || '');
 
     const zoom = sceneWorkspace?.zoom || 1;
     const center = useMemo(() => sceneWorkspace?.center || { x: 0, y: 0 }, [sceneWorkspace]);
     const pixelsPerMeterZoomed = zoom * PIXELS_PER_METER;
     const sceneDimensions = scene ? shapeDimensions(scene.shape) : { width: 0, height: 0 };
+    const entityPresetDragData = raidWorkspace?.entityPresetDragData;
 
     const mouseDown = useRef<{
         brokeDragThreshold: boolean;
@@ -45,7 +50,7 @@ export const Canvas = () => {
         ({ x, y }: { x: number; y: number }) => {
             return {
                 x: (x - 0.5 * canvasWidth) / pixelsPerMeterZoomed + center.x,
-                y: (0.5 * canvasHeight - y) / pixelsPerMeterZoomed + center.y,
+                y: (y - 0.5 * canvasHeight) / pixelsPerMeterZoomed + center.y,
             };
         },
         [canvasWidth, canvasHeight, pixelsPerMeterZoomed, center],
@@ -183,7 +188,7 @@ export const Canvas = () => {
                             x: center.x - movement.x,
                             y: center.y - movement.y,
                         };
-                        dispatch.workspaces.updateScene({ id: scene?.id || '', center: newCenter });
+                        dispatch.workspaces.updateScene({ id: sceneId || '', center: newCenter });
                     }
                 }
             } else if (!mouseDown.current.hitEntity) {
@@ -194,7 +199,52 @@ export const Canvas = () => {
             renderer.resetDragMovement();
             mouseDown.current = null;
         },
-        [renderer, pixelToSceneCoordinate, selection, dispatch, stepId, center, scene, raidId],
+        [renderer, pixelToSceneCoordinate, selection, dispatch, stepId, center, sceneId, raidId],
+    );
+
+    const dragOverHandler = useCallback(
+        (e: React.DragEvent) => {
+            if (e.dataTransfer.types.includes(ENTITY_PRESET_DRAG_MIME_TYPE)) {
+                // By default, the drop event is not allowed. We have to preventDefault to indicate that we will handle it.
+                e.preventDefault();
+
+                const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+
+                // For security reasons, browsers don't let us see the drag data during dragover.
+                // See if we put data in the store - otherwise, fall back to a square indicator.
+                const shape = entityPresetDragData
+                    ? entityPresetDragData.properties.shape
+                    : { type: 'rectangle' as const, width: 1, height: 1 };
+
+                renderer.showDropIndicator({ position: pos, shape });
+            }
+        },
+        [pixelToSceneCoordinate, renderer, entityPresetDragData],
+    );
+
+    const dropHandler = useCallback(
+        (e: React.DragEvent) => {
+            const dataString = e.dataTransfer.getData(ENTITY_PRESET_DRAG_MIME_TYPE);
+            if (dataString) {
+                const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+                const data = JSON.parse(dataString) as EntityPresetDragData;
+
+                dispatch.raids.createEntity({
+                    name: data.name,
+                    raidId: raidId || '',
+                    sceneId: sceneId || '',
+                    properties: {
+                        ...data.properties,
+                        position: { initial: pos },
+                    },
+                });
+
+                e.dataTransfer.clearData(ENTITY_PRESET_DRAG_MIME_TYPE);
+            }
+
+            renderer.hideDropIndicator();
+        },
+        [renderer, pixelToSceneCoordinate, dispatch, raidId, sceneId],
     );
 
     return (
@@ -205,6 +255,9 @@ export const Canvas = () => {
                 onMouseDown={mouseDownHandler}
                 onMouseMove={mouseMoveHandler}
                 onMouseUp={mouseUpHandler}
+                onDragOver={dragOverHandler}
+                onDragLeave={() => renderer.hideDropIndicator()}
+                onDrop={dropHandler}
             />
             <div className="absolute bottom-0 w-full flex flex-row justify-center pointer-events-none">
                 <div className="px-6 py-1 bg-elevation-1/80 rounded-t-md text-xs text-white/80 backdrop-blur-sm pointer-events-auto">

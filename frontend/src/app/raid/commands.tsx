@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { EffectSelectionDialog } from './EffectSelectionDialog';
 import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { SceneSettingsDialog } from './SceneSettingsDialog';
 import { StepSettingsDialog } from './StepSettingsDialog';
-import { useHashParam, useKeyPressEvents } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
+import { useRaidId } from './hooks';
+import { useEntity, useKeyPressEvents, useRaidWorkspace, useSceneWorkspace, useSelection } from '@/hooks';
+import { useDispatch } from '@/store';
 
 export interface HotKey {
     key: string;
@@ -32,6 +34,7 @@ interface Commands {
     newScene: Command;
     newStep: Command;
     newEntity: Command;
+    addEntityEffect: Command;
 }
 
 const findCommandByHotKey = (commands: Commands, hotKey: HotKey): Command | null => {
@@ -73,18 +76,21 @@ interface CommandProviderProps {
 const shouldUseMacLikeHotKeys = () => window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 export const CommandsProvider = (props: CommandProviderProps) => {
-    const raidId = useHashParam('id');
+    const raidId = useRaidId();
     const router = useRouter();
     const dispatch = useDispatch();
     const useMacLikeHotKeys = shouldUseMacLikeHotKeys();
-    const raidWorkspace = useSelector((state) => state.workspaces.raids[raidId || '']);
+    const raidWorkspace = useRaidWorkspace(raidId || '');
 
     const sceneId = raidWorkspace?.openSceneId;
-    const sceneWorkspace = useSelector((state) => state.workspaces.scenes[sceneId || '']);
+    const sceneWorkspace = useSceneWorkspace(sceneId || '');
+    const selection = useSelection(raidId || '');
+    const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
 
     const [newSceneDialogOpen, setNewSceneDialogOpen] = useState(false);
     const [newStepDialogOpen, setNewStepDialogOpen] = useState(false);
     const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
+    const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
 
     const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
     const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
@@ -155,6 +161,13 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !sceneId,
             execute: () => {
                 setNewEntityDialogOpen(true);
+            },
+        },
+        addEntityEffect: {
+            name: 'Add Effect',
+            disabled: !selectedEntity || selectedEntity.properties.type !== 'shape',
+            execute: () => {
+                setEffectSelectionDialogOpen(true);
             },
         },
         zoomIn: {
@@ -256,6 +269,14 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                     onClose={() => setNewEntityDialogOpen(false)}
                     raidId={raidId}
                     sceneId={sceneId}
+                />
+            )}
+
+            {selectedEntity && (
+                <EffectSelectionDialog
+                    isOpen={effectSelectionDialogOpen}
+                    onClose={() => setEffectSelectionDialogOpen(false)}
+                    entity={selectedEntity}
                 />
             )}
 

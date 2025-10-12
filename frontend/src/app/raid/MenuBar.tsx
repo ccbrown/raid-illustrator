@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUUpRightIcon, ArrowUUpLeftIcon, Icon, PlusIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowUUpRightIcon, ArrowUUpLeftIcon, Icon, PlusIcon, SparkleIcon, XIcon } from '@phosphor-icons/react';
 import { Menubar as PrimeMenuBar } from 'primereact/menubar';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
 import { useState } from 'react';
@@ -91,7 +91,10 @@ export const MenuBar = () => {
         },
         {
             label: 'Entity',
-            items: [menuItemForCommand(commands.newEntity, PlusIcon)],
+            items: [
+                menuItemForCommand(commands.newEntity, PlusIcon),
+                menuItemForCommand(commands.addEntityEffect, SparkleIcon),
+            ],
         },
         {
             label: 'View',

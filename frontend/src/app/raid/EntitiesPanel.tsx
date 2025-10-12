@@ -1,116 +1,65 @@
-import { GearSixIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { PlusIcon } from '@phosphor-icons/react';
+import clsx from 'clsx';
 
-import { useRaidId } from './hooks';
-import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
-import { EntitySettingsDialog } from './EntitySettingsDialog';
-import { useCommands } from './commands';
 import { Button } from '@/components';
+import { useCommands } from './commands';
+import { EntitiesTab } from './EntitiesTab';
+import { EntityPresetsTab } from './EntityPresetsTab';
+import { useRaidId } from './hooks';
+import { useRaidWorkspace } from '@/hooks';
 import { useDispatch } from '@/store';
 
-interface ListItemProps {
-    id: string;
-    onSettingsClick: () => void;
-    selectedEntityIds: string[];
-}
-
-const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => {
-    const entity = useEntity(id);
+const Tab = ({ id, label, activeTabId }: { id: string; label: string; activeTabId: string }) => {
+    const raidId = useRaidId();
     const dispatch = useDispatch();
-
-    const selectEntity = () => {
-        if (entity) {
-            dispatch.workspaces.select({ raidId: entity.raidId, selection: { entityIds: [entity.id] } });
-        }
-    };
-
-    const deleteEntity = () => {
-        dispatch.raids.deleteEntity({ id });
-    };
-
-    if (!entity) {
-        return null;
-    }
 
     return (
         <div
-            className={`flex flex-row gap-2 px-4 py-2 transition ${selectedEntityIds.includes(entity.id) ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
+            className={clsx(`px-4 py-2 font-semibold cursor-pointer text-sm`, {
+                'border-b-2 border-white/70 text-white': activeTabId === id,
+                'text-white/50 hover:text-white': activeTabId !== id,
+            })}
             onClick={() => {
-                selectEntity();
+                if (raidId) {
+                    dispatch.workspaces.openEntitiesPanelTab({ raidId, tab: id as 'entities' | 'presets' });
+                }
             }}
         >
-            <div className="pr-2">{entity.name}</div>
-            <div className="flex-grow" />
-            <button
-                className="subtle"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onSettingsClick();
-                }}
-            >
-                <GearSixIcon size={20} />
-            </button>
-            <button
-                className="subtle"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    deleteEntity();
-                }}
-            >
-                <TrashIcon size={18} />
-            </button>
+            {label}
         </div>
     );
 };
 
 export const EntitiesPanel = () => {
     const commands = useCommands();
-
     const raidId = useRaidId();
     const workspace = useRaidWorkspace(raidId || '');
-    const scene = useScene(workspace?.openSceneId || '');
+    const tab = workspace?.entitiesPanelTab || 'entities';
 
-    const selection = useSelection(raidId || '');
-    const selectedEntityIds = selection?.entityIds || [];
-
-    const [settingsDialogEntityId, setSettingsDialogEntityId] = useState<string | null>(null);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+    if (!raidId) {
+        return null;
+    }
 
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
-            {raidId && scene && (
-                <EntitySettingsDialog
-                    isOpen={settingsDialogOpen}
-                    onClose={() => setSettingsDialogOpen(false)}
-                    raidId={raidId}
-                    sceneId={scene.id}
-                    entityId={settingsDialogEntityId}
-                />
-            )}
-            <div className="flex flex-row items-center mb-2">
-                <div className="px-4 font-semibold">Entities</div>
+        <div className="bg-elevation-1 rounded-lg shadow-lg flex flex-col">
+            <div className="flex flex-row items-center border-b-1 border-elevation-2">
+                <Tab id="entities" label="Entities" activeTabId={tab} />
+                <Tab id="presets" label="Presets" activeTabId={tab} />
                 <div className="flex-grow" />
-                <div className="px-4">
-                    <Button
-                        icon={PlusIcon}
-                        size="small"
-                        onClick={() => {
-                            commands.newEntity.execute();
-                        }}
-                    />
-                </div>
+                {tab === 'entities' && (
+                    <div className="px-4">
+                        <Button
+                            icon={PlusIcon}
+                            size="small"
+                            onClick={() => {
+                                commands.newEntity.execute();
+                            }}
+                        />
+                    </div>
+                )}
             </div>
-            {scene?.entityIds.map((id) => (
-                <ListItem
-                    key={id}
-                    id={id}
-                    onSettingsClick={() => {
-                        setSettingsDialogEntityId(id);
-                        setSettingsDialogOpen(true);
-                    }}
-                    selectedEntityIds={selectedEntityIds}
-                />
-            ))}
+            {tab === 'entities' && <EntitiesTab />}
+            {tab === 'presets' && <EntityPresetsTab />}
         </div>
     );
 };

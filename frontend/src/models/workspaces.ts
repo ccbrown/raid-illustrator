@@ -1,7 +1,7 @@
 import { createModel } from '@rematch/core';
 
 import { RootModel } from '.';
-import { RaidBatchOperation } from './raids';
+import { RaidEntityPropertiesShape, RaidBatchOperation } from './raids';
 
 interface SceneWorkspace {
     id: string;
@@ -24,12 +24,19 @@ export interface Selection {
     entityIds?: string[];
 }
 
+export interface EntityPresetDragData {
+    name: string;
+    properties: RaidEntityPropertiesShape;
+}
+
 interface RaidWorkspace {
     id: string;
     lastActivityTime: number;
 
     openSceneId?: string;
+    entitiesPanelTab?: 'entities' | 'presets';
     selection?: Selection;
+    entityPresetDragData?: EntityPresetDragData;
 
     undoStack?: UndoRedoStackAction[];
     redoStack?: UndoRedoStackAction[];
@@ -74,7 +81,7 @@ export const workspaces = createModel<RootModel>()({
                 }
             });
         },
-        pushUndo(state, payload: { raidId: string; action: UndoRedoStackAction }) {
+        pushUndo(state, payload: { raidId: string; action: UndoRedoStackAction; preserveRedo?: boolean }) {
             const raid = state.raids[payload.raidId];
             if (!raid) {
                 return;
@@ -83,7 +90,9 @@ export const workspaces = createModel<RootModel>()({
                 raid.undoStack = [];
             }
             raid.undoStack.push(payload.action);
-            raid.redoStack = [];
+            if (!payload.preserveRedo) {
+                raid.redoStack = [];
+            }
         },
         popUndo(state, raidId: string) {
             const raid = state.raids[raidId];
@@ -161,6 +170,32 @@ export const workspaces = createModel<RootModel>()({
                 dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
             }
         },
+        putEntityPresetDragData(
+            payload: {
+                raidId: string;
+                data?: EntityPresetDragData;
+            },
+            state,
+        ) {
+            dispatch.workspaces.ensureRaid(payload.raidId);
+            const existing = state.workspaces.raids[payload.raidId];
+            if (existing) {
+                dispatch.workspaces.putRaid({ ...existing, entityPresetDragData: payload.data });
+            }
+        },
+        openEntitiesPanelTab(
+            payload: {
+                raidId: string;
+                tab: 'entities' | 'presets';
+            },
+            state,
+        ) {
+            dispatch.workspaces.ensureRaid(payload.raidId);
+            const existing = state.workspaces.raids[payload.raidId];
+            if (existing) {
+                dispatch.workspaces.putRaid({ ...existing, entitiesPanelTab: payload.tab });
+            }
+        },
         select(
             payload: {
                 raidId: string;
@@ -202,7 +237,11 @@ export const workspaces = createModel<RootModel>()({
             const item = raid.redoStack[raid.redoStack.length - 1];
             dispatch.workspaces.popRedo(payload.raidId);
             const undoOp = dispatch.raids.batchOperation(item.operation);
-            dispatch.workspaces.pushUndo({ raidId: payload.raidId, action: { name: item.name, operation: undoOp } });
+            dispatch.workspaces.pushUndo({
+                raidId: payload.raidId,
+                action: { name: item.name, operation: undoOp },
+                preserveRedo: true,
+            });
         },
     }),
 });

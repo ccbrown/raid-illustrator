@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Canvas } from './Canvas';
 import { CommandsProvider } from './commands';
 import { EntitiesPanel } from './EntitiesPanel';
+import { InspectorPanel } from './InspectorPanel';
 import { ScenesPanel } from './ScenesPanel';
 import { StepsPanel } from './StepsPanel';
 import { MenuBar } from './MenuBar';
@@ -52,8 +53,17 @@ export const Editor = () => {
                                 <StepsPanel />
                             </div>
                             <div className="flex-grow" />
-                            <div className="flex flex-col gap-4 w-64 [&>*]:pointer-events-auto">
-                                <EntitiesPanel />
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-row">
+                                    <div className="flex-grow" />
+                                    <div className="pointer-events-auto w-64">
+                                        <EntitiesPanel />
+                                    </div>
+                                </div>
+                                <div className="flex-grow" />
+                                <div className="pointer-events-auto">
+                                    <InspectorPanel />
+                                </div>
                             </div>
                         </div>
                     </div>

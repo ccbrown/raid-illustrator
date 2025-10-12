@@ -6,48 +6,109 @@ import { RaidEntity, RaidScene } from '@/models/raids';
 import { Selection } from '@/models/workspaces';
 import { shapeDimensions, Shape } from '@/shapes';
 import { keyableValueAtStep } from '@/keyable';
+import { AnyProperties, resolveKeyableProperties } from '@/property-spec';
+import { VisualEffect } from '@/visual-effect';
+import { visualEffectFactories } from '@/visual-effects';
+
+interface RendererEntityVisualEffect {
+    id: string;
+    visualEffect: VisualEffect;
+}
+
+interface RenderEntityStep {
+    position: { x: number; y: number };
+    bounds: { x: number; y: number; width: number; height: number };
+    effectProperties: Record<string, AnyProperties>;
+}
 
 class RendererEntity {
     entity: RaidEntity;
-    position: { x: number; y: number };
-    bounds: { x: number; y: number; width: number; height: number };
+    visualEffects: RendererEntityVisualEffect[] = [];
+    currentStep: RenderEntityStep;
 
     dragMovement: { x: number; y: number } = { x: 0, y: 0 };
 
-    constructor(
-        entity: RaidEntity,
-        position: { x: number; y: number },
-        bounds: { x: number; y: number; width: number; height: number },
-    ) {
+    constructor(entity: RaidEntity, sceneStepIds: string[], currentStepId: string) {
         this.entity = entity;
-        this.position = position;
-        this.bounds = bounds;
+        this.currentStep = this.step(entity, sceneStepIds, currentStepId);
+        this.createVisualEffects();
     }
 
-    update(
-        entity: RaidEntity,
-        position: { x: number; y: number },
-        bounds: { x: number; y: number; width: number; height: number },
-    ) {
-        // TODO: animate the update?
+    update(entity: RaidEntity, sceneStepIds: string[], currentStepId: string) {
         this.entity = entity;
-        this.position = position;
-        this.bounds = bounds;
+        this.currentStep = this.step(entity, sceneStepIds, currentStepId);
+        this.createVisualEffects();
+    }
+
+    private step(entity: RaidEntity, sceneStepIds: string[], currentStepId: string): RenderEntityStep {
+        const ep = entity.properties;
+        if (ep.type !== 'shape') {
+            throw new Error('RendererEntity can only handle shape entities');
+        }
+
+        const dimensions = shapeDimensions(ep.shape);
+        const position = keyableValueAtStep(ep.position, sceneStepIds, currentStepId);
+        const bounds = {
+            x: position.x - dimensions.width / 2,
+            y: position.y - dimensions.height / 2,
+            width: dimensions.width,
+            height: dimensions.height,
+        };
+
+        const effectProperties: Record<string, AnyProperties> = {};
+        for (const effect of ep.effects || []) {
+            const factory = visualEffectFactories[effect.factoryId];
+            if (factory) {
+                effectProperties[effect.id] = resolveKeyableProperties(
+                    effect.properties,
+                    factory.properties || [],
+                    sceneStepIds,
+                    currentStepId,
+                );
+            }
+        }
+
+        return { position, bounds, effectProperties };
+    }
+
+    private createVisualEffects() {
+        const ep = this.entity.properties;
+        if (ep.type !== 'shape') {
+            this.visualEffects = [];
+            return;
+        }
+
+        const newEffects: RendererEntityVisualEffect[] = [];
+        for (const e of ep.effects || []) {
+            const existing = this.visualEffects.find((e2) => e2.id === e.id);
+            if (existing) {
+                newEffects.push(existing);
+            } else {
+                const factory = visualEffectFactories[e.factoryId];
+                if (factory) {
+                    newEffects.push({
+                        id: e.id,
+                        visualEffect: factory.create(),
+                    });
+                }
+            }
+        }
+        this.visualEffects = newEffects;
     }
 
     renderPosition(): { x: number; y: number } {
         return {
-            x: this.position.x + this.dragMovement.x,
-            y: this.position.y + this.dragMovement.y,
+            x: this.currentStep.position.x + this.dragMovement.x,
+            y: this.currentStep.position.y + this.dragMovement.y,
         };
     }
 
     renderBounds(): { x: number; y: number; width: number; height: number } {
         return {
-            x: this.bounds.x + this.dragMovement.x,
-            y: this.bounds.y + this.dragMovement.y,
-            width: this.bounds.width,
-            height: this.bounds.height,
+            x: this.currentStep.bounds.x + this.dragMovement.x,
+            y: this.currentStep.bounds.y + this.dragMovement.y,
+            width: this.currentStep.bounds.width,
+            height: this.currentStep.bounds.height,
         };
     }
 }
@@ -57,17 +118,21 @@ interface ColorMaterial {
     color: string;
 }
 
-type Material = ColorMaterial;
+export type Material = ColorMaterial;
 
 class Renderer {
     scene?: RaidScene;
-    sceneDragMovement: { x: number; y: number } = { x: 0, y: 0 };
     selection?: Selection;
-    entities: Map<string, RendererEntity> = new Map();
-    entityDrawOrder: string[] = [];
+
+    private sceneDragMovement: { x: number; y: number } = { x: 0, y: 0 };
+    private entities: Map<string, RendererEntity> = new Map();
+    private entityDrawOrder: string[] = [];
+
+    // When a preset is being dragged over the canvas, this can be used to render an indicator.
+    private dropIndicator?: { position: { x: number; y: number }; shape: Shape };
 
     render(ctx: CanvasRenderingContext2D, scale: number, center: { x: number; y: number }) {
-        ctx.setTransform(1, 0, 0, -1, 0, ctx.canvas.height);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
         ctx.translate(
@@ -94,6 +159,29 @@ class Renderer {
                 continue;
             }
 
+            const pos = entity.renderPosition();
+            for (const { id, visualEffect } of entity.visualEffects) {
+                const ep = entity.entity.properties;
+                if (ep.type !== 'shape') {
+                    continue;
+                }
+
+                visualEffect.renderGround({
+                    ctx,
+                    properties: entity.currentStep.effectProperties[id] || {},
+                    shape: ep.shape,
+                    scale,
+                    center: pos,
+                });
+            }
+        }
+
+        for (const entityId of this.entityDrawOrder) {
+            const entity = this.entities.get(entityId);
+            if (!entity) {
+                continue;
+            }
+
             const ep = entity.entity.properties;
             const pos = entity.renderPosition();
             switch (ep.type) {
@@ -106,10 +194,7 @@ class Renderer {
                             x: pos.x,
                             y: pos.y,
                         },
-                        {
-                            type: 'color',
-                            color: '#ffffff',
-                        },
+                        ep.fill,
                     );
                     break;
                 }
@@ -134,6 +219,21 @@ class Renderer {
                 );
             }
         }
+
+        if (this.dropIndicator) {
+            this.drawShape(this.dropIndicator.shape, ctx, scale, this.dropIndicator.position, {
+                type: 'color',
+                color: '#ffffff80',
+            });
+        }
+    }
+
+    showDropIndicator(indicator?: { position: { x: number; y: number }; shape: Shape }) {
+        this.dropIndicator = indicator;
+    }
+
+    hideDropIndicator() {
+        this.dropIndicator = undefined;
     }
 
     setSceneDragMovement(movement: { x: number; y: number }) {
@@ -168,8 +268,8 @@ class Renderer {
                     const shape = ep.shape;
                     switch (shape.type) {
                         case 'circle': {
-                            const dx = position.x - entity.position.x;
-                            const dy = position.y - entity.position.y;
+                            const dx = position.x - entity.currentStep.position.x;
+                            const dy = position.y - entity.currentStep.position.y;
                             if (dx * dx + dy * dy < shape.radius * shape.radius) {
                                 return entity.entity;
                             }
@@ -180,10 +280,10 @@ class Renderer {
             }
 
             if (
-                position.x >= entity.bounds.x &&
-                position.x <= entity.bounds.x + entity.bounds.width &&
-                position.y >= entity.bounds.y &&
-                position.y <= entity.bounds.y + entity.bounds.height
+                position.x >= entity.currentStep.bounds.x &&
+                position.x <= entity.currentStep.bounds.x + entity.currentStep.bounds.width &&
+                position.y >= entity.currentStep.bounds.y &&
+                position.y <= entity.currentStep.bounds.y + entity.currentStep.bounds.height
             ) {
                 return entity.entity;
             }
@@ -197,29 +297,31 @@ class Renderer {
         ctx: CanvasRenderingContext2D,
         scale: number,
         center: { x: number; y: number },
-        material: Material,
+        fill?: Material,
     ) {
-        switch (material.type) {
-            case 'color':
-                ctx.fillStyle = material.color;
-                break;
-        }
-
-        switch (shape.type) {
-            case 'rectangle': {
-                ctx.fillRect(
-                    (center.x - shape.width / 2) * scale,
-                    (center.y - shape.height / 2) * scale,
-                    shape.width * scale,
-                    shape.height * scale,
-                );
-                break;
+        if (fill) {
+            switch (fill.type) {
+                case 'color':
+                    ctx.fillStyle = fill.color;
+                    break;
             }
-            case 'circle': {
-                ctx.beginPath();
-                ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
-                ctx.fill();
-                break;
+
+            switch (shape.type) {
+                case 'rectangle': {
+                    ctx.fillRect(
+                        (center.x - shape.width / 2) * scale,
+                        (center.y - shape.height / 2) * scale,
+                        shape.width * scale,
+                        shape.height * scale,
+                    );
+                    break;
+                }
+                case 'circle': {
+                    ctx.beginPath();
+                    ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                }
             }
         }
     }
@@ -239,20 +341,11 @@ class Renderer {
             const ep = entity.properties;
             switch (ep.type) {
                 case 'shape': {
-                    const dimensions = shapeDimensions(ep.shape);
-                    const position = keyableValueAtStep(ep.position, stepIds, currentStepId);
-                    const bounds = {
-                        x: position.x - dimensions.width / 2,
-                        y: position.y - dimensions.height / 2,
-                        width: dimensions.width,
-                        height: dimensions.height,
-                    };
-
                     const existing = this.entities.get(id);
                     if (existing) {
-                        existing.update(entity, position, bounds);
+                        existing.update(entity, stepIds, currentStepId);
                     } else {
-                        this.entities.set(id, new RendererEntity(entity, position, bounds));
+                        this.entities.set(id, new RendererEntity(entity, stepIds, currentStepId));
                     }
 
                     this.entityDrawOrder.push(id);

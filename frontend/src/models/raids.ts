@@ -3,6 +3,8 @@ import { createModel } from '@rematch/core';
 import { RootModel } from '.';
 import { Shape, ShapeCircle, ShapeRectangle } from '@/shapes';
 import { Keyable, keyableValueAtStep, keyableWithValueAtStep } from '@/keyable';
+import { AnyProperties } from '@/property-spec';
+import { Material } from '@/renderer';
 
 interface RaidMetadata {
     id: string;
@@ -40,10 +42,18 @@ interface RaidEntityPropertiesGroup {
     children: string[];
 }
 
-interface RaidEntityPropertiesShape {
+interface RaidEntityPropertiesShapeEffect {
+    id: string;
+    factoryId: string;
+    properties: AnyProperties;
+}
+
+export interface RaidEntityPropertiesShape {
     type: 'shape';
     shape: Shape;
+    fill?: Material;
     position: Keyable<{ x: number; y: number }>;
+    effects?: RaidEntityPropertiesShapeEffect[];
 }
 
 export type RaidEntityType = 'group' | 'shape';
@@ -53,7 +63,7 @@ type PartialRaidEntityPropertiesGroup = Partial<Omit<RaidEntityPropertiesGroup, 
     Pick<RaidEntityPropertiesGroup, 'type'>;
 type PartialRaidEntityPropertiesShape = Partial<Omit<RaidEntityPropertiesShape, 'type'>> &
     Pick<RaidEntityPropertiesShape, 'type'>;
-type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
+export type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
 
 export interface RaidEntity {
     id: string;
@@ -558,7 +568,10 @@ export const raids = createModel<RootModel>()({
 
                 const newEntity = {
                     ...entity,
-                    properties: { ...ep, position: keyableWithValueAtStep(ep.position, newPosition, payload.stepId) },
+                    properties: {
+                        ...ep,
+                        position: keyableWithValueAtStep(ep.position, newPosition, scene.stepIds, payload.stepId),
+                    },
                 };
 
                 updatedEntities.push(newEntity);

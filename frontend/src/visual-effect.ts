@@ -1,0 +1,20 @@
+import { AnyProperties, PropertySpec } from '@/property-spec';
+import { Shape } from '@/shapes';
+
+export interface VisualEffectRenderParams {
+    ctx: CanvasRenderingContext2D;
+    shape: Shape;
+    scale: number;
+    center: { x: number; y: number };
+    properties: AnyProperties;
+}
+
+export abstract class VisualEffect {
+    abstract renderGround(params: VisualEffectRenderParams): void;
+}
+
+export interface VisualEffectFactory {
+    name: string;
+    properties?: PropertySpec[];
+    create: () => VisualEffect;
+}

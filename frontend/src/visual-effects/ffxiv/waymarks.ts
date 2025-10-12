@@ -98,7 +98,7 @@ class Waymark extends VisualEffect {
                 ctx.fillStyle = this.colors[0];
 
                 for (let i = 0; i < 11; i++) {
-                    const rads = (i / 11) * Math.PI * 2 + ((now % 12000) / 12000) * (Math.PI * 2);
+                    const rads = (i / 11) * Math.PI * 2 - ((now % 12000) / 12000) * (Math.PI * 2);
                     ctx.beginPath();
                     ctx.moveTo(
                         x + Math.cos(rads) * (WAYMARK_SIZE / 2 - 0.2) * scale,

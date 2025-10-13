@@ -126,6 +126,29 @@ const presets: Preset[] = [
                 variant: '4',
             }),
     },
+    {
+        name: 'Boss',
+        iconUrl: '/images/ffxiv/role-frames/boss.png',
+        generate: () => ({
+            name: 'Boss',
+            properties: {
+                type: 'shape',
+                shape: { type: 'circle', radius: 3 },
+                position: { x: 0, y: 0 },
+                fill: {
+                    type: 'image',
+                    url: '/images/ffxiv/role-frames/boss.png',
+                },
+                effects: [
+                    {
+                        id: crypto.randomUUID(),
+                        factoryId: 'ffxiv-target-ring',
+                        properties: {},
+                    },
+                ],
+            },
+        }),
+    },
     ffxivRoleFramePreset('DPS', 'dps.png'),
     ffxivRoleFramePreset('Melee DPS', 'melee-dps.png'),
     ffxivRoleFramePreset('Ranged DPS', 'ranged-dps.png'),

@@ -1,6 +1,6 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 
-import { Button, Checkbox, ColorInput, CoordinateInput, Dropdown } from '@/components';
+import { Button, Checkbox, ColorInput, CoordinateInput, Dropdown, NumberInput } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
 import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity } from '@/models/raids/types';
 import {
@@ -160,6 +160,12 @@ const PropertySpecPropertyEditor = ({
                     onChange={(o) => onChange(o.key)}
                     options={spec.choices.map((c) => ({ key: c.value, label: c.label }))}
                 />
+            );
+            break;
+        case 'number':
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            control = ({ value, onChange }: PropertyControlProps<any>) => (
+                <NumberInput value={value} onChange={onChange} />
             );
             break;
         case 'color':

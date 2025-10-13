@@ -3,7 +3,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { disablePasswordManagers } from './TextField';
 
 interface Props {
-    label: string;
+    label?: string;
     value: number;
     onChange: (newValue: number) => void;
     min?: number;
@@ -13,7 +13,7 @@ interface Props {
 
 export const NumberInput = (props: Props) => (
     <div className="flex flex-row items-center gap-2">
-        <div className="text-white/60 text-xs whitespace-nowrap">{props.label}</div>
+        {props.label && <div className="text-white/60 text-xs whitespace-nowrap">{props.label}</div>}
         <InputNumber
             value={props.value}
             onValueChange={(e) => {

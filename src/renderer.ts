@@ -167,10 +167,47 @@ class RendererEntity {
     }
 }
 
+export class Image {
+    private broken?: boolean;
+    private img: HTMLImageElement;
+
+    constructor(url: string) {
+        this.img = document.createElement('img');
+        this.img.src = url;
+        this.img.onerror = () => {
+            console.error(`failed to load image: ${url}`);
+            this.broken = true;
+        };
+    }
+
+    get(): HTMLImageElement | undefined {
+        if (this.broken || !this.img.complete) {
+            return undefined;
+        }
+        return this.img;
+    }
+}
+
+// Like Image but does nothing until the image is first requested.
+export class LazyImage {
+    private image?: Image;
+    private url: string;
+
+    constructor(url: string) {
+        this.url = url;
+    }
+
+    get(): HTMLImageElement | undefined {
+        if (!this.image) {
+            this.image = new Image(this.url);
+        }
+        return this.image.get();
+    }
+}
+
 interface ImageManagerImage {
     used: boolean;
-    broken?: boolean;
-    img: HTMLImageElement;
+    image: Image;
 }
 
 class ImageManager {
@@ -179,21 +216,12 @@ class ImageManager {
     use(url: string): HTMLImageElement | undefined {
         let entry = this.images.get(url);
         if (!entry) {
-            const img = new Image();
-            entry = { used: true, img };
-            img.src = url;
-            img.onerror = () => {
-                console.error(`failed to load image: ${url}`);
-                entry!.broken = true;
-            };
+            entry = { used: true, image: new Image(url) };
             this.images.set(url, entry);
         } else {
             entry.used = true;
         }
-        if (entry.broken) {
-            return undefined;
-        }
-        return entry.img;
+        return entry.image.get();
     }
 
     cleanup() {

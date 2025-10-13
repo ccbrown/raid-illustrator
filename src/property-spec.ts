@@ -13,6 +13,11 @@ interface PropertySpecBoolean extends PropertySpecBase {
     default: boolean;
 }
 
+interface PropertySpecNumber extends PropertySpecBase {
+    type: 'number';
+    default: number;
+}
+
 interface PropertySpecEnumChoice {
     value: string;
     label: string;
@@ -30,7 +35,7 @@ interface PropertySpecColor extends PropertySpecBase {
 }
 
 // PropertySpec is used for run-time defined properties, e.g. for visual effects.
-export type PropertySpec = PropertySpecBoolean | PropertySpecEnum | PropertySpecColor;
+export type PropertySpec = PropertySpecBoolean | PropertySpecEnum | PropertySpecColor | PropertySpecNumber;
 
 // Returns the properties for the current step, resolving keyable values and adding defaults as needed.
 export const resolveProperties = (
@@ -42,7 +47,7 @@ export const resolveProperties = (
     const result: AnyProperties = {};
     for (const spec of specs) {
         const v = properties[spec.key];
-        if (!v) {
+        if (v === undefined) {
             result[spec.key] = spec.default;
             continue;
         }

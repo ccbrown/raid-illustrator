@@ -1,3 +1,4 @@
+import { Image } from '@/renderer';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
 interface Variant {
@@ -69,7 +70,7 @@ const VARIANTS: Record<VariantKey, Variant> = {
 
 class Waymark extends VisualEffect {
     variantKey: string = '';
-    markerImage?: HTMLImageElement;
+    markerImage?: Image;
 
     renderGround({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
@@ -79,13 +80,7 @@ class Waymark extends VisualEffect {
 
         const variant = VARIANTS[properties.variant];
         if (this.variantKey !== properties.variant) {
-            const img = new Image();
-            img.src = variant.markerImageUrl;
-            this.markerImage = img;
-            this.markerImage.onerror = () => {
-                console.error(`failed to load waymark image: ${variant.markerImageUrl}`);
-                this.markerImage = undefined;
-            };
+            this.markerImage = new Image(variant.markerImageUrl);
             this.variantKey = properties.variant;
         }
 
@@ -175,13 +170,14 @@ class Waymark extends VisualEffect {
 
         ctx.shadowBlur = 0;
 
-        if (this.markerImage?.complete) {
+        const img = this.markerImage?.get();
+        if (img) {
             const floatHeight = 0.1 * Math.sin(((now % 5000) / 5000) * Math.PI * 2) * scale;
 
             const imgHeight = WAYMARK_SIZE * 1.3 * scale * variant.markerImageScale.height;
             const imgWidth = WAYMARK_SIZE * 1.3 * 0.5 * scale * variant.markerImageScale.width;
             ctx.drawImage(
-                this.markerImage,
+                img,
                 x - imgWidth / 2 + (variant.markerImageXOffset || 0) * scale,
                 y - imgHeight / 2 - floatHeight,
                 imgWidth,

@@ -1,3 +1,4 @@
+import { Animated } from '@/animated';
 import { Image } from '@/renderer';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
@@ -71,12 +72,18 @@ const VARIANTS: Record<VariantKey, Variant> = {
 class Waymark extends VisualEffect {
     variantKey: string = '';
     markerImage?: Image;
+    enabled: Animated<number> = new Animated(0);
 
     renderGround({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        if (!properties.enabled) {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+            transitionDuration: 300,
+        });
+        if (!enabled) {
             return;
         }
+
+        ctx.globalAlpha = enabled;
 
         const variant = VARIANTS[properties.variant];
         if (this.variantKey !== properties.variant) {

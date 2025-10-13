@@ -1,3 +1,4 @@
+import { Animated, smoothstep } from '@/animated';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
 type ClusterFormation = 'dot' | 'horizontal-pair' | 'upward-triangle' | 'downward-triangle' | 'square';
@@ -29,23 +30,16 @@ const BASE_DOT_RADIUS = 0.3;
 const BASE_CLUSTER_SPACING = BASE_HORIZONTAL_DOT_SPACING * 2;
 const OFFSET_Y = -1.8;
 
-const ease = (t: number) => t * t * (3 - 2 * t);
-
 class LimitCut extends VisualEffect {
-    isEnabled: boolean = false;
-    enableDisableTime: number = 0;
+    enabled: Animated<number> = new Animated(0);
 
     renderOverlay({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-
-        if (properties.enabled !== this.isEnabled) {
-            this.enableDisableTime = Date.now();
-            this.isEnabled = properties.enabled;
-        }
-
-        const now = Date.now();
-        const enableDisableTransitionProgress = Math.min(1, (now - this.enableDisableTime) / 500);
-        if (!this.isEnabled && enableDisableTransitionProgress >= 1) {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+            easingFunction: smoothstep,
+            transitionDuration: 500,
+        });
+        if (!enabled) {
             return;
         }
 
@@ -54,10 +48,9 @@ class LimitCut extends VisualEffect {
 
         ctx.translate(center.x * scale, (center.y + OFFSET_Y) * scale);
 
-        const spread = ease(now % 2000 >= 1000 ? 1 - (now % 1000) / 1000 : (now % 1000) / 1000) * 0.3;
-        const dotRadius =
-            BASE_DOT_RADIUS *
-            ease(this.isEnabled ? enableDisableTransitionProgress : 1.0 - enableDisableTransitionProgress);
+        const now = Date.now();
+        const spread = smoothstep(now % 2000 >= 1000 ? 1 - (now % 1000) / 1000 : (now % 1000) / 1000) * 0.3;
+        const dotRadius = BASE_DOT_RADIUS * enabled;
 
         if (variant.cluster2) {
             const offsetX = BASE_CLUSTER_SPACING / 2 + spread;

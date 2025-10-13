@@ -1,0 +1,111 @@
+type AnimatableType = number | { [key: string]: number };
+
+const equals = <T extends AnimatableType>(a: T, b: T): boolean => {
+    if (typeof a !== typeof b) {
+        return false;
+    } else if (a === b) {
+        return true;
+    }
+
+    if (typeof a === 'object' && a && b) {
+        const aKeys = Object.keys(a) as (keyof typeof a)[];
+        const bKeys = Object.keys(b) as (keyof typeof b)[];
+
+        if (aKeys.length !== bKeys.length) {
+            return false;
+        }
+
+        for (const key of aKeys) {
+            if (a[key] !== b[key]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+};
+
+const interpolate = <T extends AnimatableType>(from: T, to: T, progress: number): T => {
+    if (typeof from === 'number' && typeof to === 'number') {
+        return (from + (to - from) * progress) as T;
+    } else if (typeof from === 'object' && from !== null && typeof to === 'object' && to !== null) {
+        const result: { [key: string]: number } = {};
+        const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
+
+        keys.forEach((key) => {
+            const fromValue = from[key] ?? 0;
+            const toValue = to[key] ?? 0;
+            result[key] = fromValue + (toValue - fromValue) * progress;
+        });
+
+        return result as T;
+    }
+    return to;
+};
+
+type EasingFunction = (t: number) => number;
+
+export const easeOutCubic: EasingFunction = (t) => 1 - Math.pow(1 - t, 3);
+export const smoothstep: EasingFunction = (t) => t * t * (3 - 2 * t);
+
+interface UpdateParams {
+    easingFunction?: EasingFunction;
+    transitionDuration?: number;
+}
+
+export class Animated<T extends AnimatableType> {
+    private previousValue?: T;
+    private latestValue?: T;
+    private transitionStartTime?: number;
+    private transitionDuration?: number;
+    private easingFunction?: EasingFunction;
+
+    constructor(initialValue?: T) {
+        this.latestValue = initialValue;
+    }
+
+    update(currentValue: T, params?: UpdateParams): T {
+        if (this.latestValue === undefined) {
+            this.latestValue = currentValue;
+            return currentValue;
+        } else if (!equals(this.latestValue, currentValue)) {
+            this.previousValue = this.get();
+            this.latestValue = currentValue;
+            this.transitionStartTime = Date.now();
+            this.transitionDuration = params?.transitionDuration;
+            this.easingFunction = params?.easingFunction;
+        }
+        return this.get()!;
+    }
+
+    private ease(t: number): number {
+        if (this.easingFunction) {
+            return this.easingFunction(t);
+        }
+        return easeOutCubic(t);
+    }
+
+    get(): T | undefined {
+        if (this.latestValue === undefined) {
+            return undefined;
+        }
+
+        if (this.previousValue === undefined || !this.transitionStartTime) {
+            return this.latestValue;
+        }
+
+        const now = Date.now();
+        const elapsed = now - this.transitionStartTime;
+        const progress = this.ease(Math.min(elapsed / (this.transitionDuration ?? 300), 1));
+
+        if (progress >= 1) {
+            this.previousValue = undefined;
+            this.transitionStartTime = undefined;
+            return this.latestValue;
+        }
+
+        return interpolate(this.previousValue, this.latestValue, progress);
+    }
+}

@@ -1,8 +1,11 @@
+import { Animated } from '@/animated';
 import { shapeDimensions } from '@/models/raids/utils';
 import { Image, LazyImage } from '@/renderer';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
 class TargetRing extends VisualEffect {
+    enabled: Animated<number> = new Animated(0);
+    color: Animated<{ r: number; g: number; b: number }> = new Animated();
     sideMarkImage: Image;
     sideMarkGlowImage: Image;
     frontMarkImage: LazyImage;
@@ -22,7 +25,10 @@ class TargetRing extends VisualEffect {
 
     renderGround({ ctx, properties: anyProperties, shape, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        if (!properties.enabled) {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+            transitionDuration: 300,
+        });
+        if (!enabled) {
             return;
         }
 
@@ -39,26 +45,30 @@ class TargetRing extends VisualEffect {
         const arcStart = properties.directionalDisregard ? 0 : Math.PI * -0.25;
         const arcEnd = properties.directionalDisregard ? 2 * Math.PI : Math.PI * 1.25;
 
-        const color = properties.color;
+        const color = this.color.update(properties.color);
 
         // glows
 
+        ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
         ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
-        ctx.shadowBlur = 2 * innerThickness;
 
+        ctx.save();
+        ctx.globalAlpha = enabled;
+        ctx.shadowBlur = 2 * innerThickness;
         ctx.beginPath();
         ctx.arc(0, 0, innerRadius, arcStart, arcEnd);
         ctx.lineWidth = innerThickness;
-        ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
         ctx.stroke();
+        ctx.restore();
 
+        ctx.save();
+        ctx.globalAlpha = enabled;
         ctx.shadowBlur = 2 * outerThickness;
-
         ctx.beginPath();
         ctx.arc(0, 0, outerRadius, arcStart, arcEnd);
         ctx.lineWidth = outerThickness;
-        ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
         ctx.stroke();
+        ctx.restore();
 
         // arrows
 
@@ -76,7 +86,7 @@ class TargetRing extends VisualEffect {
             ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`;
             ctx.shadowBlur = 4 * outerThickness;
             ctx.rotate(Math.PI);
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.4 * enabled;
             ctx.drawImage(
                 frontMarkGlowImage,
                 -frontMarkImageSize / 2,
@@ -96,7 +106,7 @@ class TargetRing extends VisualEffect {
 
         if (sideMarkImage && sideMarkGlowImage) {
             ctx.save();
-            ctx.globalAlpha = 0.8;
+            ctx.globalAlpha = 0.8 * enabled;
             ctx.rotate(Math.PI / 2);
             ctx.drawImage(
                 sideMarkGlowImage,
@@ -119,6 +129,7 @@ class TargetRing extends VisualEffect {
         // highlights
 
         ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = enabled;
 
         const outerGradient = ctx.createRadialGradient(
             0,
@@ -164,7 +175,7 @@ class TargetRing extends VisualEffect {
 
         if (sideMarkImage && sideMarkGlowImage) {
             ctx.save();
-            ctx.globalAlpha = 0.8;
+            ctx.globalAlpha = 0.8 * enabled;
             ctx.rotate(Math.PI / 2);
             ctx.drawImage(
                 sideMarkImage,
@@ -189,7 +200,7 @@ class TargetRing extends VisualEffect {
             ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`;
             ctx.shadowBlur = 4 * outerThickness;
             ctx.rotate(Math.PI);
-            ctx.globalAlpha = properties.directionalDisregard ? 0.35 : 0.45;
+            ctx.globalAlpha = (properties.directionalDisregard ? 0.35 : 0.45) * enabled;
             ctx.drawImage(
                 frontMarkImage,
                 -frontMarkImageSize / 2,
@@ -205,7 +216,9 @@ class TargetRing extends VisualEffect {
         ctx.rotate(-((Date.now() % 3000) / 3000) * 2 * Math.PI);
 
         {
+            ctx.save();
             ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 0.8 * enabled;
             const g = ctx.createLinearGradient(-outerRadius, 0, outerRadius, 0);
             g.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`);
             g.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, 0.0)`);
@@ -220,10 +233,13 @@ class TargetRing extends VisualEffect {
             ctx.beginPath();
             ctx.arc(0, 0, outerRadius * 0.95, Math.PI, Math.PI * 1.5);
             ctx.stroke();
+            ctx.restore();
         }
 
         {
+            ctx.save();
             ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.8 * enabled;
             const g = ctx.createLinearGradient(-outerRadius, 0, outerRadius, 0);
             g.addColorStop(0, `rgba(255, 255, 255, 0.7)`);
             g.addColorStop(0.5, `rgba(255, 255, 255, 0.0)`);
@@ -238,6 +254,7 @@ class TargetRing extends VisualEffect {
             ctx.beginPath();
             ctx.arc(0, 0, outerRadius * 0.95, Math.PI, Math.PI * 1.5);
             ctx.stroke();
+            ctx.restore();
         }
     }
 }

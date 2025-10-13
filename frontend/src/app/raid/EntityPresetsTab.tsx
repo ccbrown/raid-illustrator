@@ -1,6 +1,6 @@
 import Image from 'next/image';
 
-import { Shape } from '@/models/raids/types';
+import { AnyProperties, Shape } from '@/models/raids/types';
 import { EntityPresetDragData } from '@/models/workspaces/types';
 import { defaultProperties } from '@/property-spec';
 import { useDispatch } from '@/store';
@@ -24,7 +24,7 @@ const basicImagePreset = (name: string, shape: Shape, imageUrl: string): Preset 
             properties: {
                 type: 'shape',
                 shape,
-                position: { initial: { x: 0, y: 0 } },
+                position: { x: 0, y: 0 },
                 fill: {
                     type: 'image',
                     url: imageUrl,
@@ -38,23 +38,31 @@ const ffxivRoleFramePreset = (name: string, imageName: string): Preset => {
     return basicImagePreset(name, { type: 'rectangle', width: 1, height: 1 }, `/images/ffxiv/role-frames/${imageName}`);
 };
 
-const generateBasicEffectEntity = (name: string, shape: Shape, effectFactoryId: string): EntityPresetDragData => {
+const generateBasicEffectEntity = (
+    name: string,
+    shape: Shape,
+    effectFactoryId: string,
+    propertyOverrides: AnyProperties,
+): EntityPresetDragData => {
     const effectFactory = visualEffectFactories[effectFactoryId];
     if (!effectFactory) {
         throw new Error(`Effect factory with ID ${effectFactoryId} not found`);
     }
-    const effectProperties = defaultProperties(effectFactory.properties || []);
+    const defaultEffectProperties = defaultProperties(effectFactory.properties || []);
     return {
         name,
         properties: {
             type: 'shape',
             shape,
-            position: { initial: { x: 0, y: 0 } },
+            position: { x: 0, y: 0 },
             effects: [
                 {
                     id: crypto.randomUUID(),
                     factoryId: effectFactoryId,
-                    properties: effectProperties,
+                    properties: {
+                        ...defaultEffectProperties,
+                        ...propertyOverrides,
+                    },
                 },
             ],
         },
@@ -65,42 +73,58 @@ const presets: Preset[] = [
     {
         name: 'Waymark A',
         iconUrl: '/images/ffxiv/waymarks/icons/a.png',
-        generate: () => generateBasicEffectEntity('Waymark A', { type: 'circle', radius: 1 }, 'ffxiv-waymark-a'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark A', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'a' }),
     },
     {
         name: 'Waymark B',
         iconUrl: '/images/ffxiv/waymarks/icons/b.png',
-        generate: () => generateBasicEffectEntity('Waymark B', { type: 'circle', radius: 1 }, 'ffxiv-waymark-b'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark B', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'b' }),
     },
     {
         name: 'Waymark C',
         iconUrl: '/images/ffxiv/waymarks/icons/c.png',
-        generate: () => generateBasicEffectEntity('Waymark C', { type: 'circle', radius: 1 }, 'ffxiv-waymark-c'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark C', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'c' }),
     },
     {
         name: 'Waymark D',
         iconUrl: '/images/ffxiv/waymarks/icons/d.png',
-        generate: () => generateBasicEffectEntity('Waymark D', { type: 'circle', radius: 1 }, 'ffxiv-waymark-d'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark D', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'd' }),
     },
     {
         name: 'Waymark 1',
         iconUrl: '/images/ffxiv/waymarks/icons/1.png',
-        generate: () => generateBasicEffectEntity('Waymark 1', { type: 'circle', radius: 1 }, 'ffxiv-waymark-1'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark 1', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
+                variant: '1',
+            }),
     },
     {
         name: 'Waymark 2',
         iconUrl: '/images/ffxiv/waymarks/icons/2.png',
-        generate: () => generateBasicEffectEntity('Waymark 2', { type: 'circle', radius: 1 }, 'ffxiv-waymark-2'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark 2', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
+                variant: '2',
+            }),
     },
     {
         name: 'Waymark 3',
         iconUrl: '/images/ffxiv/waymarks/icons/3.png',
-        generate: () => generateBasicEffectEntity('Waymark 3', { type: 'circle', radius: 1 }, 'ffxiv-waymark-3'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark 3', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
+                variant: '3',
+            }),
     },
     {
         name: 'Waymark 4',
         iconUrl: '/images/ffxiv/waymarks/icons/4.png',
-        generate: () => generateBasicEffectEntity('Waymark 4', { type: 'circle', radius: 1 }, 'ffxiv-waymark-4'),
+        generate: () =>
+            generateBasicEffectEntity('Waymark 4', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
+                variant: '4',
+            }),
     },
     ffxivRoleFramePreset('DPS', 'dps.png'),
     ffxivRoleFramePreset('Melee DPS', 'melee-dps.png'),

@@ -1,15 +1,16 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 
-import { Button, Checkbox, CoordinateInput } from '@/components';
+import { Button, Checkbox, ColorInput, CoordinateInput, Dropdown } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
 import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity } from '@/models/raids/types';
 import {
+    keyableIsKeyedAtStep,
     keyableValueAtStep,
     keyableWithKeyedStep,
     keyableWithUnkeyedStep,
     keyableWithValueAtStep,
 } from '@/models/raids/utils';
-import { PropertySpec, defaultProperty } from '@/property-spec';
+import { PropertySpec } from '@/property-spec';
 import { useDispatch } from '@/store';
 import { visualEffectFactories } from '@/visual-effects';
 
@@ -19,6 +20,26 @@ import { useRaidId } from './hooks';
 type PropertyControlProps<T> = {
     value: T;
     onChange: (newValue: T) => void;
+};
+
+interface UnkeyablePropertyEditorProps<T> {
+    label: string;
+    value: T;
+    onChange: (newValue: T) => void;
+    control: (props: PropertyControlProps<T>) => React.ReactNode;
+}
+
+const UnkeyablePropertyEditor = <T,>({ label, value, onChange, control }: UnkeyablePropertyEditorProps<T>) => {
+    return (
+        <div className="flex flex-row items-center gap-2">
+            <div className="text-sm text-gray-300">{label}</div>
+            <div className="flex-grow" />
+            {control({
+                value,
+                onChange,
+            })}
+        </div>
+    );
 };
 
 interface KeyablePropertyEditorProps<T> {
@@ -38,7 +59,7 @@ const KeyablePropertyEditor = <T,>({
     onChange,
     control,
 }: KeyablePropertyEditorProps<T>) => {
-    const currentStepIsKeyed = value.steps && stepId in value.steps;
+    const currentStepIsKeyed = keyableIsKeyedAtStep(value, stepId);
     const currentValue = keyableValueAtStep(value, sceneStepIds, stepId);
 
     return (
@@ -122,7 +143,7 @@ const PropertySpecPropertyEditor = ({
     stepId,
     value,
 }: PropertySpecPropertyEditorProps) => {
-    const currentValue = value !== undefined ? value : defaultProperty(spec);
+    const currentValue = value !== undefined ? value : spec.default;
 
     let control = null;
     switch (spec.type) {
@@ -132,13 +153,28 @@ const PropertySpecPropertyEditor = ({
                 <Checkbox checked={value} onChange={onChange} />
             );
             break;
+        case 'enum':
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            control = ({ value, onChange }: PropertyControlProps<any>) => (
+                <Dropdown
+                    selectedOptionKey={value}
+                    onChange={(o) => onChange(o.key)}
+                    options={spec.choices.map((c) => ({ key: c.value, label: c.label }))}
+                />
+            );
+            break;
+        case 'color':
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            control = ({ value, onChange }: PropertyControlProps<any>) => (
+                <ColorInput value={value} onChange={onChange} />
+            );
+            break;
         default:
             control = () => null;
     }
 
     if (!spec.keyable) {
-        // TODO: implement non-keyable property editor
-        return null;
+        return <UnkeyablePropertyEditor label={spec.name} value={currentValue} onChange={onChange} control={control} />;
     }
 
     return (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { Button, Dialog, Dropdown, TextField } from '@/components';
+import { Button, Dialog, Dropdown, NumberInput, TextField } from '@/components';
 import { RaidScene } from '@/models/raids/types';
 import { useDispatch, useSelector } from '@/store';
 
@@ -16,9 +16,9 @@ const SceneSettings = (props: SceneSettingsProps) => {
     const [populatedFromId, setPopulatedFromId] = useState('');
     const [name, setName] = useState('New Scene');
     const [shape, setShape] = useState<'rectangle' | 'circle'>('rectangle');
-    const [rectangleWidth, setRectangleWidth] = useState('40');
-    const [rectangleHeight, setRectangleHeight] = useState('40');
-    const [circleRadius, setCircleRadius] = useState('25');
+    const [rectangleWidth, setRectangleWidth] = useState(40);
+    const [rectangleHeight, setRectangleHeight] = useState(40);
+    const [circleRadius, setCircleRadius] = useState(25);
 
     useEffect(() => {
         if (props.existing && props.existing.id !== populatedFromId) {
@@ -26,20 +26,17 @@ const SceneSettings = (props: SceneSettingsProps) => {
             setName(props.existing.name);
             if (props.existing.shape.type === 'rectangle') {
                 setShape('rectangle');
-                setRectangleWidth(props.existing.shape.width.toString());
-                setRectangleHeight(props.existing.shape.height.toString());
+                setRectangleWidth(props.existing.shape.width);
+                setRectangleHeight(props.existing.shape.height);
             } else if (props.existing.shape.type === 'circle') {
                 setShape('circle');
-                setCircleRadius(props.existing.shape.radius.toString());
+                setCircleRadius(props.existing.shape.radius);
             }
         }
     }, [props.existing, populatedFromId]);
 
     const hasValidInput =
-        !!name.trim() &&
-        (shape === 'rectangle'
-            ? !!(parseFloat(rectangleWidth) > 0 && parseFloat(rectangleHeight) > 0)
-            : !!(parseFloat(circleRadius) > 0));
+        !!name.trim() && (shape === 'rectangle' ? rectangleWidth > 0 && rectangleHeight > 0 : circleRadius > 0);
 
     const submit = () => {
         if (!hasValidInput) {
@@ -52,12 +49,12 @@ const SceneSettings = (props: SceneSettingsProps) => {
                 shape === 'rectangle'
                     ? {
                           type: 'rectangle' as const,
-                          width: parseFloat(rectangleWidth),
-                          height: parseFloat(rectangleHeight),
+                          width: rectangleWidth,
+                          height: rectangleHeight,
                       }
                     : {
                           type: 'circle' as const,
-                          radius: parseFloat(circleRadius),
+                          radius: circleRadius,
                       },
         };
         if (props.existing) {
@@ -65,6 +62,7 @@ const SceneSettings = (props: SceneSettingsProps) => {
         } else {
             const id = dispatch.raids.createScene({ raidId: props.raidId, ...update });
             dispatch.workspaces.openScene({ id, raidId: props.raidId });
+            dispatch.workspaces.select({ raidId: props.raidId, selection: { sceneIds: [id] } });
         }
 
         if (props.onClose) {
@@ -93,21 +91,11 @@ const SceneSettings = (props: SceneSettingsProps) => {
                 />
                 {shape === 'rectangle' ? (
                     <>
-                        <TextField
-                            label="Width (m)"
-                            type="number"
-                            value={rectangleWidth}
-                            onChange={setRectangleWidth}
-                        />
-                        <TextField
-                            label="Height (m)"
-                            type="number"
-                            value={rectangleHeight}
-                            onChange={setRectangleHeight}
-                        />
+                        <NumberInput label="Width (m)" value={rectangleWidth} onChange={setRectangleWidth} />
+                        <NumberInput label="Height (m)" value={rectangleHeight} onChange={setRectangleHeight} />
                     </>
                 ) : (
-                    <TextField label="Radius (m)" type="number" value={circleRadius} onChange={setCircleRadius} />
+                    <NumberInput label="Radius (m)" value={circleRadius} onChange={setCircleRadius} />
                 )}
             </div>
             <div className="flex flex-row justify-end">

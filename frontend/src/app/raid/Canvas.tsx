@@ -236,7 +236,7 @@ export const Canvas = () => {
                     sceneId: sceneId || '',
                     properties: {
                         ...data.properties,
-                        position: { initial: pos },
+                        position: pos,
                     },
                 });
 

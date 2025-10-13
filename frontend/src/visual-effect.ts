@@ -10,7 +10,8 @@ export interface VisualEffectRenderParams {
 }
 
 export abstract class VisualEffect {
-    abstract renderGround(params: VisualEffectRenderParams): void;
+    renderGround?(params: VisualEffectRenderParams): void;
+    renderOverlay?(params: VisualEffectRenderParams): void;
 }
 
 export interface VisualEffectFactory {

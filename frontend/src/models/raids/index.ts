@@ -288,10 +288,17 @@ export const raids = createModel<RootModel>()({
             const stepsToRemove = Object.values(state.raids.steps).filter((s) => payload.ids.includes(s.sceneId));
             const entitiesToRemove = Object.values(state.raids.entities).filter((e) => payload.ids.includes(e.sceneId));
 
+            const metadata = state.raids.metadata[raidId];
+            const newMetadata = {
+                ...metadata,
+                sceneIds: metadata.sceneIds.filter((id) => !payload.ids.includes(id)),
+            };
+
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Scene${existingScenes.length > 1 ? 's' : ''}`,
                 raidId,
                 operation: {
+                    putMetadata: newMetadata,
                     removeEntities: entitiesToRemove.map((e) => e.id),
                     removeScenes: existingScenes.map((s) => s.id),
                     removeSteps: stepsToRemove.map((s) => s.id),
@@ -377,10 +384,22 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete steps from one raid at a time');
             }
 
+            const sceneId = existingSteps[0].sceneId;
+            if (existingSteps.some((s) => s.sceneId !== sceneId)) {
+                throw new Error('Can only delete steps from one scene at a time');
+            }
+
+            const scene = state.raids.scenes[sceneId];
+            const newScene = {
+                ...scene,
+                stepIds: scene.stepIds.filter((id) => !payload.ids.includes(id)),
+            };
+
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Step${existingSteps.length > 1 ? 's' : ''}`,
                 raidId,
                 operation: {
+                    putScenes: [newScene],
                     removeSteps: existingSteps.map((s) => s.id),
                 },
             });
@@ -553,10 +572,22 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete entities from one raid at a time');
             }
 
+            const sceneId = existingEntities[0].sceneId;
+            if (existingEntities.some((e) => e.sceneId !== sceneId)) {
+                throw new Error('Can only delete entities from one scene at a time');
+            }
+
+            const scene = state.raids.scenes[sceneId];
+            const newScene = {
+                ...scene,
+                entityIds: scene.entityIds.filter((id) => !payload.ids.includes(id)),
+            };
+
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Entit${existingEntities.length > 1 ? 'ies' : 'y'}`,
                 raidId,
                 operation: {
+                    putScenes: [newScene],
                     removeEntities: existingEntities.map((e) => e.id),
                 },
             });

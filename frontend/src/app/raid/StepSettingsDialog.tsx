@@ -39,6 +39,7 @@ const StepSettings = (props: StepSettingsProps) => {
         } else {
             const id = dispatch.raids.createStep({ raidId: props.raidId, sceneId: props.sceneId, ...update });
             dispatch.workspaces.openStep({ id, sceneId: props.sceneId });
+            dispatch.workspaces.select({ raidId: props.raidId, selection: { stepIds: [id] } });
         }
 
         if (props.onClose) {

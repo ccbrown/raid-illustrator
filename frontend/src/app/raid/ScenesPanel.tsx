@@ -62,7 +62,7 @@ const ListItem = ({ id, onSettingsClick, openSceneId, selectedSceneIds }: ListIt
                     onSettingsClick();
                 }}
             >
-                <GearSixIcon size={18} />
+                <GearSixIcon size={20} />
             </button>
         </div>
     );

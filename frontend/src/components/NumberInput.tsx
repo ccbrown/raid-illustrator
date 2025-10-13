@@ -6,11 +6,14 @@ interface Props {
     label: string;
     value: number;
     onChange: (newValue: number) => void;
+    min?: number;
+    max?: number;
+    maxFractionDigits?: number;
 }
 
 export const NumberInput = (props: Props) => (
     <div className="flex flex-row items-center gap-2">
-        <div className="text-white/60 text-xs">{props.label}</div>
+        <div className="text-white/60 text-xs whitespace-nowrap">{props.label}</div>
         <InputNumber
             value={props.value}
             onValueChange={(e) => {
@@ -19,8 +22,10 @@ export const NumberInput = (props: Props) => (
                 }
             }}
             mode="decimal"
+            min={props.min}
+            max={props.max}
             minFractionDigits={0}
-            maxFractionDigits={2}
+            maxFractionDigits={props.maxFractionDigits ?? 2}
             size={3}
             pt={{
                 input: {

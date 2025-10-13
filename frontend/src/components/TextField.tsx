@@ -20,12 +20,10 @@ export const disablePasswordManagers = {
 
 export const TextField = (props: Props) => {
     return (
-        <Field className="grow">
-            <div className="flex text-sm">
-                {props.label && <Label className="block leading-6 font-semibold">{props.label}</Label>}
-            </div>
+        <Field className="flex flex-row items-center gap-2">
+            {props.label && <Label className="text-white/60 text-xs whitespace-nowrap">{props.label}</Label>}
             <input
-                className={`block w-full bg-black/20 rounded-full border-0 outline-none mt-1 shadow-none px-4 py-2 ring-inset focus:ring-1 focus:ring-inset focus:ring-cyan-500 text-sm/6`}
+                className={`block w-full bg-black/20 rounded-sm border-0 outline-none shadow-none px-2 py-0.5 ring-inset focus:ring-1 focus:ring-inset focus:ring-cyan-500 text-xs`}
                 disabled={props.disabled}
                 type={props.type || 'text'}
                 required={props.required}

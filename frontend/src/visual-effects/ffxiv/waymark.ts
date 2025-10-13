@@ -1,6 +1,6 @@
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
-interface WaymarkParams {
+interface Variant {
     markerImageUrl: string;
     markerImageScale: { width: number; height: number };
     markerImageXOffset?: number;
@@ -11,28 +11,65 @@ interface WaymarkParams {
 // Waymarks are always 2x2 meters.
 const WAYMARK_SIZE = 2.0;
 
+type VariantKey = 'a' | 'b' | 'c' | 'd' | '1' | '2' | '3' | '4';
+
+const VARIANTS: Record<VariantKey, Variant> = {
+    a: {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/a.png',
+        colors: ['#ffb6b3', '#ff73f1'],
+        shape: 'circle',
+        markerImageScale: { width: 1.2, height: 1.2 },
+    },
+    b: {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/b.png',
+        colors: ['#ffdc61', '#ffb383'],
+        shape: 'circle',
+        markerImageScale: { width: 1.55, height: 0.8 },
+    },
+    c: {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/c.png',
+        colors: ['#c6cfff', '#73f5ff'],
+        shape: 'circle',
+        markerImageScale: { width: 1.3, height: 1.3 },
+        markerImageXOffset: -0.1,
+    },
+    d: {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/d.png',
+        colors: ['#c6cfff', '#a65dff'],
+        shape: 'circle',
+        markerImageScale: { width: 1.35, height: 1.3 },
+        markerImageXOffset: 0.05,
+    },
+    '1': {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/1.png',
+        colors: ['#ffb6b3', '#ff73f1'],
+        shape: 'square',
+        markerImageScale: { width: 0.8, height: 0.8 },
+    },
+    '2': {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/2.png',
+        colors: ['#ffdc61', '#ffb383'],
+        shape: 'square',
+        markerImageScale: { width: 1.2, height: 1 },
+    },
+    '3': {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/3.png',
+        colors: ['#c6cfff', '#73f5ff'],
+        shape: 'square',
+        markerImageScale: { width: 1, height: 0.75 },
+    },
+    '4': {
+        markerImageUrl: '/images/ffxiv/waymarks/markers/4.png',
+        colors: ['#c6cfff', '#a65dff'],
+        shape: 'square',
+        markerImageScale: { width: 1.3, height: 0.7 },
+        markerImageXOffset: -0.05,
+    },
+};
+
 class Waymark extends VisualEffect {
-    colors: string[];
-    shape: 'square' | 'circle';
+    variantKey: string = '';
     markerImage?: HTMLImageElement;
-    markerImageScale: { width: number; height: number };
-    markerImageXOffset: number;
-
-    constructor(params: WaymarkParams) {
-        super();
-        this.colors = params.colors;
-        this.shape = params.shape;
-
-        const img = new Image();
-        img.src = params.markerImageUrl;
-        this.markerImage = img;
-        this.markerImage.onerror = () => {
-            console.error(`failed to load waymark image: ${params.markerImageUrl}`);
-            this.markerImage = undefined;
-        };
-        this.markerImageScale = params.markerImageScale;
-        this.markerImageXOffset = params.markerImageXOffset ?? 0;
-    }
 
     renderGround({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
@@ -40,21 +77,33 @@ class Waymark extends VisualEffect {
             return;
         }
 
+        const variant = VARIANTS[properties.variant];
+        if (this.variantKey !== properties.variant) {
+            const img = new Image();
+            img.src = variant.markerImageUrl;
+            this.markerImage = img;
+            this.markerImage.onerror = () => {
+                console.error(`failed to load waymark image: ${variant.markerImageUrl}`);
+                this.markerImage = undefined;
+            };
+            this.variantKey = properties.variant;
+        }
+
         const x = center.x * scale;
         const y = center.y * scale;
 
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, (WAYMARK_SIZE / 2) * scale);
-        gradient.addColorStop(0, this.colors[0] + '80');
-        gradient.addColorStop(1, this.colors[1] + '20');
+        gradient.addColorStop(0, variant.colors[0] + '80');
+        gradient.addColorStop(1, variant.colors[1] + '20');
         ctx.shadowBlur = 0.5 * scale;
-        ctx.shadowColor = this.colors[1];
+        ctx.shadowColor = variant.colors[1];
         ctx.fillStyle = gradient;
-        ctx.strokeStyle = this.colors[0];
+        ctx.strokeStyle = variant.colors[0];
         ctx.lineWidth = 0.05 * scale;
 
         const now = Date.now();
 
-        switch (this.shape) {
+        switch (variant.shape) {
             case 'square': {
                 ctx.fillRect(
                     (center.x - WAYMARK_SIZE / 2) * scale,
@@ -95,7 +144,7 @@ class Waymark extends VisualEffect {
                 ctx.stroke();
 
                 ctx.lineWidth = 0.01 * scale;
-                ctx.fillStyle = this.colors[0];
+                ctx.fillStyle = variant.colors[0];
 
                 for (let i = 0; i < 11; i++) {
                     const rads = (i / 11) * Math.PI * 2 - ((now % 12000) / 12000) * (Math.PI * 2);
@@ -129,11 +178,11 @@ class Waymark extends VisualEffect {
         if (this.markerImage?.complete) {
             const floatHeight = 0.1 * Math.sin(((now % 5000) / 5000) * Math.PI * 2) * scale;
 
-            const imgHeight = WAYMARK_SIZE * 1.3 * scale * this.markerImageScale.height;
-            const imgWidth = WAYMARK_SIZE * 1.3 * 0.5 * scale * this.markerImageScale.width;
+            const imgHeight = WAYMARK_SIZE * 1.3 * scale * variant.markerImageScale.height;
+            const imgWidth = WAYMARK_SIZE * 1.3 * 0.5 * scale * variant.markerImageScale.width;
             ctx.drawImage(
                 this.markerImage,
-                x - imgWidth / 2 + this.markerImageXOffset * scale,
+                x - imgWidth / 2 + (variant.markerImageXOffset || 0) * scale,
                 y - imgHeight / 2 - floatHeight,
                 imgWidth,
                 imgHeight,
@@ -144,11 +193,12 @@ class Waymark extends VisualEffect {
 
 interface Properties {
     enabled: boolean;
+    variant: VariantKey;
 }
 
-const factory = (name: string, params: WaymarkParams): VisualEffectFactory => ({
-    name,
-    create: () => new Waymark(params),
+export const waymark: VisualEffectFactory = {
+    name: 'Waymark',
+    create: () => new Waymark(),
     properties: [
         {
             name: 'Enabled',
@@ -157,64 +207,22 @@ const factory = (name: string, params: WaymarkParams): VisualEffectFactory => ({
             keyable: true,
             default: true,
         },
+        {
+            name: 'Variant',
+            type: 'enum',
+            key: 'variant',
+            keyable: false,
+            default: 'a',
+            choices: [
+                { value: 'a', label: 'A' },
+                { value: 'b', label: 'B' },
+                { value: 'c', label: 'C' },
+                { value: 'd', label: 'D' },
+                { value: '1', label: '1' },
+                { value: '2', label: '2' },
+                { value: '3', label: '3' },
+                { value: '4', label: '4' },
+            ],
+        },
     ],
-});
-
-export const waymarkA = factory('Waymark A', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/a.png',
-    colors: ['#ffb6b3', '#ff73f1'],
-    shape: 'circle',
-    markerImageScale: { width: 1.2, height: 1.2 },
-});
-
-export const waymarkB = factory('Waymark B', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/b.png',
-    colors: ['#ffdc61', '#ffb383'],
-    shape: 'circle',
-    markerImageScale: { width: 1.55, height: 0.8 },
-});
-
-export const waymarkC = factory('Waymark C', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/c.png',
-    colors: ['#c6cfff', '#73f5ff'],
-    shape: 'circle',
-    markerImageScale: { width: 1.3, height: 1.3 },
-    markerImageXOffset: -0.1,
-});
-
-export const waymarkD = factory('Waymark D', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/d.png',
-    colors: ['#c6cfff', '#a65dff'],
-    shape: 'circle',
-    markerImageScale: { width: 1.35, height: 1.3 },
-    markerImageXOffset: 0.05,
-});
-
-export const waymark1 = factory('Waymark 1', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/1.png',
-    colors: ['#ffb6b3', '#ff73f1'],
-    shape: 'square',
-    markerImageScale: { width: 0.8, height: 0.8 },
-});
-
-export const waymark2 = factory('Waymark 2', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/2.png',
-    colors: ['#ffdc61', '#ffb383'],
-    shape: 'square',
-    markerImageScale: { width: 1.2, height: 1 },
-});
-
-export const waymark3 = factory('Waymark 3', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/3.png',
-    colors: ['#c6cfff', '#73f5ff'],
-    shape: 'square',
-    markerImageScale: { width: 1, height: 0.75 },
-});
-
-export const waymark4 = factory('Waymark 4', {
-    markerImageUrl: '/images/ffxiv/waymarks/markers/4.png',
-    colors: ['#c6cfff', '#a65dff'],
-    shape: 'square',
-    markerImageScale: { width: 1.3, height: 0.7 },
-    markerImageXOffset: -0.05,
-});
+};

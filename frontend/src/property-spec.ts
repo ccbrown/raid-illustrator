@@ -13,10 +13,27 @@ interface PropertySpecBoolean extends PropertySpecBase {
     default: boolean;
 }
 
-// PropertySpec is used for run-time defined properties, e.g. for visual effects.
-export type PropertySpec = PropertySpecBoolean;
+interface PropertySpecEnumChoice {
+    value: string;
+    label: string;
+}
 
-export const resolveKeyableProperties = (
+interface PropertySpecEnum extends PropertySpecBase {
+    type: 'enum';
+    default: string;
+    choices: PropertySpecEnumChoice[];
+}
+
+interface PropertySpecColor extends PropertySpecBase {
+    type: 'color';
+    default: { r: number; g: number; b: number };
+}
+
+// PropertySpec is used for run-time defined properties, e.g. for visual effects.
+export type PropertySpec = PropertySpecBoolean | PropertySpecEnum | PropertySpecColor;
+
+// Returns the properties for the current step, resolving keyable values and adding defaults as needed.
+export const resolveProperties = (
     properties: AnyProperties,
     specs: PropertySpec[],
     sceneStepIds: string[],
@@ -26,6 +43,7 @@ export const resolveKeyableProperties = (
     for (const spec of specs) {
         const v = properties[spec.key];
         if (!v) {
+            result[spec.key] = spec.default;
             continue;
         }
 
@@ -41,22 +59,10 @@ export const resolveKeyableProperties = (
     return result;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const defaultProperty = (spec: PropertySpec): any => {
-    switch (spec.type) {
-        case 'boolean':
-            if (spec.keyable) {
-                return { initial: spec.default };
-            } else {
-                return spec.default;
-            }
-    }
-};
-
 export const defaultProperties = (specs: PropertySpec[]): AnyProperties => {
     const result: AnyProperties = {};
     for (const spec of specs) {
-        result[spec.key] = defaultProperty(spec);
+        result[spec.key] = spec.default;
     }
     return result;
 };

@@ -17,16 +17,14 @@ interface Props {
 
 export const Dropdown = (props: Props) => {
     return (
-        <Field className="grow">
-            <div className="flex text-sm">
-                {props.label && <Label className="block leading-6 font-semibold">{props.label}</Label>}
-            </div>
+        <Field className="flex flex-row items-center gap-2">
+            {props.label && <Label className="text-white/60 text-xs whitespace-nowrap">{props.label}</Label>}
             <Popover>
                 <PopoverButton
                     disabled={props.disabled}
-                    className={`inline-flex items-center gap-2 bg-black/20 rounded-full mt-1 py-1.5 px-3 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}
+                    className={`inline-flex items-center gap-2 bg-black/20 rounded-xs mt-1 py-0.5 px-2 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}
                 >
-                    <div className="text-sm/6">
+                    <div className="text-xs">
                         {props.options.find((opt) => opt.key === props.selectedOptionKey)?.label}
                     </div>
                     <CaretDownIcon size={14} />
@@ -37,12 +35,12 @@ export const Dropdown = (props: Props) => {
                         {props.options.map((option) => (
                             <CloseButton
                                 key={option.key}
-                                className="flex flex-row px-4 py-0.5 hover:bg-white/10 cursor-pointer justify-start"
+                                className="flex flex-row px-2 py-0.5 hover:bg-white/10 cursor-pointer justify-start"
                                 onClick={() => {
                                     props.onChange(option);
                                 }}
                             >
-                                <div className="text-sm/6">{option.label}</div>
+                                <div className="text-xs">{option.label}</div>
                             </CloseButton>
                         ))}
                     </div>

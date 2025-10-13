@@ -90,10 +90,12 @@ export interface RaidBatchOperation {
     removeEntities?: string[];
 }
 
-export interface Keyable<T> {
+export interface Keyed<T> {
     initial: T;
-    steps?: Record<string, T>;
+    steps: Record<string, T>;
 }
+
+export type Keyable<T> = T | Keyed<T>;
 
 interface ColorMaterial {
     type: 'color';

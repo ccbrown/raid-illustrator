@@ -1,5 +1,6 @@
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
+export { ColorInput } from './ColorInput';
 export { CoordinateInput } from './CoordinateInput';
 export { Dialog } from './Dialog';
 export { Dropdown } from './Dropdown';

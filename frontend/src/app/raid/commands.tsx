@@ -15,7 +15,6 @@ import { useDispatch } from '@/store';
 import { EffectSelectionDialog } from './EffectSelectionDialog';
 import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { SceneSettingsDialog } from './SceneSettingsDialog';
-import { StepSettingsDialog } from './StepSettingsDialog';
 import { useRaidId } from './hooks';
 
 export interface HotKey {
@@ -101,7 +100,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
 
     const [newSceneDialogOpen, setNewSceneDialogOpen] = useState(false);
-    const [newStepDialogOpen, setNewStepDialogOpen] = useState(false);
     const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
     const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
 
@@ -190,15 +188,22 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         newStep: {
             name: 'New Step',
             disabled: !sceneId,
+            hotKey: {
+                key: 'n',
+                shift: true,
+            },
             execute: () => {
-                setNewStepDialogOpen(true);
+                if (raidId && sceneId) {
+                    const id = dispatch.raids.createStep({ raidId, sceneId, name: 'New Step' });
+                    dispatch.workspaces.openStep({ id, sceneId });
+                    dispatch.workspaces.select({ raidId, selection: { stepIds: [id] } });
+                }
             },
         },
         openNextStep: {
             name: 'Next Step',
             disabled: !nextStepId,
             hotKey: {
-                ...hotKeyBase,
                 key: 'ArrowRight',
                 shift: true,
             },
@@ -212,7 +217,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             name: 'Previous Step',
             disabled: !previousStepId,
             hotKey: {
-                ...hotKeyBase,
                 key: 'ArrowLeft',
                 shift: true,
             },
@@ -331,15 +335,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                     isOpen={newSceneDialogOpen}
                     onClose={() => setNewSceneDialogOpen(false)}
                     raidId={raidId}
-                />
-            )}
-
-            {raidId && sceneId && (
-                <StepSettingsDialog
-                    isOpen={newStepDialogOpen}
-                    onClose={() => setNewStepDialogOpen(false)}
-                    raidId={raidId}
-                    sceneId={sceneId}
                 />
             )}
 

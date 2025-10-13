@@ -4,7 +4,7 @@ import { useScene, useSelection } from '@/hooks';
 import { AnyProperties, Material, RaidEntity, RaidScene, Shape } from '@/models/raids/types';
 import { keyableValueAtStep, shapeDimensions } from '@/models/raids/utils';
 import { Selection } from '@/models/workspaces/types';
-import { resolveKeyableProperties } from '@/property-spec';
+import { resolveProperties } from '@/property-spec';
 import { useSelector } from '@/store';
 import { VisualEffect } from '@/visual-effect';
 import { visualEffectFactories } from '@/visual-effects';
@@ -67,7 +67,7 @@ class RendererEntity {
         for (const effect of ep.effects || []) {
             const factory = visualEffectFactories[effect.factoryId];
             if (factory) {
-                effectProperties[effect.id] = resolveKeyableProperties(
+                effectProperties[effect.id] = resolveProperties(
                     effect.properties,
                     factory.properties || [],
                     sceneStepIds,
@@ -254,13 +254,15 @@ class Renderer {
                     continue;
                 }
 
-                visualEffect.renderGround({
+                ctx.save();
+                visualEffect.renderGround?.({
                     ctx,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
                     center: pos,
                 });
+                ctx.restore();
             }
         }
 
@@ -286,6 +288,31 @@ class Renderer {
                     );
                     break;
                 }
+            }
+        }
+
+        for (const entityId of this.entityDrawOrder) {
+            const entity = this.entities.get(entityId);
+            if (!entity) {
+                continue;
+            }
+
+            const pos = entity.renderPosition();
+            for (const { id, visualEffect } of entity.visualEffects) {
+                const ep = entity.entity.properties;
+                if (ep.type !== 'shape') {
+                    continue;
+                }
+
+                ctx.save();
+                visualEffect.renderOverlay?.({
+                    ctx,
+                    properties: entity.renderEffectProperties(id) || {},
+                    shape: ep.shape,
+                    scale,
+                    center: pos,
+                });
+                ctx.restore();
             }
         }
 

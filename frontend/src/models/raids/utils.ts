@@ -9,43 +9,69 @@ export const shapeDimensions = (shape: Shape) => {
     }
 };
 
-export const keyableValueAtStep = <T>(kv: Keyable<T>, sceneStepIds: string[], currentStepId: string): T => {
-    if (!kv.steps) {
-        return kv.initial;
+// Used by the utility functions here to make it easier to work with Keyables.
+interface normalizedKeyable<T> {
+    initial: T;
+    steps?: Record<string, T>;
+}
+
+export const normalizeKeyable = <T>(k: Keyable<T>): normalizedKeyable<T> => {
+    if (typeof k === 'object' && k !== null && 'initial' in k && 'steps' in k) {
+        return {
+            initial: k.initial,
+            steps: k.steps,
+        };
+    } else {
+        return {
+            initial: k as T,
+        };
+    }
+};
+
+export const keyableIsKeyedAtStep = <T>(k: Keyable<T>, stepId: string): boolean => {
+    const norm = normalizeKeyable(k);
+    return norm.steps ? stepId in norm.steps : false;
+};
+
+export const keyableValueAtStep = <T>(k: Keyable<T>, sceneStepIds: string[], currentStepId: string): T => {
+    const norm = normalizeKeyable(k);
+    if (!norm.steps) {
+        return norm.initial;
     }
 
     // find the closest previous step that has a value
     const currentStepIndex = sceneStepIds.indexOf(currentStepId);
     for (let i = currentStepIndex; i >= 0; i--) {
         const stepId = sceneStepIds[i];
-        const value = kv.steps[stepId];
+        const value = norm.steps[stepId];
         if (value !== undefined) {
             return value;
         }
     }
 
-    return kv.initial;
+    return norm.initial;
 };
 
 // Returns a new Keyable with the value set at the given stepId. This does NOT change unkeyed
 // Keyables to keyed ones. If the Keyable is unkeyed, it just returns a new unkeyed Keyable with the
 // given value.
 export const keyableWithValueAtStep = <T>(
-    kv: Keyable<T>,
+    k: Keyable<T>,
     value: T,
     sceneStepIds: string[],
     stepId: string,
 ): Keyable<T> => {
-    if (!kv.steps) {
-        return { initial: value };
+    const norm = normalizeKeyable(k);
+    if (!norm.steps) {
+        return value;
     }
 
     const isFirstStep = sceneStepIds.length > 0 && sceneStepIds[0] === stepId;
 
     return {
-        initial: isFirstStep ? value : kv.initial,
+        initial: isFirstStep ? value : norm.initial,
         steps: {
-            ...kv.steps,
+            ...norm.steps,
             [stepId]: value,
         },
     };
@@ -53,22 +79,23 @@ export const keyableWithValueAtStep = <T>(
 
 // Returns a new Keyable where the given stepId is keyed to the current value, converting an unkeyed
 // Keyable to a keyed one if necessary.
-export const keyableWithKeyedStep = <T>(kv: Keyable<T>, sceneStepIds: string[], stepId: string): Keyable<T> => {
-    if (!kv.steps) {
+export const keyableWithKeyedStep = <T>(k: Keyable<T>, sceneStepIds: string[], stepId: string): Keyable<T> => {
+    const norm = normalizeKeyable(k);
+    if (!norm.steps) {
         return {
-            initial: kv.initial,
+            initial: norm.initial,
             steps: {
-                [stepId]: kv.initial,
+                [stepId]: norm.initial,
             },
         };
     }
 
-    const currentValue = keyableValueAtStep(kv, sceneStepIds, stepId);
+    const currentValue = keyableValueAtStep(k, sceneStepIds, stepId);
 
     return {
-        initial: kv.initial,
+        initial: norm.initial,
         steps: {
-            ...kv.steps,
+            ...norm.steps,
             [stepId]: currentValue,
         },
     };
@@ -76,14 +103,17 @@ export const keyableWithKeyedStep = <T>(kv: Keyable<T>, sceneStepIds: string[], 
 
 // Returns a new Keyable where the given stepId is removed from the keyed steps. If there are no
 // remaining keyed steps, converts to an unkeyed Keyable.
-export const keyableWithUnkeyedStep = <T>(kv: Keyable<T>, stepId: string): Keyable<T> => {
-    if (!kv.steps) {
-        return kv;
+export const keyableWithUnkeyedStep = <T>(k: Keyable<T>, stepId: string): Keyable<T> => {
+    const norm = normalizeKeyable(k);
+    if (!norm.steps) {
+        return norm.initial;
     }
 
-    const { [stepId]: _, ...remainingSteps } = kv.steps;
-    return {
-        initial: kv.initial,
-        steps: Object.keys(remainingSteps).length > 0 ? remainingSteps : undefined,
-    };
+    const { [stepId]: _, ...remainingSteps } = norm.steps;
+    return Object.keys(remainingSteps).length > 0
+        ? {
+              initial: norm.initial,
+              steps: remainingSteps,
+          }
+        : norm.initial;
 };

@@ -81,7 +81,7 @@ const EntitySettings = (props: EntitySettingsProps) => {
                         ...update,
                         properties: {
                             ...update.properties,
-                            position: { initial: { x: 0.0, y: 0.0 } },
+                            position: { x: 0.0, y: 0.0 },
                         },
                     },
                 };

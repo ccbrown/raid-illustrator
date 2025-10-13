@@ -6,13 +6,13 @@ import { useEffect } from 'react';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
 
+import { CommandsProvider } from '../commands';
 import { Canvas } from './Canvas';
 import { EntitiesPanel } from './EntitiesPanel';
 import { InspectorPanel } from './InspectorPanel';
 import { MenuBar } from './MenuBar';
 import { ScenesPanel } from './ScenesPanel';
 import { StepsPanel } from './StepsPanel';
-import { CommandsProvider } from './commands';
 
 export const Editor = () => {
     const router = useRouter();

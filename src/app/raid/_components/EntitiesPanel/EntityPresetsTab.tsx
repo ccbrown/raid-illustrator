@@ -6,8 +6,8 @@ import { defaultProperties } from '@/property-spec';
 import { useDispatch } from '@/store';
 import { visualEffectFactories } from '@/visual-effects';
 
-import { ENTITY_PRESET_DRAG_MIME_TYPE } from './Canvas';
-import { useRaidId } from './hooks';
+import { useRaidId } from '../../hooks';
+import { ENTITY_PRESET_DRAG_MIME_TYPE } from '../Canvas';
 
 interface Preset {
     name: string;

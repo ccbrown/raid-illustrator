@@ -5,8 +5,8 @@ import { EditableText } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
 import { useDispatch } from '@/store';
 
-import { EntitySettingsDialog } from './EntitySettingsDialog';
-import { useRaidId } from './hooks';
+import { useRaidId } from '../../hooks';
+import { EntitySettingsDialog } from '../EntitySettingsDialog';
 
 interface ListItemProps {
     id: string;

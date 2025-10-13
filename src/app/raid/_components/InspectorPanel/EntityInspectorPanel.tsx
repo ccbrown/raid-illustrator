@@ -1,7 +1,7 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 
 import { Button, Checkbox, ColorInput, CoordinateInput, Dropdown } from '@/components';
-import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
+import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
 import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity } from '@/models/raids/types';
 import {
     keyableIsKeyedAtStep,
@@ -14,8 +14,7 @@ import { PropertySpec } from '@/property-spec';
 import { useDispatch } from '@/store';
 import { visualEffectFactories } from '@/visual-effects';
 
-import { useCommands } from './commands';
-import { useRaidId } from './hooks';
+import { useCommands } from '../../commands';
 
 type PropertyControlProps<T> = {
     value: T;
@@ -286,14 +285,14 @@ const EffectEditor = ({ entity, index, sceneStepIds, stepId }: EffectEditorProps
     );
 };
 
-interface EntityInspectorPanelProps {
+interface Props {
     id: string;
-    raidId: string;
 }
 
-const EntityInspectorPanel = ({ id, raidId }: EntityInspectorPanelProps) => {
+export const EntityInspectorPanel = ({ id }: Props) => {
     const entity = useEntity(id);
-    const raidWorkspace = useRaidWorkspace(raidId);
+    const raidId = entity?.raidId;
+    const raidWorkspace = useRaidWorkspace(raidId || '');
     const scene = useScene(raidWorkspace?.openSceneId || '');
     const sceneWorkspace = useSceneWorkspace(scene?.id || '');
     const stepId = sceneWorkspace?.openStepId || '';
@@ -351,15 +350,4 @@ const EntityInspectorPanel = ({ id, raidId }: EntityInspectorPanelProps) => {
             </div>
         </div>
     );
-};
-
-export const InspectorPanel = () => {
-    const raidId = useRaidId();
-    const selection = useSelection(raidId || '');
-
-    if (!raidId || !selection?.entityIds || selection.entityIds.length !== 1) {
-        return null;
-    }
-
-    return <EntityInspectorPanel id={selection.entityIds[0]} raidId={raidId} />;
 };

@@ -1,4 +1,4 @@
-import { WelcomePanel } from './WelcomePanel';
+import { WelcomePanel } from './_components/WelcomePanel';
 
 export default function Page() {
     return (

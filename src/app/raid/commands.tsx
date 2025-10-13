@@ -12,9 +12,8 @@ import {
 } from '@/hooks';
 import { useDispatch } from '@/store';
 
-import { EffectSelectionDialog } from './EffectSelectionDialog';
-import { EntitySettingsDialog } from './EntitySettingsDialog';
-import { SceneSettingsDialog } from './SceneSettingsDialog';
+import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
+import { EntitySettingsDialog } from './_components/EntitySettingsDialog';
 import { useRaidId } from './hooks';
 
 export interface HotKey {
@@ -99,7 +98,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const selection = useSelection(raidId || '');
     const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
 
-    const [newSceneDialogOpen, setNewSceneDialogOpen] = useState(false);
     const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
     const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
 
@@ -182,7 +180,22 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             name: 'New Scene',
             disabled: !raidId,
             execute: () => {
-                setNewSceneDialogOpen(true);
+                if (raidId) {
+                    const id = dispatch.raids.createScene({
+                        raidId,
+                        name: 'New Scene',
+                        shape: scene
+                            ? scene.shape
+                            : {
+                                  type: 'rectangle',
+                                  width: 40,
+                                  height: 40,
+                              },
+                        afterSceneId: raidWorkspace?.openSceneId,
+                    });
+                    dispatch.workspaces.openScene({ id, raidId });
+                    dispatch.workspaces.select({ raidId, selection: { sceneIds: [id] } });
+                }
             },
         },
         newStep: {
@@ -194,7 +207,12 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             },
             execute: () => {
                 if (raidId && sceneId) {
-                    const id = dispatch.raids.createStep({ raidId, sceneId, name: 'New Step' });
+                    const id = dispatch.raids.createStep({
+                        raidId,
+                        sceneId,
+                        name: 'New Step',
+                        afterStepId: sceneWorkspace?.openStepId,
+                    });
                     dispatch.workspaces.openStep({ id, sceneId });
                     dispatch.workspaces.select({ raidId, selection: { stepIds: [id] } });
                 }
@@ -330,14 +348,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     return (
         <CommandsContext.Provider value={commands}>
-            {raidId && (
-                <SceneSettingsDialog
-                    isOpen={newSceneDialogOpen}
-                    onClose={() => setNewSceneDialogOpen(false)}
-                    raidId={raidId}
-                />
-            )}
-
             {raidId && sceneId && (
                 <EntitySettingsDialog
                     isOpen={newEntityDialogOpen}

@@ -1,22 +1,20 @@
-import { GearSixIcon, PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import { useState } from 'react';
 
 import { Button, EditableText } from '@/components';
 import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection, useStep } from '@/hooks';
 import { useDispatch } from '@/store';
 
-import { StepSettingsDialog } from './StepSettingsDialog';
-import { useRaidId } from './hooks';
+import { useCommands } from '../commands';
+import { useRaidId } from '../hooks';
 
 interface ListItemProps {
     id: string;
-    onSettingsClick: () => void;
     openStepId?: string;
     selectedStepIds?: string[];
 }
 
-const ListItem = ({ id, onSettingsClick, openStepId, selectedStepIds }: ListItemProps) => {
+const ListItem = ({ id, openStepId, selectedStepIds }: ListItemProps) => {
     const step = useStep(id);
     const dispatch = useDispatch();
 
@@ -54,16 +52,6 @@ const ListItem = ({ id, onSettingsClick, openStepId, selectedStepIds }: ListItem
                     dispatch.raids.updateStep({ id: step.id, name: newName });
                 }}
             />
-            <div className="flex-grow" />
-            <button
-                className="subtle pr-2"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onSettingsClick();
-                }}
-            >
-                <GearSixIcon size={20} />
-            </button>
         </div>
     );
 };
@@ -74,21 +62,10 @@ export const StepsPanel = () => {
     const scene = useScene(workspace?.openSceneId || '');
     const sceneWorkspace = useSceneWorkspace(scene?.id || '');
     const selection = useSelection(raidId || '');
-
-    const [settingsDialogStepId, setSettingsDialogStepId] = useState<string | null>(null);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+    const commands = useCommands();
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
-            {raidId && scene && (
-                <StepSettingsDialog
-                    isOpen={settingsDialogOpen}
-                    onClose={() => setSettingsDialogOpen(false)}
-                    raidId={raidId}
-                    sceneId={scene.id}
-                    stepId={settingsDialogStepId}
-                />
-            )}
             <div className="flex flex-row items-center mb-2">
                 <div className="px-4 font-semibold">Steps</div>
                 <div className="flex-grow" />
@@ -97,8 +74,7 @@ export const StepsPanel = () => {
                         icon={PlusIcon}
                         size="small"
                         onClick={() => {
-                            setSettingsDialogStepId(null);
-                            setSettingsDialogOpen(true);
+                            commands.newStep.execute();
                         }}
                     />
                 </div>
@@ -107,10 +83,6 @@ export const StepsPanel = () => {
                 <ListItem
                     key={id}
                     id={id}
-                    onSettingsClick={() => {
-                        setSettingsDialogStepId(id);
-                        setSettingsDialogOpen(true);
-                    }}
                     openStepId={sceneWorkspace?.openStepId}
                     selectedStepIds={selection?.stepIds}
                 />

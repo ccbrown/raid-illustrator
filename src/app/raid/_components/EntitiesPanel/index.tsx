@@ -5,10 +5,10 @@ import { Button } from '@/components';
 import { useRaidWorkspace } from '@/hooks';
 import { useDispatch } from '@/store';
 
+import { useCommands } from '../../commands';
+import { useRaidId } from '../../hooks';
 import { EntitiesTab } from './EntitiesTab';
 import { EntityPresetsTab } from './EntityPresetsTab';
-import { useCommands } from './commands';
-import { useRaidId } from './hooks';
 
 const Tab = ({ id, label, activeTabId }: { id: string; label: string; activeTabId: string }) => {
     const raidId = useRaidId();

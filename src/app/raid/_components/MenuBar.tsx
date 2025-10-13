@@ -19,7 +19,7 @@ import { EditableText } from '@/components';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
 
-import { Command, HotKey, useCommands } from './commands';
+import { Command, HotKey, useCommands } from '../commands';
 
 interface MenuItem extends PrimeMenuItem {
     icon?: Icon;

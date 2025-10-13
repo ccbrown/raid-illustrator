@@ -1,22 +1,20 @@
-import { GearSixIcon, PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import { useState } from 'react';
 
 import { Button, EditableText } from '@/components';
 import { useRaid, useRaidWorkspace, useScene, useSelection } from '@/hooks';
 import { useDispatch } from '@/store';
 
-import { SceneSettingsDialog } from './SceneSettingsDialog';
-import { useRaidId } from './hooks';
+import { useCommands } from '../commands';
+import { useRaidId } from '../hooks';
 
 interface ListItemProps {
     id: string;
-    onSettingsClick: () => void;
     openSceneId?: string;
     selectedSceneIds?: string[];
 }
 
-const ListItem = ({ id, onSettingsClick, openSceneId, selectedSceneIds }: ListItemProps) => {
+const ListItem = ({ id, openSceneId, selectedSceneIds }: ListItemProps) => {
     const scene = useScene(id);
     const dispatch = useDispatch();
 
@@ -54,16 +52,6 @@ const ListItem = ({ id, onSettingsClick, openSceneId, selectedSceneIds }: ListIt
                     dispatch.raids.updateScene({ id: scene.id, name: newName });
                 }}
             />
-            <div className="flex-grow" />
-            <button
-                className="subtle pr-2"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onSettingsClick();
-                }}
-            >
-                <GearSixIcon size={20} />
-            </button>
         </div>
     );
 };
@@ -73,20 +61,10 @@ export const ScenesPanel = () => {
     const raid = useRaid(raidId || '');
     const raidWorkspace = useRaidWorkspace(raidId || '');
     const selection = useSelection(raidId || '');
-
-    const [settingsDialogSceneId, setSettingsDialogSceneId] = useState<string | null>(null);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+    const commands = useCommands();
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
-            {raidId && (
-                <SceneSettingsDialog
-                    isOpen={settingsDialogOpen}
-                    onClose={() => setSettingsDialogOpen(false)}
-                    sceneId={settingsDialogSceneId}
-                    raidId={raidId}
-                />
-            )}
             <div className="flex flex-row items-center mb-2">
                 <div className="px-4 font-semibold">Scenes</div>
                 <div className="flex-grow" />
@@ -95,8 +73,7 @@ export const ScenesPanel = () => {
                         icon={PlusIcon}
                         size="small"
                         onClick={() => {
-                            setSettingsDialogSceneId(null);
-                            setSettingsDialogOpen(true);
+                            commands.newScene.execute();
                         }}
                     />
                 </div>
@@ -106,10 +83,6 @@ export const ScenesPanel = () => {
                     key={id}
                     id={id}
                     openSceneId={raidWorkspace?.openSceneId}
-                    onSettingsClick={() => {
-                        setSettingsDialogSceneId(id);
-                        setSettingsDialogOpen(true);
-                    }}
                     selectedSceneIds={selection?.sceneIds}
                 />
             ))}

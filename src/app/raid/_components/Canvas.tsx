@@ -7,7 +7,7 @@ import { EntityPresetDragData } from '@/models/workspaces/types';
 import { useSceneRenderer } from '@/renderer';
 import { useDispatch } from '@/store';
 
-import { useRaidId } from './hooks';
+import { useRaidId } from '../hooks';
 
 const PIXELS_PER_METER = 100;
 

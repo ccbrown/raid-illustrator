@@ -208,6 +208,7 @@ export const raids = createModel<RootModel>()({
                 name: string;
                 shape: RaidSceneShape;
                 raidId: string;
+                afterSceneId?: string;
             },
             _state,
         ) {
@@ -226,9 +227,17 @@ export const raids = createModel<RootModel>()({
                 entityIds: [],
             };
 
+            let newSceneIds: string[];
+            if (payload.afterSceneId) {
+                const index = raid.sceneIds.indexOf(payload.afterSceneId) ?? raid.sceneIds.length - 1;
+                newSceneIds = [...raid.sceneIds.slice(0, index + 1), newScene.id, ...raid.sceneIds.slice(index + 1)];
+            } else {
+                newSceneIds = [...raid.sceneIds, newScene.id];
+            }
+
             const newRaid = {
                 ...raid,
-                sceneIds: [...raid.sceneIds, newScene.id],
+                sceneIds: newSceneIds,
             };
 
             dispatch.raids.undoableBatchOperation({
@@ -310,6 +319,7 @@ export const raids = createModel<RootModel>()({
                 name: string;
                 raidId: string;
                 sceneId: string;
+                afterStepId?: string;
             },
             state,
         ) {
@@ -326,9 +336,17 @@ export const raids = createModel<RootModel>()({
                 creationTime: Date.now(),
             };
 
+            let newStepIds: string[];
+            if (payload.afterStepId) {
+                const index = scene.stepIds.indexOf(payload.afterStepId) ?? scene.stepIds.length - 1;
+                newStepIds = [...scene.stepIds.slice(0, index + 1), newStep.id, ...scene.stepIds.slice(index + 1)];
+            } else {
+                newStepIds = [...scene.stepIds, newStep.id];
+            }
+
             const newScene = {
                 ...scene,
-                stepIds: [...scene.stepIds, newStep.id],
+                stepIds: newStepIds,
             };
 
             dispatch.raids.undoableBatchOperation({

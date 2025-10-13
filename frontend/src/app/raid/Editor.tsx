@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-import { Canvas } from './Canvas';
-import { CommandsProvider } from './commands';
-import { EntitiesPanel } from './EntitiesPanel';
-import { InspectorPanel } from './InspectorPanel';
-import { ScenesPanel } from './ScenesPanel';
-import { StepsPanel } from './StepsPanel';
-import { MenuBar } from './MenuBar';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
+
+import { Canvas } from './Canvas';
+import { EntitiesPanel } from './EntitiesPanel';
+import { InspectorPanel } from './InspectorPanel';
+import { MenuBar } from './MenuBar';
+import { ScenesPanel } from './ScenesPanel';
+import { StepsPanel } from './StepsPanel';
+import { CommandsProvider } from './commands';
 
 export const Editor = () => {
     const router = useRouter();

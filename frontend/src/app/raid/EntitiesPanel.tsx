@@ -2,12 +2,13 @@ import { PlusIcon } from '@phosphor-icons/react';
 import clsx from 'clsx';
 
 import { Button } from '@/components';
-import { useCommands } from './commands';
-import { EntitiesTab } from './EntitiesTab';
-import { EntityPresetsTab } from './EntityPresetsTab';
-import { useRaidId } from './hooks';
 import { useRaidWorkspace } from '@/hooks';
 import { useDispatch } from '@/store';
+
+import { EntitiesTab } from './EntitiesTab';
+import { EntityPresetsTab } from './EntityPresetsTab';
+import { useCommands } from './commands';
+import { useRaidId } from './hooks';
 
 const Tab = ({ id, label, activeTabId }: { id: string; label: string; activeTabId: string }) => {
     const raidId = useRaidId();

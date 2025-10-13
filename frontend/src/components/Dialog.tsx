@@ -1,5 +1,5 @@
+import { CloseButton, DialogBackdrop, Dialog as DialogImpl, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XIcon } from '@phosphor-icons/react';
-import { CloseButton, Dialog as DialogImpl, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import React from 'react';
 
 interface Props {

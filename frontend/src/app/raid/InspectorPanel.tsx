@@ -1,20 +1,20 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 
 import { Button, Checkbox, CoordinateInput } from '@/components';
-import { useCommands } from './commands';
-import { useRaidId } from './hooks';
-import { useEntity, useSelection, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
+import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
+import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity } from '@/models/raids/types';
 import {
-    Keyable,
     keyableValueAtStep,
     keyableWithKeyedStep,
     keyableWithUnkeyedStep,
     keyableWithValueAtStep,
-} from '@/keyable';
-import { AnyProperties, defaultProperty, PropertySpec } from '@/property-spec';
+} from '@/models/raids/utils';
+import { PropertySpec, defaultProperty } from '@/property-spec';
 import { useDispatch } from '@/store';
-import { PartialRaidEntityProperties, RaidEntity } from '@/models/raids';
 import { visualEffectFactories } from '@/visual-effects';
+
+import { useCommands } from './commands';
+import { useRaidId } from './hooks';
 
 type PropertyControlProps<T> = {
     value: T;

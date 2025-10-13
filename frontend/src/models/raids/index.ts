@@ -1,95 +1,23 @@
 import { createModel } from '@rematch/core';
 
-import { RootModel } from '.';
-import { Shape, ShapeCircle, ShapeRectangle } from '@/shapes';
-import { Keyable, keyableValueAtStep, keyableWithValueAtStep } from '@/keyable';
-import { AnyProperties } from '@/property-spec';
-import { Material } from '@/renderer';
-
-interface RaidMetadata {
-    id: string;
-    name: string;
-    creationTime: number;
-
-    sceneIds: string[];
-}
-
-type RaidSceneShape = ShapeRectangle | ShapeCircle;
-
-export interface RaidScene {
-    id: string;
-    raidId: string;
-
-    name: string;
-    creationTime: number;
-    shape: RaidSceneShape;
-
-    stepIds: string[];
-    entityIds: string[];
-}
-
-export interface RaidStep {
-    id: string;
-    raidId: string;
-    sceneId: string;
-
-    name: string;
-    creationTime: number;
-}
-
-interface RaidEntityPropertiesGroup {
-    type: 'group';
-    children: string[];
-}
-
-interface RaidEntityPropertiesShapeEffect {
-    id: string;
-    factoryId: string;
-    properties: AnyProperties;
-}
-
-export interface RaidEntityPropertiesShape {
-    type: 'shape';
-    shape: Shape;
-    fill?: Material;
-    position: Keyable<{ x: number; y: number }>;
-    effects?: RaidEntityPropertiesShapeEffect[];
-}
-
-export type RaidEntityType = 'group' | 'shape';
-type RaidEntityProperties = RaidEntityPropertiesGroup | RaidEntityPropertiesShape;
-
-type PartialRaidEntityPropertiesGroup = Partial<Omit<RaidEntityPropertiesGroup, 'type'>> &
-    Pick<RaidEntityPropertiesGroup, 'type'>;
-type PartialRaidEntityPropertiesShape = Partial<Omit<RaidEntityPropertiesShape, 'type'>> &
-    Pick<RaidEntityPropertiesShape, 'type'>;
-export type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
-
-export interface RaidEntity {
-    id: string;
-    raidId: string;
-    sceneId: string;
-
-    name: string;
-    creationTime: number;
-    properties: RaidEntityProperties;
-}
+import { RootModel } from '..';
+import {
+    PartialRaidEntityProperties,
+    RaidBatchOperation,
+    RaidEntity,
+    RaidEntityProperties,
+    RaidMetadata,
+    RaidScene,
+    RaidSceneShape,
+    RaidStep,
+} from './types';
+import { keyableValueAtStep, keyableWithValueAtStep } from './utils';
 
 interface RaidsState {
     metadata: Record<string, RaidMetadata>;
     scenes: Record<string, RaidScene>;
     steps: Record<string, RaidStep>;
     entities: Record<string, RaidEntity>;
-}
-
-export interface RaidBatchOperation {
-    putMetadata?: RaidMetadata;
-    putScenes?: RaidScene[];
-    removeScenes?: string[];
-    putSteps?: RaidStep[];
-    removeSteps?: string[];
-    putEntities?: RaidEntity[];
-    removeEntities?: string[];
 }
 
 export const raids = createModel<RootModel>()({

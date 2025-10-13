@@ -1,11 +1,11 @@
 'use client';
 
+import { getPersistor } from '@rematch/persist';
 import { useServerInsertedHTML } from 'next/navigation';
+import { PrimeReactProvider } from 'primereact/api';
 import { PropsWithChildren } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
-import { getPersistor } from '@rematch/persist';
 import { PersistGate } from 'redux-persist/integration/react';
-import { PrimeReactProvider } from 'primereact/api';
 import { twMerge } from 'tailwind-merge';
 
 import { store } from '@/store';

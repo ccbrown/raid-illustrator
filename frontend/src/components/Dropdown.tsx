@@ -1,5 +1,5 @@
-import { CaretDownIcon } from '@phosphor-icons/react';
 import { CloseButton, Field, Label, Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
+import { CaretDownIcon } from '@phosphor-icons/react';
 
 interface Option {
     label: string;

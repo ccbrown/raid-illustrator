@@ -1,5 +1,5 @@
-import React, { useId } from 'react';
 import { CheckFatIcon } from '@phosphor-icons/react';
+import React, { useId } from 'react';
 
 interface Props {
     disabled?: boolean;

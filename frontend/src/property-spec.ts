@@ -1,4 +1,6 @@
-import { keyableValueAtStep, Keyable } from './keyable';
+import { AnyProperties, Keyable } from '@/models/raids/types';
+
+import { keyableValueAtStep } from './models/raids/utils';
 
 interface PropertySpecBase {
     name: string;
@@ -13,9 +15,6 @@ interface PropertySpecBoolean extends PropertySpecBase {
 
 // PropertySpec is used for run-time defined properties, e.g. for visual effects.
 export type PropertySpec = PropertySpecBoolean;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyProperties = { [key: string]: any };
 
 export const resolveKeyableProperties = (
     properties: AnyProperties,

@@ -1,11 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import React, { createContext, useContext, useState } from 'react';
 
-import { EffectSelectionDialog } from './EffectSelectionDialog';
-import { EntitySettingsDialog } from './EntitySettingsDialog';
-import { SceneSettingsDialog } from './SceneSettingsDialog';
-import { StepSettingsDialog } from './StepSettingsDialog';
-import { useRaidId } from './hooks';
 import {
     useEntity,
     useKeyDownEvents,
@@ -16,6 +11,12 @@ import {
     useSelection,
 } from '@/hooks';
 import { useDispatch } from '@/store';
+
+import { EffectSelectionDialog } from './EffectSelectionDialog';
+import { EntitySettingsDialog } from './EntitySettingsDialog';
+import { SceneSettingsDialog } from './SceneSettingsDialog';
+import { StepSettingsDialog } from './StepSettingsDialog';
+import { useRaidId } from './hooks';
 
 export interface HotKey {
     key: string;

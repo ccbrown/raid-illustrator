@@ -1,12 +1,11 @@
 import { useRef } from 'react';
 
 import { useScene, useSelection } from '@/hooks';
+import { AnyProperties, Material, RaidEntity, RaidScene, Shape } from '@/models/raids/types';
+import { keyableValueAtStep, shapeDimensions } from '@/models/raids/utils';
+import { Selection } from '@/models/workspaces/types';
+import { resolveKeyableProperties } from '@/property-spec';
 import { useSelector } from '@/store';
-import { RaidEntity, RaidScene } from '@/models/raids';
-import { Selection } from '@/models/workspaces';
-import { shapeDimensions, Shape } from '@/shapes';
-import { keyableValueAtStep } from '@/keyable';
-import { AnyProperties, resolveKeyableProperties } from '@/property-spec';
 import { VisualEffect } from '@/visual-effect';
 import { visualEffectFactories } from '@/visual-effects';
 
@@ -167,18 +166,6 @@ class RendererEntity {
         };
     }
 }
-
-interface ColorMaterial {
-    type: 'color';
-    color: string;
-}
-
-interface ImageMaterial {
-    type: 'image';
-    url: string;
-}
-
-export type Material = ColorMaterial | ImageMaterial;
 
 interface ImageManagerImage {
     used: boolean;

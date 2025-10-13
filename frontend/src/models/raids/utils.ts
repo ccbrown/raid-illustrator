@@ -1,7 +1,13 @@
-export interface Keyable<T> {
-    initial: T;
-    steps?: Record<string, T>;
-}
+import { Keyable, Shape } from './types';
+
+export const shapeDimensions = (shape: Shape) => {
+    switch (shape.type) {
+        case 'rectangle':
+            return { width: shape.width, height: shape.height };
+        case 'circle':
+            return { width: shape.radius * 2, height: shape.radius * 2 };
+    }
+};
 
 export const keyableValueAtStep = <T>(kv: Keyable<T>, sceneStepIds: string[], currentStepId: string): T => {
     if (!kv.steps) {

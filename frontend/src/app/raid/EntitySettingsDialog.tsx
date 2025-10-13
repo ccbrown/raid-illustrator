@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 import { Button, Dialog, Dropdown, TextField } from '@/components';
 import { useEntity } from '@/hooks';
+import { RaidEntity, RaidEntityType } from '@/models/raids/types';
 import { useDispatch } from '@/store';
-import { RaidEntity, RaidEntityType } from '@/models/raids';
 
 interface EntitySettingsProps {
     existing?: RaidEntity;

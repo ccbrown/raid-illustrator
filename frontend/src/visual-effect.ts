@@ -1,5 +1,5 @@
-import { AnyProperties, PropertySpec } from '@/property-spec';
-import { Shape } from '@/shapes';
+import { AnyProperties, Shape } from '@/models/raids/types';
+import { PropertySpec } from '@/property-spec';
 
 export interface VisualEffectRenderParams {
     ctx: CanvasRenderingContext2D;

@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAnimationFrame } from 'motion/react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
+import { shapeDimensions } from '@/models/raids/utils';
+import { EntityPresetDragData } from '@/models/workspaces/types';
+import { useSceneRenderer } from '@/renderer';
+import { useDispatch } from '@/store';
 
 import { useRaidId } from './hooks';
-import { useRaidWorkspace, useSceneWorkspace, useScene, useSelection } from '@/hooks';
-import { shapeDimensions } from '@/shapes';
-import { useDispatch } from '@/store';
-import { useSceneRenderer } from '@/renderer';
-import { EntityPresetDragData } from '@/models/workspaces';
 
 const PIXELS_PER_METER = 100;
 

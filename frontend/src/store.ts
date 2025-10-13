@@ -1,12 +1,12 @@
-import { init, Plugin, RematchDispatch, RematchRootState } from '@rematch/core';
-import { produce } from 'immer';
-import Redux from 'redux';
-import { TypedUseSelectorHook, useDispatch as useDispatchImpl, useSelector as useSelectorImpl } from 'react-redux';
+import { Plugin, RematchDispatch, RematchRootState, init } from '@rematch/core';
 import persistPlugin from '@rematch/persist';
-import storage from 'redux-persist/lib/storage';
+import { produce } from 'immer';
+import { TypedUseSelectorHook, useDispatch as useDispatchImpl, useSelector as useSelectorImpl } from 'react-redux';
+import Redux from 'redux';
 import { createMigrate } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
 
-import { models, RootModel } from './models';
+import { RootModel, models } from './models';
 
 function wrapReducerWithImmer(reducer: Redux.Reducer) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

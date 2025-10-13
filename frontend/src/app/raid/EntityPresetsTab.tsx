@@ -1,12 +1,13 @@
 import Image from 'next/image';
 
-import { visualEffectFactories } from '@/visual-effects';
-import { useRaidId } from './hooks';
-import { ENTITY_PRESET_DRAG_MIME_TYPE } from './Canvas';
+import { Shape } from '@/models/raids/types';
+import { EntityPresetDragData } from '@/models/workspaces/types';
 import { defaultProperties } from '@/property-spec';
-import { Shape } from '@/shapes';
-import { EntityPresetDragData } from '@/models/workspaces';
 import { useDispatch } from '@/store';
+import { visualEffectFactories } from '@/visual-effects';
+
+import { ENTITY_PRESET_DRAG_MIME_TYPE } from './Canvas';
+import { useRaidId } from './hooks';
 
 interface Preset {
     name: string;

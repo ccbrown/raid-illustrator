@@ -1,12 +1,13 @@
 import { GearSixIcon, PlusIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
 import clsx from 'clsx';
+import { useState } from 'react';
 
-import { useRaidId } from './hooks';
-import { StepSettingsDialog } from './StepSettingsDialog';
 import { Button, EditableText } from '@/components';
-import { useRaidWorkspace, useSceneWorkspace, useScene, useStep, useSelection } from '@/hooks';
+import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection, useStep } from '@/hooks';
 import { useDispatch } from '@/store';
+
+import { StepSettingsDialog } from './StepSettingsDialog';
+import { useRaidId } from './hooks';
 
 interface ListItemProps {
     id: string;

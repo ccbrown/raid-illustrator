@@ -1,4 +1,5 @@
 import { VisualEffectFactory } from '@/visual-effect';
+
 import * as FfxivWaymarks from './ffxiv/waymarks';
 
 export const visualEffectFactories: Record<string, VisualEffectFactory> = {

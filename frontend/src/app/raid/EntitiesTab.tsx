@@ -2,10 +2,11 @@ import { GearSixIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { EditableText } from '@/components';
-import { useRaidId } from './hooks';
 import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
-import { EntitySettingsDialog } from './EntitySettingsDialog';
 import { useDispatch } from '@/store';
+
+import { EntitySettingsDialog } from './EntitySettingsDialog';
+import { useRaidId } from './hooks';
 
 interface ListItemProps {
     id: string;

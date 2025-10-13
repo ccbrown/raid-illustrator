@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { Button, Dialog, Dropdown, TextField } from '@/components';
+import { RaidScene } from '@/models/raids/types';
 import { useDispatch, useSelector } from '@/store';
-import { RaidScene } from '@/models/raids';
 
 interface SceneSettingsProps {
     existing?: RaidScene;

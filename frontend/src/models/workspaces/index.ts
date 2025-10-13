@@ -1,48 +1,7 @@
 import { createModel } from '@rematch/core';
 
-import { RootModel } from '.';
-import { RaidEntityPropertiesShape, RaidBatchOperation } from './raids';
-
-interface SceneWorkspace {
-    id: string;
-
-    openStepId?: string;
-
-    zoom?: number;
-    center?: {
-        x: number;
-        y: number;
-    };
-}
-
-interface UndoRedoStackAction {
-    name: string;
-    operation: RaidBatchOperation;
-}
-
-export interface Selection {
-    entityIds?: string[];
-    sceneIds?: string[];
-    stepIds?: string[];
-}
-
-export interface EntityPresetDragData {
-    name: string;
-    properties: RaidEntityPropertiesShape;
-}
-
-interface RaidWorkspace {
-    id: string;
-    lastActivityTime: number;
-
-    openSceneId?: string;
-    entitiesPanelTab?: 'entities' | 'presets';
-    selection?: Selection;
-    entityPresetDragData?: EntityPresetDragData;
-
-    undoStack?: UndoRedoStackAction[];
-    redoStack?: UndoRedoStackAction[];
-}
+import { RootModel } from '..';
+import { EntityPresetDragData, RaidWorkspace, SceneWorkspace, Selection, UndoRedoStackAction } from './types';
 
 interface WorkspacesState {
     raids: Record<string, RaidWorkspace>;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { Button, Dialog, TextField } from '@/components';
+import { RaidStep } from '@/models/raids/types';
 import { useDispatch, useSelector } from '@/store';
-import { RaidStep } from '@/models/raids';
 
 interface StepSettingsProps {
     existing?: RaidStep;

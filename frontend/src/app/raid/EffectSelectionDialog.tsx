@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
 import { Button, Dialog, Dropdown } from '@/components';
+import { RaidEntity } from '@/models/raids/types';
 import { defaultProperties } from '@/property-spec';
 import { useDispatch } from '@/store';
 import { visualEffectFactories } from '@/visual-effects';
-import { RaidEntity } from '@/models/raids';
 
 interface Props {
     isOpen?: boolean;

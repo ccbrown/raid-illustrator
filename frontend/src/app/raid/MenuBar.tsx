@@ -3,22 +3,23 @@
 import {
     ArrowFatLeftIcon,
     ArrowFatRightIcon,
-    ArrowUUpRightIcon,
     ArrowUUpLeftIcon,
+    ArrowUUpRightIcon,
     Icon,
     PlusIcon,
     SparkleIcon,
     TrashIcon,
     XIcon,
 } from '@phosphor-icons/react';
+import { clsx } from 'clsx';
 import { Menubar as PrimeMenuBar } from 'primereact/menubar';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
-import { clsx } from 'clsx';
 
 import { EditableText } from '@/components';
-import { Command, HotKey, useCommands } from './commands';
 import { useHashParam } from '@/hooks';
 import { useDispatch, useSelector } from '@/store';
+
+import { Command, HotKey, useCommands } from './commands';
 
 interface MenuItem extends PrimeMenuItem {
     icon?: Icon;

@@ -1,5 +1,5 @@
-import React from 'react';
 import { Icon } from '@phosphor-icons/react';
+import React from 'react';
 
 interface Props {
     text?: string;

@@ -1,8 +1,17 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 
-import { Button, Checkbox, ColorInput, CoordinateInput, Dropdown, NumberInput } from '@/components';
+import {
+    Button,
+    Checkbox,
+    CoordinateInput,
+    Dropdown,
+    NumberInput,
+    RGBAInput,
+    RGBInput,
+    StandaloneTextInput,
+} from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
-import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity } from '@/models/raids/types';
+import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity, Shape } from '@/models/raids/types';
 import {
     keyableIsKeyedAtStep,
     keyableValueAtStep,
@@ -171,7 +180,7 @@ const PropertySpecPropertyEditor = ({
         case 'color':
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <ColorInput value={value} onChange={onChange} />
+                <RGBInput value={value} onChange={onChange} />
             );
             break;
         default:
@@ -304,12 +313,19 @@ export const EntityInspectorPanel = ({ id }: Props) => {
     const stepId = sceneWorkspace?.openStepId || '';
     const sceneStepIds = scene?.stepIds || [];
     const commands = useCommands();
+    const dispatch = useDispatch();
 
     if (!entity) {
         return null;
     }
 
     const ep = entity.properties;
+
+    const updateShape = (newShape: Shape) => {
+        if (ep.type === 'shape') {
+            dispatch.raids.updateEntity({ id: entity.id, properties: { type: 'shape', shape: newShape } });
+        }
+    };
 
     const kpeProps = {
         entityId: entity.id,
@@ -323,11 +339,157 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                 <div className="font-semibold">{entity.name}</div>
                 {ep.type === 'shape' && (
                     <>
+                        <div className="flex flex-row gap-2">
+                            <Dropdown
+                                options={[
+                                    { label: 'Circle', key: 'circle' },
+                                    { label: 'Rectangle', key: 'rectangle' },
+                                ]}
+                                label="Shape"
+                                selectedOptionKey={ep.shape.type}
+                                onChange={(option) => {
+                                    switch (ep.shape.type) {
+                                        case 'rectangle':
+                                            switch (option.key) {
+                                                case 'circle':
+                                                    // use the smaller of the width or height as the radius
+                                                    const radius = Math.min(ep.shape.width, ep.shape.height) / 2;
+                                                    updateShape({ type: 'circle', radius });
+                                                    return;
+                                            }
+                                            return;
+                                        case 'circle':
+                                            switch (option.key) {
+                                                case 'rectangle':
+                                                    // use the diameter as both width and height
+                                                    const diameter = ep.shape.radius * 2;
+                                                    updateShape({
+                                                        type: 'rectangle',
+                                                        width: diameter,
+                                                        height: diameter,
+                                                    });
+                                                    return;
+                                            }
+                                            return;
+                                    }
+                                }}
+                            />
+                            <div className="flex-grow" />
+                            {ep.shape.type === 'rectangle' ? (
+                                <>
+                                    <NumberInput
+                                        label="Width (m)"
+                                        min={1}
+                                        value={ep.shape.width}
+                                        onChange={(w) => {
+                                            if (ep.shape.type === 'rectangle') {
+                                                updateShape({ ...ep.shape, width: w });
+                                            }
+                                        }}
+                                    />
+                                    <NumberInput
+                                        label="Height (m)"
+                                        min={1}
+                                        value={ep.shape.height}
+                                        onChange={(h) => {
+                                            if (ep.shape.type === 'rectangle') {
+                                                updateShape({ ...ep.shape, height: h });
+                                            }
+                                        }}
+                                    />
+                                </>
+                            ) : (
+                                <NumberInput
+                                    label="Radius (m)"
+                                    min={1}
+                                    value={ep.shape.radius}
+                                    onChange={(r) => {
+                                        if (ep.shape.type === 'circle') {
+                                            updateShape({ ...ep.shape, radius: r });
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        <div className="flex flex-row gap-2 items-center">
+                            <Dropdown
+                                options={[
+                                    { label: 'None', key: 'none' },
+                                    { label: 'Color', key: 'color' },
+                                    { label: 'Image', key: 'image' },
+                                ]}
+                                label="Fill"
+                                selectedOptionKey={ep.fill?.type ?? 'none'}
+                                onChange={(option) => {
+                                    switch (option.key) {
+                                        case 'none':
+                                            dispatch.raids.updateEntity({
+                                                id: entity.id,
+                                                properties: { type: 'shape', fill: undefined },
+                                            });
+                                            return;
+                                        case 'color':
+                                            dispatch.raids.updateEntity({
+                                                id: entity.id,
+                                                properties: {
+                                                    type: 'shape',
+                                                    fill: { type: 'color', color: { r: 255, g: 255, b: 255, a: 1 } },
+                                                },
+                                            });
+                                            return;
+                                        case 'image':
+                                            dispatch.raids.updateEntity({
+                                                id: entity.id,
+                                                properties: { type: 'shape', fill: { type: 'image', url: '' } },
+                                            });
+                                            return;
+                                    }
+                                }}
+                            />
+
+                            {ep.fill?.type === 'color' && (
+                                <RGBAInput
+                                    value={ep.fill.color}
+                                    onChange={(c) => {
+                                        if (ep.fill?.type === 'color') {
+                                            dispatch.raids.updateEntity({
+                                                id: entity.id,
+                                                properties: { type: 'shape', fill: { type: 'color', color: c } },
+                                            });
+                                        }
+                                    }}
+                                />
+                            )}
+
+                            {ep.fill?.type === 'image' && (
+                                <StandaloneTextInput
+                                    className="flex-grow"
+                                    value={ep.fill.url}
+                                    onChange={(url) => {
+                                        if (ep.fill?.type === 'image') {
+                                            dispatch.raids.updateEntity({
+                                                id: entity.id,
+                                                properties: { type: 'shape', fill: { type: 'image', url } },
+                                            });
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+
                         <KeyableEntityPropertyEditor
                             label="Position"
                             value={ep.position}
                             toPartial={(v) => ({ type: 'shape', position: v })}
                             control={CoordinateInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Rotation"
+                            value={ep.rotation ?? 0}
+                            toPartial={(v) => ({ type: 'shape', rotation: v })}
+                            control={NumberInput}
                             {...kpeProps}
                         />
                         <div className="flex flex-row items-center gap-2 py-2">

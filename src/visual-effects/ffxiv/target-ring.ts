@@ -23,7 +23,7 @@ class TargetRing extends VisualEffect {
         this.ddFrontMarkGlowImage = new LazyImage('/images/ffxiv/target-ring/dd-front-mark-glow.png');
     }
 
-    renderGround({ ctx, properties: anyProperties, shape, scale, center }: VisualEffectRenderParams) {
+    renderGround({ ctx, properties: anyProperties, shape, rotation, scale, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
         const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
             transitionDuration: 300,
@@ -33,6 +33,7 @@ class TargetRing extends VisualEffect {
         }
 
         ctx.translate(center.x * scale, center.y * scale);
+        ctx.rotate(rotation);
 
         const entityDimensions = shapeDimensions(shape);
         const entityRadius = Math.max(entityDimensions.width, entityDimensions.height) / 2;

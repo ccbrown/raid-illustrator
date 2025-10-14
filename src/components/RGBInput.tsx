@@ -5,7 +5,7 @@ interface Props {
     onChange: (newValue: { r: number; g: number; b: number }) => void;
 }
 
-export const ColorInput = ({ value, onChange }: Props) => {
+export const RGBInput = ({ value, onChange }: Props) => {
     return (
         <div className="flex flex-row gap-2">
             <NumberInput

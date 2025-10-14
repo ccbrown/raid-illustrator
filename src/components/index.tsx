@@ -1,9 +1,11 @@
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
-export { ColorInput } from './ColorInput';
+export { RGBInput } from './RGBInput';
+export { RGBAInput } from './RGBAInput';
 export { CoordinateInput } from './CoordinateInput';
 export { Dialog } from './Dialog';
 export { Dropdown } from './Dropdown';
 export { EditableText } from './EditableText';
 export { NumberInput } from './NumberInput';
+export { StandaloneTextInput } from './StandaloneTextInput';
 export { TextField } from './TextField';

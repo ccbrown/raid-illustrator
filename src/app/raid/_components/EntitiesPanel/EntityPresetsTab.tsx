@@ -74,56 +74,120 @@ const presets: Preset[] = [
         name: 'Waymark A',
         iconUrl: '/images/ffxiv/waymarks/icons/a.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark A', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'a' }),
+            generateBasicEffectEntity('Waymark A', { type: 'circle', radius: 1 }, 'ffxiv-waymark', {
+                marker: 'a',
+                shape: 'circle',
+                color1: {
+                    r: 255,
+                    g: 182,
+                    b: 179,
+                },
+                color2: { r: 255, g: 155, b: 241 },
+            }),
     },
     {
         name: 'Waymark B',
         iconUrl: '/images/ffxiv/waymarks/icons/b.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark B', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'b' }),
+            generateBasicEffectEntity('Waymark B', { type: 'circle', radius: 1 }, 'ffxiv-waymark', {
+                marker: 'b',
+                shape: 'circle',
+                color1: {
+                    r: 255,
+                    g: 220,
+                    b: 97,
+                },
+                color2: { r: 255, g: 179, b: 131 },
+            }),
     },
     {
         name: 'Waymark C',
         iconUrl: '/images/ffxiv/waymarks/icons/c.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark C', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'c' }),
+            generateBasicEffectEntity('Waymark C', { type: 'circle', radius: 1 }, 'ffxiv-waymark', {
+                marker: 'c',
+                shape: 'circle',
+                color1: {
+                    r: 198,
+                    g: 207,
+                    b: 255,
+                },
+                color2: { r: 115, g: 245, b: 255 },
+            }),
     },
     {
         name: 'Waymark D',
         iconUrl: '/images/ffxiv/waymarks/icons/d.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark D', { type: 'circle', radius: 1 }, 'ffxiv-waymark', { variant: 'd' }),
+            generateBasicEffectEntity('Waymark D', { type: 'circle', radius: 1 }, 'ffxiv-waymark', {
+                marker: 'd',
+                shape: 'circle',
+                color1: {
+                    r: 198,
+                    g: 207,
+                    b: 255,
+                },
+                color2: { r: 166, g: 93, b: 255 },
+            }),
     },
     {
         name: 'Waymark 1',
         iconUrl: '/images/ffxiv/waymarks/icons/1.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark 1', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
-                variant: '1',
+            generateBasicEffectEntity('Waymark 1', { type: 'rectangle', width: 2, height: 2 }, 'ffxiv-waymark', {
+                marker: '1',
+                shape: 'square',
+                color1: {
+                    r: 255,
+                    g: 182,
+                    b: 179,
+                },
+                color2: { r: 255, g: 155, b: 241 },
             }),
     },
     {
         name: 'Waymark 2',
         iconUrl: '/images/ffxiv/waymarks/icons/2.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark 2', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
-                variant: '2',
+            generateBasicEffectEntity('Waymark 2', { type: 'rectangle', width: 2, height: 2 }, 'ffxiv-waymark', {
+                marker: '2',
+                shape: 'square',
+                color1: {
+                    r: 255,
+                    g: 220,
+                    b: 97,
+                },
+                color2: { r: 255, g: 179, b: 131 },
             }),
     },
     {
         name: 'Waymark 3',
         iconUrl: '/images/ffxiv/waymarks/icons/3.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark 3', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
-                variant: '3',
+            generateBasicEffectEntity('Waymark 3', { type: 'rectangle', width: 2, height: 2 }, 'ffxiv-waymark', {
+                marker: '3',
+                shape: 'square',
+                color1: {
+                    r: 198,
+                    g: 207,
+                    b: 255,
+                },
+                color2: { r: 115, g: 245, b: 255 },
             }),
     },
     {
         name: 'Waymark 4',
         iconUrl: '/images/ffxiv/waymarks/icons/4.png',
         generate: () =>
-            generateBasicEffectEntity('Waymark 4', { type: 'rectangle', width: 1, height: 1 }, 'ffxiv-waymark', {
-                variant: '4',
+            generateBasicEffectEntity('Waymark 4', { type: 'rectangle', width: 2, height: 2 }, 'ffxiv-waymark', {
+                marker: '4',
+                shape: 'square',
+                color1: {
+                    r: 198,
+                    g: 207,
+                    b: 255,
+                },
+                color2: { r: 166, g: 93, b: 255 },
             }),
     },
     {

@@ -1,80 +1,70 @@
 import { Animated } from '@/animated';
-import { Image } from '@/renderer';
+import { shapeDimensions } from '@/models/raids/utils';
+import { Image, LazyImage } from '@/renderer';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
-interface Variant {
-    markerImageUrl: string;
-    markerImageScale: { width: number; height: number };
-    markerImageXOffset?: number;
-    colors: string[];
-    shape: 'square' | 'circle';
+interface Marker {
+    imageUrl: string;
+    imageScale: { width: number; height: number };
+    imageXOffset?: number;
 }
 
-// Waymarks are always 2x2 meters.
-const WAYMARK_SIZE = 2.0;
+type MarkerKey = 'a' | 'b' | 'c' | 'd' | '1' | '2' | '3' | '4' | 'none';
 
-type VariantKey = 'a' | 'b' | 'c' | 'd' | '1' | '2' | '3' | '4';
-
-const VARIANTS: Record<VariantKey, Variant> = {
+const MARKERS: Record<string, Marker> = {
     a: {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/a.png',
-        colors: ['#ffb6b3', '#ff73f1'],
-        shape: 'circle',
-        markerImageScale: { width: 1.2, height: 1.2 },
+        imageUrl: '/images/ffxiv/waymarks/markers/a.png',
+        imageScale: { width: 1.2, height: 1.2 },
     },
     b: {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/b.png',
-        colors: ['#ffdc61', '#ffb383'],
-        shape: 'circle',
-        markerImageScale: { width: 1.55, height: 0.8 },
+        imageUrl: '/images/ffxiv/waymarks/markers/b.png',
+        imageScale: { width: 1.55, height: 0.8 },
     },
     c: {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/c.png',
-        colors: ['#c6cfff', '#73f5ff'],
-        shape: 'circle',
-        markerImageScale: { width: 1.3, height: 1.3 },
-        markerImageXOffset: -0.1,
+        imageUrl: '/images/ffxiv/waymarks/markers/c.png',
+        imageScale: { width: 1.3, height: 1.3 },
+        imageXOffset: -0.09,
     },
     d: {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/d.png',
-        colors: ['#c6cfff', '#a65dff'],
-        shape: 'circle',
-        markerImageScale: { width: 1.35, height: 1.3 },
-        markerImageXOffset: 0.05,
+        imageUrl: '/images/ffxiv/waymarks/markers/d.png',
+        imageScale: { width: 1.35, height: 1.3 },
+        imageXOffset: 0.05,
     },
     '1': {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/1.png',
-        colors: ['#ffb6b3', '#ff73f1'],
-        shape: 'square',
-        markerImageScale: { width: 0.8, height: 0.8 },
+        imageUrl: '/images/ffxiv/waymarks/markers/1.png',
+        imageScale: { width: 0.8, height: 0.8 },
     },
     '2': {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/2.png',
-        colors: ['#ffdc61', '#ffb383'],
-        shape: 'square',
-        markerImageScale: { width: 1.2, height: 1 },
+        imageUrl: '/images/ffxiv/waymarks/markers/2.png',
+        imageScale: { width: 1.2, height: 1 },
     },
     '3': {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/3.png',
-        colors: ['#c6cfff', '#73f5ff'],
-        shape: 'square',
-        markerImageScale: { width: 1, height: 0.75 },
+        imageUrl: '/images/ffxiv/waymarks/markers/3.png',
+        imageScale: { width: 1, height: 0.75 },
     },
     '4': {
-        markerImageUrl: '/images/ffxiv/waymarks/markers/4.png',
-        colors: ['#c6cfff', '#a65dff'],
-        shape: 'square',
-        markerImageScale: { width: 1.3, height: 0.7 },
-        markerImageXOffset: -0.05,
+        imageUrl: '/images/ffxiv/waymarks/markers/4.png',
+        imageScale: { width: 1.3, height: 0.7 },
+        imageXOffset: -0.05,
     },
 };
 
 class Waymark extends VisualEffect {
-    variantKey: string = '';
+    markerKey: string = '';
     markerImage?: Image;
+    circleRingImage: LazyImage;
+    squareRingImage: LazyImage;
     enabled: Animated<number> = new Animated(0);
+    color1: Animated<{ r: number; g: number; b: number }> = new Animated();
+    color2: Animated<{ r: number; g: number; b: number }> = new Animated();
 
-    renderGround({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
+    constructor() {
+        super();
+        this.circleRingImage = new LazyImage('/images/ffxiv/waymarks/circle-ring.png');
+        this.squareRingImage = new LazyImage('/images/ffxiv/waymarks/square-ring.png');
+    }
+
+    renderGround({ ctx, properties: anyProperties, scale, rotation, shape, center }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
         const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
             transitionDuration: 300,
@@ -83,92 +73,145 @@ class Waymark extends VisualEffect {
             return;
         }
 
-        ctx.globalAlpha = enabled;
+        const color1 = this.color1.update(properties.color1, { transitionDuration: 300 });
+        const color2 = this.color2.update(properties.color2, { transitionDuration: 300 });
 
-        const variant = VARIANTS[properties.variant];
-        if (this.variantKey !== properties.variant) {
-            this.markerImage = new Image(variant.markerImageUrl);
-            this.variantKey = properties.variant;
+        const marker = MARKERS[properties.marker];
+        if (this.markerKey !== properties.marker) {
+            this.markerImage = marker ? new Image(marker.imageUrl) : undefined;
+            this.markerKey = properties.marker;
         }
 
         const x = center.x * scale;
         const y = center.y * scale;
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
 
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, (WAYMARK_SIZE / 2) * scale);
-        gradient.addColorStop(0, variant.colors[0] + '80');
-        gradient.addColorStop(1, variant.colors[1] + '20');
-        ctx.shadowBlur = 0.5 * scale;
-        ctx.shadowColor = variant.colors[1];
-        ctx.fillStyle = gradient;
-        ctx.strokeStyle = variant.colors[0];
-        ctx.lineWidth = 0.05 * scale;
+        const dims = shapeDimensions(shape);
+        const size = Math.max(dims.width, dims.height) * scale;
+
+        const innerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
+        innerGradient.addColorStop(0, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.5)`);
+        innerGradient.addColorStop(1, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0.13)`);
+
+        const opaqueColor2 = `rgb(${color2.r}, ${color2.g}, ${color2.b})`;
 
         const now = Date.now();
 
-        switch (variant.shape) {
+        switch (properties.shape) {
             case 'square': {
-                ctx.fillRect(
-                    (center.x - WAYMARK_SIZE / 2) * scale,
-                    (center.y - WAYMARK_SIZE / 2) * scale,
-                    WAYMARK_SIZE * scale,
-                    WAYMARK_SIZE * scale,
-                );
-                ctx.strokeRect(
-                    (center.x - WAYMARK_SIZE / 2) * scale,
-                    (center.y - WAYMARK_SIZE / 2) * scale,
-                    WAYMARK_SIZE * scale,
-                    WAYMARK_SIZE * scale,
-                );
+                {
+                    ctx.save();
+                    ctx.globalAlpha = enabled;
+                    ctx.shadowBlur = 0.5 * scale;
+                    ctx.shadowColor = opaqueColor2;
+                    ctx.fillStyle = innerGradient;
+                    ctx.fillRect(-size / 2, -size / 2, size, size);
+                    ctx.restore();
+                }
 
-                for (let i = 0; i < 3; i++) {
-                    const growth = (now % 700) / 700;
-                    const offset = i * 0.1 + growth * 0.1;
-
-                    if (i === 2) {
-                        ctx.globalAlpha = 1.0 - growth;
+                const ring = this.squareRingImage.get();
+                const ringSize = size * 1.1;
+                if (ring) {
+                    {
+                        ctx.save();
+                        ctx.globalAlpha = enabled;
+                        ctx.shadowBlur = 0.2 * scale;
+                        ctx.shadowColor = opaqueColor2;
+                        ctx.drawImage(ring, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+                        ctx.restore();
                     }
-                    ctx.lineWidth = 0.02 * scale;
-                    ctx.strokeRect(
-                        (center.x - WAYMARK_SIZE / 2 - offset) * scale,
-                        (center.y - WAYMARK_SIZE / 2 - offset) * scale,
-                        (WAYMARK_SIZE + offset * 2) * scale,
-                        (WAYMARK_SIZE + offset * 2) * scale,
-                    );
-                    ctx.globalAlpha = 1.0;
+
+                    {
+                        ctx.save();
+                        ctx.globalAlpha = 0.25 * enabled;
+                        ctx.globalCompositeOperation = 'lighter';
+                        ctx.shadowBlur = 0.1 * scale;
+                        ctx.shadowColor = opaqueColor2;
+                        ctx.drawImage(ring, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+                        ctx.restore();
+                    }
+
+                    for (let i = 0; i < 2; i++) {
+                        const growth = (now % 700) / 700;
+                        const offset = (i + growth) * size * 0.05;
+
+                        ctx.save();
+                        ctx.globalAlpha = (i === 0 ? growth : i === 1 ? 1.0 - growth : 1) * enabled * 0.4;
+                        ctx.drawImage(
+                            ring,
+                            -ringSize / 2 - offset,
+                            -ringSize / 2 - offset,
+                            ringSize + offset * 2,
+                            ringSize + offset * 2,
+                        );
+                        ctx.restore();
+                    }
                 }
 
                 break;
             }
             case 'circle': {
-                ctx.beginPath();
-                ctx.arc(x, y, WAYMARK_SIZE * 0.5 * scale, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                const r = size / 2;
 
-                ctx.lineWidth = 0.01 * scale;
-                ctx.fillStyle = variant.colors[0];
+                // inner gradient
+                {
+                    ctx.save();
+                    ctx.shadowBlur = 0.5 * scale;
+                    ctx.shadowColor = opaqueColor2;
+                    ctx.fillStyle = innerGradient;
+                    ctx.globalAlpha = enabled;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                const ring = this.circleRingImage.get();
+                const ringSize = size * 1.26;
+                if (ring) {
+                    {
+                        ctx.save();
+                        ctx.globalAlpha = 0.8 * enabled;
+                        ctx.shadowBlur = 0.2 * scale;
+                        ctx.shadowColor = opaqueColor2;
+                        ctx.drawImage(ring, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+                        ctx.restore();
+                    }
+
+                    {
+                        ctx.save();
+                        ctx.globalAlpha = 0.1 * enabled;
+                        ctx.globalCompositeOperation = 'lighter';
+                        ctx.shadowBlur = 0;
+                        ctx.drawImage(ring, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+                        ctx.restore();
+                    }
+                }
+
+                const beamRadius = r * 0.4;
+                const beamGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, beamRadius);
+                beamGradient.addColorStop(0, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.8)`);
+                beamGradient.addColorStop(0.7, `rgba(255, 255, 255, 0.1)`);
+                beamGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+                ctx.fillStyle = beamGradient;
 
                 for (let i = 0; i < 11; i++) {
                     const rads = (i / 11) * Math.PI * 2 - ((now % 12000) / 12000) * (Math.PI * 2);
+                    ctx.save();
+                    ctx.globalAlpha = enabled * 0.5;
+                    ctx.rotate(rads);
+                    ctx.translate(r, 0);
+                    ctx.scale(0.3, 0.8);
                     ctx.beginPath();
-                    ctx.moveTo(
-                        x + Math.cos(rads) * (WAYMARK_SIZE / 2 - 0.2) * scale,
-                        y + Math.sin(rads) * (WAYMARK_SIZE / 2 - 0.2) * scale,
-                    );
-                    ctx.lineTo(
-                        x + Math.cos(rads + 0.02) * (WAYMARK_SIZE / 2) * scale,
-                        y + Math.sin(rads + 0.02) * (WAYMARK_SIZE / 2) * scale,
-                    );
-                    ctx.lineTo(
-                        x + Math.cos(rads) * (WAYMARK_SIZE / 2 + 0.2) * scale,
-                        y + Math.sin(rads) * (WAYMARK_SIZE / 2 + 0.2) * scale,
-                    );
-                    ctx.lineTo(
-                        x + Math.cos(rads - 0.02) * (WAYMARK_SIZE / 2) * scale,
-                        y + Math.sin(rads - 0.02) * (WAYMARK_SIZE / 2) * scale,
-                    );
-                    ctx.closePath();
+                    ctx.arc(0, 0, beamRadius, 0, 2 * Math.PI);
                     ctx.fill();
+                    ctx.scale(0.5, 0.8);
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, beamRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.restore();
                 }
 
                 break;
@@ -176,17 +219,18 @@ class Waymark extends VisualEffect {
         }
 
         ctx.shadowBlur = 0;
+        ctx.globalAlpha = enabled;
 
         const img = this.markerImage?.get();
-        if (img) {
+        if (marker && img) {
             const floatHeight = 0.1 * Math.sin(((now % 5000) / 5000) * Math.PI * 2) * scale;
 
-            const imgHeight = WAYMARK_SIZE * 1.3 * scale * variant.markerImageScale.height;
-            const imgWidth = WAYMARK_SIZE * 1.3 * 0.5 * scale * variant.markerImageScale.width;
+            const imgHeight = size * 1.3 * marker.imageScale.height;
+            const imgWidth = size * 1.3 * 0.5 * marker.imageScale.width;
             ctx.drawImage(
                 img,
-                x - imgWidth / 2 + (variant.markerImageXOffset || 0) * scale,
-                y - imgHeight / 2 - floatHeight,
+                -imgWidth / 2 + (marker.imageXOffset || 0) * scale,
+                -imgHeight / 2 - floatHeight,
                 imgWidth,
                 imgHeight,
             );
@@ -196,7 +240,10 @@ class Waymark extends VisualEffect {
 
 interface Properties {
     enabled: boolean;
-    variant: VariantKey;
+    marker: MarkerKey;
+    shape: 'circle' | 'square';
+    color1: { r: number; g: number; b: number };
+    color2: { r: number; g: number; b: number };
 }
 
 export const waymark: VisualEffectFactory = {
@@ -211,12 +258,24 @@ export const waymark: VisualEffectFactory = {
             default: true,
         },
         {
-            name: 'Variant',
+            name: 'Shape',
             type: 'enum',
-            key: 'variant',
-            keyable: false,
-            default: 'a',
+            key: 'shape',
+            keyable: true,
+            default: 'square',
             choices: [
+                { value: 'circle', label: 'Circle' },
+                { value: 'square', label: 'Square' },
+            ],
+        },
+        {
+            name: 'Marker',
+            type: 'enum',
+            key: 'marker',
+            keyable: true,
+            default: '1',
+            choices: [
+                { value: 'none', label: 'None' },
                 { value: 'a', label: 'A' },
                 { value: 'b', label: 'B' },
                 { value: 'c', label: 'C' },
@@ -226,6 +285,24 @@ export const waymark: VisualEffectFactory = {
                 { value: '3', label: '3' },
                 { value: '4', label: '4' },
             ],
+        },
+        {
+            name: 'Color 1',
+            type: 'color',
+            key: 'color1',
+            keyable: true,
+            default: {
+                r: 255,
+                g: 182,
+                b: 179,
+            },
+        },
+        {
+            name: 'Color 2',
+            type: 'color',
+            key: 'color2',
+            keyable: true,
+            default: { r: 255, g: 155, b: 241 },
         },
     ],
 };

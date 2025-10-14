@@ -22,7 +22,7 @@ export const Dropdown = (props: Props) => {
             <Popover>
                 <PopoverButton
                     disabled={props.disabled}
-                    className={`inline-flex items-center gap-2 bg-black/20 rounded-xs mt-1 py-0.5 px-2 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}
+                    className={`inline-flex items-center gap-2 bg-black/20 rounded-xs py-0.5 px-2 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}
                 >
                     <div className="text-xs">
                         {props.options.find((opt) => opt.key === props.selectedOptionKey)?.label}

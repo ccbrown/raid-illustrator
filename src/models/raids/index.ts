@@ -570,6 +570,61 @@ export const raids = createModel<RootModel>()({
                 },
             });
         },
+        rotateEntities(
+            payload: {
+                stepId: string;
+                entityIds: string[];
+                rotation: number;
+            },
+            state,
+        ) {
+            const step = state.raids.steps[payload.stepId];
+            if (!step) {
+                return;
+            }
+
+            const scene = state.raids.scenes[step.sceneId];
+            if (!scene) {
+                return;
+            }
+
+            // this is much simpler than movement since you can't rotate groups
+
+            const updatedEntities: RaidEntity[] = [];
+            for (const id of payload.entityIds) {
+                const entity = state.raids.entities[id];
+                if (!entity) {
+                    continue;
+                }
+
+                const ep = entity.properties;
+                if (ep.type !== 'shape') {
+                    continue;
+                }
+
+                const currentRotation = keyableValueAtStep(ep.rotation || 0, scene.stepIds, payload.stepId);
+                let newRotation = (currentRotation + payload.rotation) % (2 * Math.PI);
+                if (Math.abs(newRotation) > Math.PI) {
+                    newRotation -= Math.sign(newRotation) * 2 * Math.PI;
+                }
+                const newEntity = {
+                    ...entity,
+                    properties: {
+                        ...ep,
+                        rotation: keyableWithValueAtStep(ep.rotation || 0, newRotation, scene.stepIds, payload.stepId),
+                    },
+                };
+                updatedEntities.push(newEntity);
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: `Rotate Entit${payload.entityIds.length > 1 ? 'ies' : 'y'}`,
+                raidId: scene.raidId,
+                operation: {
+                    putEntities: updatedEntities,
+                },
+            });
+        },
         deleteEntities(
             payload: {
                 ids: string[];

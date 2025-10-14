@@ -57,6 +57,7 @@ export interface RaidEntityPropertiesShape {
     type: 'shape';
     shape: Shape;
     fill?: Material;
+    rotation?: Keyable<number>;
     position: Keyable<{ x: number; y: number }>;
     effects?: RaidEntityPropertiesShapeEffect[];
 }
@@ -99,7 +100,12 @@ export type Keyable<T> = T | Keyed<T>;
 
 interface ColorMaterial {
     type: 'color';
-    color: string;
+    color: {
+        r: number;
+        g: number;
+        b: number;
+        a: number;
+    };
 }
 
 interface ImageMaterial {

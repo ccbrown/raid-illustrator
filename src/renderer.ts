@@ -17,6 +17,7 @@ interface RendererEntityVisualEffect {
 interface RenderEntityStep {
     id: string;
     position: { x: number; y: number };
+    rotation: number;
     bounds: { x: number; y: number; width: number; height: number };
     effectProperties: Record<string, AnyProperties>;
 }
@@ -30,6 +31,7 @@ class RendererEntity {
     private stepChangeTime?: number;
 
     dragMovement: { x: number; y: number } = { x: 0, y: 0 };
+    dragRotation: number = 0;
 
     constructor(entity: RaidEntity, sceneStepIds: string[], currentStepId: string) {
         this.entity = entity;
@@ -56,6 +58,7 @@ class RendererEntity {
 
         const dimensions = shapeDimensions(ep.shape);
         const position = keyableValueAtStep(ep.position, sceneStepIds, currentStepId);
+        const rotation = ep.rotation ? keyableValueAtStep(ep.rotation, sceneStepIds, currentStepId) : 0;
         const bounds = {
             x: position.x - dimensions.width / 2,
             y: position.y - dimensions.height / 2,
@@ -76,7 +79,7 @@ class RendererEntity {
             }
         }
 
-        return { id: currentStepId, position, bounds, effectProperties };
+        return { id: currentStepId, position, rotation, bounds, effectProperties };
     }
 
     private createVisualEffects() {
@@ -135,6 +138,24 @@ class RendererEntity {
                 (this.currentStep.position.y - this.previousStep.position.y) * transitionProgress +
                 this.dragMovement.y,
         };
+    }
+
+    renderRotation(): number {
+        const ep = this.entity.properties;
+        if (ep.type !== 'shape' || !ep.rotation) {
+            return this.dragRotation;
+        }
+
+        if (!this.previousStep || !this.stepChangeTime) {
+            return this.currentStep.rotation + this.dragRotation;
+        }
+
+        const transitionProgress = this.stepTransitionProgress();
+        return (
+            this.previousStep.rotation +
+            (this.currentStep.rotation - this.previousStep.rotation) * transitionProgress +
+            this.dragRotation
+        );
     }
 
     renderBounds(): { x: number; y: number; width: number; height: number } {
@@ -214,6 +235,10 @@ class ImageManager {
     private images: Map<string, ImageManagerImage> = new Map();
 
     use(url: string): HTMLImageElement | undefined {
+        if (!url) {
+            return undefined;
+        }
+
         let entry = this.images.get(url);
         if (!entry) {
             entry = { used: true, image: new Image(url) };
@@ -234,6 +259,13 @@ class ImageManager {
         }
     }
 }
+
+const ROTATION_HANDLE_RADIUS = 10;
+const ROTATION_HANDLE_DISTANCE = 40;
+
+export type Hit =
+    | { type: 'entity'; entity: RaidEntity }
+    | { type: 'rotation-handle'; entity: RaidEntity; pivot: { x: number; y: number } };
 
 class Renderer {
     scene?: RaidScene;
@@ -257,16 +289,15 @@ class Renderer {
         );
 
         if (this.scene) {
-            this.drawShape(
-                this.scene.shape,
-                ctx,
-                scale,
-                { x: 0, y: 0 },
-                {
-                    type: 'color',
-                    color: '#282a36',
+            this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, {
+                type: 'color',
+                color: {
+                    r: 40,
+                    g: 42,
+                    b: 54,
+                    a: 1,
                 },
-            );
+            });
         }
 
         for (const entityId of this.entityDrawOrder) {
@@ -278,17 +309,19 @@ class Renderer {
             const pos = entity.renderPosition();
             for (const { id, visualEffect } of entity.visualEffects) {
                 const ep = entity.entity.properties;
-                if (ep.type !== 'shape') {
+                if (ep.type !== 'shape' || !visualEffect.renderGround) {
                     continue;
                 }
 
+                const rot = entity.renderRotation();
                 ctx.save();
-                visualEffect.renderGround?.({
+                visualEffect.renderGround({
                     ctx,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
                     center: pos,
+                    rotation: rot || 0,
                 });
                 ctx.restore();
             }
@@ -302,6 +335,7 @@ class Renderer {
 
             const ep = entity.entity.properties;
             const pos = entity.renderPosition();
+            const rot = entity.renderRotation();
             switch (ep.type) {
                 case 'shape': {
                     this.drawShape(
@@ -312,6 +346,7 @@ class Renderer {
                             x: pos.x,
                             y: pos.y,
                         },
+                        rot,
                         ep.fill,
                     );
                     break;
@@ -328,45 +363,105 @@ class Renderer {
             const pos = entity.renderPosition();
             for (const { id, visualEffect } of entity.visualEffects) {
                 const ep = entity.entity.properties;
-                if (ep.type !== 'shape') {
+                if (ep.type !== 'shape' || !visualEffect.renderOverlay) {
                     continue;
                 }
 
+                const rot = entity.renderRotation();
                 ctx.save();
-                visualEffect.renderOverlay?.({
+                visualEffect.renderOverlay({
                     ctx,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
                     center: pos,
+                    rotation: rot || 0,
                 });
                 ctx.restore();
             }
         }
 
         if (this.selection?.entityIds) {
+            ctx.globalCompositeOperation = 'difference';
             for (const entityId of this.selection.entityIds) {
                 const entity = this.entities.get(entityId);
                 if (!entity) {
                     continue;
                 }
 
-                const bounds = entity.renderBounds();
-                ctx.strokeStyle = '#00b8db';
-                ctx.lineWidth = window.devicePixelRatio * 2;
-                ctx.strokeRect(
-                    bounds.x * scale - 2 * window.devicePixelRatio,
-                    bounds.y * scale - 2 * window.devicePixelRatio,
-                    bounds.width * scale + window.devicePixelRatio * 4,
-                    bounds.height * scale + window.devicePixelRatio * 4,
-                );
+                const ep = entity.entity.properties;
+                switch (ep.type) {
+                    case 'shape': {
+                        const pos = entity.renderPosition();
+                        const rot = entity.renderRotation();
+
+                        ctx.save();
+                        ctx.translate(pos.x * scale, pos.y * scale);
+                        ctx.rotate(rot);
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = window.devicePixelRatio * 2;
+                        switch (ep.shape.type) {
+                            case 'rectangle': {
+                                ctx.strokeRect(
+                                    (-ep.shape.width / 2) * scale,
+                                    (-ep.shape.height / 2) * scale,
+                                    ep.shape.width * scale,
+                                    ep.shape.height * scale,
+                                );
+                                break;
+                            }
+                            case 'circle': {
+                                ctx.beginPath();
+                                ctx.arc(0, 0, ep.shape.radius * scale, 0, Math.PI * 2);
+                                ctx.stroke();
+                                break;
+                            }
+                        }
+
+                        // rotation handle
+                        const topDistance =
+                            (ep.shape.type === 'rectangle' ? ep.shape.height / 2 : ep.shape.radius) * scale;
+                        ctx.beginPath();
+                        ctx.moveTo(0, -topDistance);
+                        ctx.lineTo(0, -topDistance - ROTATION_HANDLE_DISTANCE * window.devicePixelRatio);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(
+                            0,
+                            -topDistance -
+                                (ROTATION_HANDLE_DISTANCE + ROTATION_HANDLE_RADIUS) * window.devicePixelRatio,
+                            ROTATION_HANDLE_RADIUS * window.devicePixelRatio,
+                            0,
+                            Math.PI * 2,
+                        );
+                        ctx.stroke();
+
+                        ctx.restore();
+                        break;
+                    }
+                    default: {
+                        const bounds = entity.renderBounds();
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = window.devicePixelRatio * 2;
+                        ctx.strokeRect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);
+                        break;
+                    }
+                }
             }
+            ctx.globalCompositeOperation = 'source-over';
         }
 
         if (this.dropIndicator) {
-            this.drawShape(this.dropIndicator.shape, ctx, scale, this.dropIndicator.position, {
+            this.drawShape(this.dropIndicator.shape, ctx, scale, this.dropIndicator.position, 0, {
                 type: 'color',
-                color: '#ffffff80',
+                color: {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                    a: 0.5,
+                },
             });
         }
 
@@ -392,47 +487,107 @@ class Renderer {
         }
     }
 
-    resetDragMovement() {
-        this.sceneDragMovement = { x: 0, y: 0 };
-        for (const entity of this.entities.values()) {
-            entity.dragMovement = { x: 0, y: 0 };
+    setEntityDragRotation(entityId: string, rotation: number) {
+        const entity = this.entities.get(entityId);
+        if (entity) {
+            entity.dragRotation = rotation;
         }
     }
 
-    hitTest(position: { x: number; y: number }): RaidEntity | undefined {
+    resetDragMovementAndRotation() {
+        this.sceneDragMovement = { x: 0, y: 0 };
+        for (const entity of this.entities.values()) {
+            entity.dragMovement = { x: 0, y: 0 };
+            entity.dragRotation = 0;
+        }
+    }
+
+    private entityHitTest(entity: RendererEntity, position: { x: number; y: number }): boolean {
+        const ep = entity.entity.properties;
+        switch (ep.type) {
+            case 'shape': {
+                const shape = ep.shape;
+                const entityPosition = entity.renderPosition();
+                switch (shape.type) {
+                    case 'rectangle': {
+                        const rot = entity.renderRotation();
+                        const cos = Math.cos(-rot);
+                        const sin = Math.sin(-rot);
+                        const dx = position.x - entityPosition.x;
+                        const dy = position.y - entityPosition.y;
+                        const rx = dx * cos - dy * sin;
+                        const ry = dx * sin + dy * cos;
+                        return (
+                            rx >= -shape.width / 2 &&
+                            rx <= shape.width / 2 &&
+                            ry >= -shape.height / 2 &&
+                            ry <= shape.height / 2
+                        );
+                    }
+                    case 'circle': {
+                        const dx = position.x - entityPosition.x;
+                        const dy = position.y - entityPosition.y;
+                        return dx * dx + dy * dy < shape.radius * shape.radius;
+                    }
+                }
+            }
+        }
+
+        const bounds = entity.renderBounds();
+        return (
+            position.x >= bounds.x &&
+            position.x <= bounds.x + bounds.width &&
+            position.y >= bounds.y &&
+            position.y <= bounds.y + bounds.height
+        );
+    }
+
+    hitTest(position: { x: number; y: number }, scale: number): Hit | undefined {
+        if (this.selection?.entityIds) {
+            // prioritize rotation handles
+            for (const entityId of this.selection.entityIds) {
+                const entity = this.entities.get(entityId);
+                if (!entity) {
+                    continue;
+                }
+                const ep = entity.entity.properties;
+                if (ep.type !== 'shape') {
+                    continue;
+                }
+                const topDistance = ep.shape.type === 'rectangle' ? ep.shape.height / 2 : ep.shape.radius;
+                const handleCenterDistance =
+                    topDistance +
+                    ((ROTATION_HANDLE_DISTANCE + ROTATION_HANDLE_RADIUS) / scale) * window.devicePixelRatio;
+                const entityPosition = entity.renderPosition();
+                const rot = entity.renderRotation();
+                const handleCenterX = entityPosition.x + Math.sin(rot) * handleCenterDistance;
+                const handleCenterY = entityPosition.y - Math.cos(rot) * handleCenterDistance;
+                const dx = position.x - handleCenterX;
+                const dy = position.y - handleCenterY;
+                if (dx * dx + dy * dy < ((ROTATION_HANDLE_RADIUS / scale) * window.devicePixelRatio) ** 2) {
+                    return { type: 'rotation-handle', entity: entity.entity, pivot: entityPosition };
+                }
+            }
+
+            // then selected entities
+            for (const entityId of this.selection.entityIds) {
+                const entity = this.entities.get(entityId);
+                if (!entity) {
+                    continue;
+                }
+                if (this.entityHitTest(entity, position)) {
+                    return { type: 'entity', entity: entity.entity };
+                }
+            }
+        }
+
         for (const entityId of this.entityDrawOrder.slice().reverse()) {
             const entity = this.entities.get(entityId);
             if (!entity) {
                 continue;
             }
-
-            // if we can do a more precise hit test, do that
-            const ep = entity.entity.properties;
-            switch (ep.type) {
-                case 'shape': {
-                    const shape = ep.shape;
-                    switch (shape.type) {
-                        case 'circle': {
-                            const entityPosition = entity.renderPosition();
-                            const dx = position.x - entityPosition.x;
-                            const dy = position.y - entityPosition.y;
-                            if (dx * dx + dy * dy < shape.radius * shape.radius) {
-                                return entity.entity;
-                            }
-                            continue;
-                        }
-                    }
-                }
-            }
-
-            const bounds = entity.renderBounds();
-            if (
-                position.x >= bounds.x &&
-                position.x <= bounds.x + bounds.width &&
-                position.y >= bounds.y &&
-                position.y <= bounds.y + bounds.height
-            ) {
-                return entity.entity;
+            if (this.entityHitTest(entity, position)) {
+                return { type: 'entity', entity: entity.entity };
             }
         }
 
@@ -444,18 +599,25 @@ class Renderer {
         ctx: CanvasRenderingContext2D,
         scale: number,
         center: { x: number; y: number },
+        rotation?: number,
         fill?: Material,
     ) {
         if (fill) {
+            ctx.save();
+            ctx.translate(center.x * scale, center.y * scale);
+            if (rotation) {
+                ctx.rotate(rotation);
+            }
+
             switch (fill.type) {
                 case 'color': {
-                    ctx.fillStyle = fill.color;
+                    ctx.fillStyle = `rgba(${fill.color.r}, ${fill.color.g}, ${fill.color.b}, ${fill.color.a})`;
 
                     switch (shape.type) {
                         case 'rectangle': {
                             ctx.fillRect(
-                                (center.x - shape.width / 2) * scale,
-                                (center.y - shape.height / 2) * scale,
+                                (-shape.width / 2) * scale,
+                                (-shape.height / 2) * scale,
                                 shape.width * scale,
                                 shape.height * scale,
                             );
@@ -463,7 +625,7 @@ class Renderer {
                         }
                         case 'circle': {
                             ctx.beginPath();
-                            ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
+                            ctx.arc(0, 0, shape.radius * scale, 0, Math.PI * 2);
                             ctx.fill();
                             break;
                         }
@@ -479,15 +641,15 @@ class Renderer {
                         switch (shape.type) {
                             case 'circle': {
                                 ctx.beginPath();
-                                ctx.arc(center.x * scale, center.y * scale, shape.radius * scale, 0, Math.PI * 2);
+                                ctx.arc(0, 0, shape.radius * scale, 0, Math.PI * 2);
                                 ctx.clip();
                                 break;
                             }
                         }
                         ctx.drawImage(
                             img,
-                            (center.x - dimensions.width / 2) * scale,
-                            (center.y - dimensions.height / 2) * scale,
+                            -(dimensions.width / 2) * scale,
+                            -(dimensions.height / 2) * scale,
                             dimensions.width * scale,
                             dimensions.height * scale,
                         );
@@ -497,6 +659,8 @@ class Renderer {
                     break;
                 }
             }
+
+            ctx.restore();
         }
     }
 

@@ -6,6 +6,7 @@ export interface VisualEffectRenderParams {
     shape: Shape;
     scale: number;
     center: { x: number; y: number };
+    rotation: number;
     properties: AnyProperties;
 }
 

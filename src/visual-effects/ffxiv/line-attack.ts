@@ -22,7 +22,7 @@ class LineAttack extends VisualEffect {
 
         ctx.scale(scale, scale);
         ctx.translate(center.x, center.y);
-        ctx.rotate(rotation + Math.PI + properties.rotation);
+        ctx.rotate(rotation + properties.direction);
 
         const { width, length, distance } = properties;
         const left = -width / 2;
@@ -94,7 +94,7 @@ interface Properties {
     enabled: boolean;
     width: number;
     length: number;
-    rotation: number;
+    direction: number;
     distance: number;
 }
 
@@ -124,11 +124,11 @@ export const lineAttack: VisualEffectFactory = {
             default: 10,
         },
         {
-            name: 'Rotation',
+            name: 'Direction',
             type: 'angle',
-            key: 'rotation',
+            key: 'direction',
             keyable: true,
-            default: 0,
+            default: Math.PI,
         },
         {
             name: 'Distance',

@@ -50,6 +50,19 @@ class RendererEntity {
         this.createVisualEffects();
     }
 
+    hitTestPriority(): number {
+        const ep = this.entity.properties;
+        switch (ep.type) {
+            case 'shape':
+                if (!ep.fill) {
+                    // if the shape is invisible, prioritize visible shapes over it
+                    return -1;
+                }
+                break;
+        }
+        return 0;
+    }
+
     private step(entity: RaidEntity, sceneStepIds: string[], currentStepId: string): RenderEntityStep {
         const ep = entity.properties;
         if (ep.type !== 'shape') {
@@ -558,6 +571,20 @@ class Renderer {
         );
     }
 
+    private entityHits(position: { x: number; y: number }): RendererEntity[] {
+        const ret = [];
+        for (const entityId of this.entityDrawOrder.slice().reverse()) {
+            const entity = this.entities.get(entityId);
+            if (!entity) {
+                continue;
+            }
+            if (this.entityHitTest(entity, position)) {
+                ret.push(entity);
+            }
+        }
+        return ret;
+    }
+
     hitTest(position: { x: number; y: number }, scale: number): Hit | undefined {
         if (this.selection?.entityIds) {
             // prioritize rotation handles
@@ -584,27 +611,22 @@ class Renderer {
                     return { type: 'rotation-handle', entity: entity.entity, pivot: entityPosition };
                 }
             }
+        }
 
-            // then selected entities
-            for (const entityId of this.selection.entityIds) {
-                const entity = this.entities.get(entityId);
-                if (!entity) {
-                    continue;
-                }
-                if (this.entityHitTest(entity, position)) {
+        const entityHits = this.entityHits(position);
+
+        // prioritize selected entities
+        if (this.selection?.entityIds) {
+            for (const entity of entityHits) {
+                if (this.selection.entityIds.includes(entity.entity.id)) {
                     return { type: 'entity', entity: entity.entity };
                 }
             }
         }
 
-        for (const entityId of this.entityDrawOrder.slice().reverse()) {
-            const entity = this.entities.get(entityId);
-            if (!entity) {
-                continue;
-            }
-            if (this.entityHitTest(entity, position)) {
-                return { type: 'entity', entity: entity.entity };
-            }
+        entityHits.sort((a, b) => b.hitTestPriority() - a.hitTestPriority());
+        if (entityHits.length > 0) {
+            return { type: 'entity', entity: entityHits[0].entity };
         }
 
         return undefined;
@@ -721,6 +743,7 @@ class Renderer {
     ) {
         this.entityDrawOrder = [];
         this.updateEntitiesImpl(allEntities, entitiesToUpdate, stepIds, currentStepId);
+        this.entityDrawOrder.reverse();
     }
 }
 

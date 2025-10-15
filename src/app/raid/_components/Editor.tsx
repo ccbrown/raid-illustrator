@@ -62,7 +62,7 @@ export const Editor = () => {
                                     </div>
                                 </div>
                                 <div className="flex-grow" />
-                                <div className="pointer-events-auto">
+                                <div className="pointer-events-auto min-h-0">
                                     <InspectorPanel />
                                 </div>
                             </div>

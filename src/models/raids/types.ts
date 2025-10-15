@@ -28,6 +28,7 @@ export interface RaidScene {
     name: string;
     creationTime: number;
     shape: RaidSceneShape;
+    fill?: Material;
 
     stepIds: string[];
     entityIds: string[];

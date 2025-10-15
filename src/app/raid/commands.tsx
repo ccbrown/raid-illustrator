@@ -191,6 +191,17 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                                   width: 40,
                                   height: 40,
                               },
+                        fill: scene
+                            ? scene.fill
+                            : {
+                                  type: 'color',
+                                  color: {
+                                      r: 40,
+                                      g: 42,
+                                      b: 54,
+                                      a: 1,
+                                  },
+                              },
                         afterSceneId: raidWorkspace?.openSceneId,
                     });
                     dispatch.workspaces.openScene({ id, raidId });

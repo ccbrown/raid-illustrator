@@ -1,3 +1,4 @@
+export { AngleInput } from './AngleInput';
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
 export { RGBInput } from './RGBInput';

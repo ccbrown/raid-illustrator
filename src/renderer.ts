@@ -289,15 +289,7 @@ class Renderer {
         );
 
         if (this.scene) {
-            this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, {
-                type: 'color',
-                color: {
-                    r: 40,
-                    g: 42,
-                    b: 54,
-                    a: 1,
-                },
-            });
+            this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, this.scene.fill);
         }
 
         for (const entityId of this.entityDrawOrder) {
@@ -448,6 +440,30 @@ class Renderer {
                         ctx.strokeRect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);
                         break;
                     }
+                }
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        if (this.selection?.sceneIds && this.scene && this.selection.sceneIds.includes(this.scene.id)) {
+            ctx.globalCompositeOperation = 'difference';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = window.devicePixelRatio * 2;
+            switch (this.scene.shape.type) {
+                case 'rectangle': {
+                    ctx.strokeRect(
+                        (-this.scene.shape.width / 2) * scale,
+                        (-this.scene.shape.height / 2) * scale,
+                        this.scene.shape.width * scale,
+                        this.scene.shape.height * scale,
+                    );
+                    break;
+                }
+                case 'circle': {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.scene.shape.radius * scale, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
                 }
             }
             ctx.globalCompositeOperation = 'source-over';

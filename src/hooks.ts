@@ -64,3 +64,19 @@ export const useSceneWorkspace = (sceneId: string) => useSelector((state) => sta
 export const useStep = (stepId: string) => useSelector((state) => state.raids.steps[stepId]);
 export const useEntity = (entityId: string) => useSelector((state) => state.raids.entities[entityId]);
 export const useSelection = (raidId: string) => useSelector((state) => state.workspaces.raids[raidId]?.selection);
+
+// Returns a callback which will when called will only actually call the provided callback at most
+// once every `delay` ms.
+export const useThrottledCallback = <T>(callback: (arg: T) => void, delay: number) => {
+    const lastCalledRef = useRef(0);
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    return (arg: T) => {
+        const now = Date.now();
+        if (now - lastCalledRef.current >= delay) {
+            lastCalledRef.current = now;
+            callbackRef.current(arg);
+        }
+    };
+};

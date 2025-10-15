@@ -2,6 +2,7 @@ import { createModel } from '@rematch/core';
 
 import { RootModel } from '..';
 import {
+    Material,
     PartialRaidEntityProperties,
     RaidBatchOperation,
     RaidEntity,
@@ -207,6 +208,7 @@ export const raids = createModel<RootModel>()({
             payload: {
                 name: string;
                 shape: RaidSceneShape;
+                fill?: Material;
                 raidId: string;
                 afterSceneId?: string;
             },
@@ -223,6 +225,7 @@ export const raids = createModel<RootModel>()({
                 name: payload.name,
                 creationTime: Date.now(),
                 shape: payload.shape,
+                fill: payload.fill,
                 stepIds: [],
                 entityIds: [],
             };
@@ -256,6 +259,7 @@ export const raids = createModel<RootModel>()({
                 id: string;
                 name?: string;
                 shape?: RaidSceneShape;
+                fill?: Material;
             },
             state,
         ) {

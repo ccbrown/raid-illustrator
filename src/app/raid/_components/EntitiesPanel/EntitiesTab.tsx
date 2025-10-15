@@ -1,4 +1,3 @@
-import { GearSixIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { EditableText } from '@/components';
@@ -10,11 +9,10 @@ import { EntitySettingsDialog } from '../EntitySettingsDialog';
 
 interface ListItemProps {
     id: string;
-    onSettingsClick: () => void;
     selectedEntityIds: string[];
 }
 
-const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => {
+const ListItem = ({ id, selectedEntityIds }: ListItemProps) => {
     const entity = useEntity(id);
     const dispatch = useDispatch();
 
@@ -44,16 +42,6 @@ const ListItem = ({ id, onSettingsClick, selectedEntityIds }: ListItemProps) => 
                     dispatch.raids.updateEntity({ id: entity.id, name: newName });
                 }}
             />
-            <div className="flex-grow" />
-            <button
-                className="subtle pr-2"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onSettingsClick();
-                }}
-            >
-                <GearSixIcon size={20} />
-            </button>
         </div>
     );
 };
@@ -66,7 +54,6 @@ export const EntitiesTab = () => {
     const selection = useSelection(raidId || '');
     const selectedEntityIds = selection?.entityIds || [];
 
-    const [settingsDialogEntityId, setSettingsDialogEntityId] = useState<string | null>(null);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
     return (
@@ -77,19 +64,10 @@ export const EntitiesTab = () => {
                     onClose={() => setSettingsDialogOpen(false)}
                     raidId={raidId}
                     sceneId={scene.id}
-                    entityId={settingsDialogEntityId}
                 />
             )}
             {scene?.entityIds.map((id) => (
-                <ListItem
-                    key={id}
-                    id={id}
-                    onSettingsClick={() => {
-                        setSettingsDialogEntityId(id);
-                        setSettingsDialogOpen(true);
-                    }}
-                    selectedEntityIds={selectedEntityIds}
-                />
+                <ListItem key={id} id={id} selectedEntityIds={selectedEntityIds} />
             ))}
         </div>
     );

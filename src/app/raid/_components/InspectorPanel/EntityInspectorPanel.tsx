@@ -1,17 +1,9 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { useCallback } from 'react';
 
-import {
-    Button,
-    Checkbox,
-    CoordinateInput,
-    Dropdown,
-    NumberInput,
-    RGBAInput,
-    RGBInput,
-    StandaloneTextInput,
-} from '@/components';
+import { AngleInput, Button, Checkbox, CoordinateInput, Dropdown, NumberInput, RGBInput } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
-import { AnyProperties, Keyable, PartialRaidEntityProperties, RaidEntity, Shape } from '@/models/raids/types';
+import { AnyProperties, Keyable, Material, PartialRaidEntityProperties, RaidEntity, Shape } from '@/models/raids/types';
 import {
     keyableIsKeyedAtStep,
     keyableValueAtStep,
@@ -24,6 +16,8 @@ import { useDispatch } from '@/store';
 import { visualEffectFactories } from '@/visual-effects';
 
 import { useCommands } from '../../commands';
+import { MaterialEditor } from './MaterialEditor';
+import { ShapeEditor } from './ShapeEditor';
 
 type PropertyControlProps<T> = {
     value: T;
@@ -69,6 +63,12 @@ const KeyablePropertyEditor = <T,>({
 }: KeyablePropertyEditorProps<T>) => {
     const currentStepIsKeyed = keyableIsKeyedAtStep(value, stepId);
     const currentValue = keyableValueAtStep(value, sceneStepIds, stepId);
+    const controlOnChange = useCallback(
+        (newValue: T) => {
+            onChange(keyableWithValueAtStep(value, newValue, sceneStepIds, stepId));
+        },
+        [onChange, value, sceneStepIds, stepId],
+    );
 
     return (
         <div className="flex flex-row items-center gap-2">
@@ -88,9 +88,7 @@ const KeyablePropertyEditor = <T,>({
             <div className="flex-grow" />
             {control({
                 value: currentValue,
-                onChange: (newValue) => {
-                    onChange(keyableWithValueAtStep(value, newValue, sceneStepIds, stepId));
-                },
+                onChange: controlOnChange,
             })}
         </div>
     );
@@ -117,10 +115,13 @@ const KeyableEntityPropertyEditor = <T,>({
 }: KeyableEntityPropertyEditorProps<T>) => {
     const dispatch = useDispatch();
 
-    const update = (nextValue: Keyable<T>) => {
-        const partial = toPartial(nextValue);
-        dispatch.raids.updateEntity({ id: entityId, properties: partial });
-    };
+    const update = useCallback(
+        (nextValue: Keyable<T>) => {
+            const partial = toPartial(nextValue);
+            dispatch.raids.updateEntity({ id: entityId, properties: partial });
+        },
+        [dispatch, entityId, toPartial],
+    );
 
     return (
         <KeyablePropertyEditor
@@ -175,6 +176,12 @@ const PropertySpecPropertyEditor = ({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             control = ({ value, onChange }: PropertyControlProps<any>) => (
                 <NumberInput value={value} onChange={onChange} />
+            );
+            break;
+        case 'angle':
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            control = ({ value, onChange }: PropertyControlProps<any>) => (
+                <AngleInput value={value} onChange={onChange} />
             );
             break;
         case 'color':
@@ -304,6 +311,13 @@ interface Props {
     id: string;
 }
 
+const toPositionPartial = (v: Keyable<{ x: number; y: number }>): PartialRaidEntityProperties => ({
+    type: 'shape',
+    position: v,
+});
+
+const toRotationPartial = (v: Keyable<number>): PartialRaidEntityProperties => ({ type: 'shape', rotation: v });
+
 export const EntityInspectorPanel = ({ id }: Props) => {
     const entity = useEntity(id);
     const raidId = entity?.raidId;
@@ -327,6 +341,18 @@ export const EntityInspectorPanel = ({ id }: Props) => {
         }
     };
 
+    const updateFill = (newFill?: Material) => {
+        if (ep.type === 'shape') {
+            dispatch.raids.updateEntity({
+                id: entity.id,
+                properties: {
+                    type: 'shape',
+                    fill: newFill,
+                },
+            });
+        }
+    };
+
     const kpeProps = {
         entityId: entity.id,
         sceneStepIds,
@@ -334,162 +360,36 @@ export const EntityInspectorPanel = ({ id }: Props) => {
     };
 
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
+        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col h-full overflow-auto">
             <div className="flex flex-col gap-2 px-4">
                 <div className="font-semibold">{entity.name}</div>
                 {ep.type === 'shape' && (
                     <>
-                        <div className="flex flex-row gap-2">
-                            <Dropdown
-                                options={[
-                                    { label: 'Circle', key: 'circle' },
-                                    { label: 'Rectangle', key: 'rectangle' },
-                                ]}
-                                label="Shape"
-                                selectedOptionKey={ep.shape.type}
-                                onChange={(option) => {
-                                    switch (ep.shape.type) {
-                                        case 'rectangle':
-                                            switch (option.key) {
-                                                case 'circle':
-                                                    // use the smaller of the width or height as the radius
-                                                    const radius = Math.min(ep.shape.width, ep.shape.height) / 2;
-                                                    updateShape({ type: 'circle', radius });
-                                                    return;
-                                            }
-                                            return;
-                                        case 'circle':
-                                            switch (option.key) {
-                                                case 'rectangle':
-                                                    // use the diameter as both width and height
-                                                    const diameter = ep.shape.radius * 2;
-                                                    updateShape({
-                                                        type: 'rectangle',
-                                                        width: diameter,
-                                                        height: diameter,
-                                                    });
-                                                    return;
-                                            }
-                                            return;
-                                    }
-                                }}
-                            />
-                            <div className="flex-grow" />
-                            {ep.shape.type === 'rectangle' ? (
-                                <>
-                                    <NumberInput
-                                        label="Width (m)"
-                                        min={1}
-                                        value={ep.shape.width}
-                                        onChange={(w) => {
-                                            if (ep.shape.type === 'rectangle') {
-                                                updateShape({ ...ep.shape, width: w });
-                                            }
-                                        }}
-                                    />
-                                    <NumberInput
-                                        label="Height (m)"
-                                        min={1}
-                                        value={ep.shape.height}
-                                        onChange={(h) => {
-                                            if (ep.shape.type === 'rectangle') {
-                                                updateShape({ ...ep.shape, height: h });
-                                            }
-                                        }}
-                                    />
-                                </>
-                            ) : (
-                                <NumberInput
-                                    label="Radius (m)"
-                                    min={1}
-                                    value={ep.shape.radius}
-                                    onChange={(r) => {
-                                        if (ep.shape.type === 'circle') {
-                                            updateShape({ ...ep.shape, radius: r });
-                                        }
-                                    }}
-                                />
-                            )}
-                        </div>
-
-                        <div className="flex flex-row gap-2 items-center">
-                            <Dropdown
-                                options={[
-                                    { label: 'None', key: 'none' },
-                                    { label: 'Color', key: 'color' },
-                                    { label: 'Image', key: 'image' },
-                                ]}
-                                label="Fill"
-                                selectedOptionKey={ep.fill?.type ?? 'none'}
-                                onChange={(option) => {
-                                    switch (option.key) {
-                                        case 'none':
-                                            dispatch.raids.updateEntity({
-                                                id: entity.id,
-                                                properties: { type: 'shape', fill: undefined },
-                                            });
-                                            return;
-                                        case 'color':
-                                            dispatch.raids.updateEntity({
-                                                id: entity.id,
-                                                properties: {
-                                                    type: 'shape',
-                                                    fill: { type: 'color', color: { r: 255, g: 255, b: 255, a: 1 } },
-                                                },
-                                            });
-                                            return;
-                                        case 'image':
-                                            dispatch.raids.updateEntity({
-                                                id: entity.id,
-                                                properties: { type: 'shape', fill: { type: 'image', url: '' } },
-                                            });
-                                            return;
-                                    }
-                                }}
-                            />
-
-                            {ep.fill?.type === 'color' && (
-                                <RGBAInput
-                                    value={ep.fill.color}
-                                    onChange={(c) => {
-                                        if (ep.fill?.type === 'color') {
-                                            dispatch.raids.updateEntity({
-                                                id: entity.id,
-                                                properties: { type: 'shape', fill: { type: 'color', color: c } },
-                                            });
-                                        }
-                                    }}
-                                />
-                            )}
-
-                            {ep.fill?.type === 'image' && (
-                                <StandaloneTextInput
-                                    className="flex-grow"
-                                    value={ep.fill.url}
-                                    onChange={(url) => {
-                                        if (ep.fill?.type === 'image') {
-                                            dispatch.raids.updateEntity({
-                                                id: entity.id,
-                                                properties: { type: 'shape', fill: { type: 'image', url } },
-                                            });
-                                        }
-                                    }}
-                                />
-                            )}
-                        </div>
+                        <ShapeEditor value={ep.shape} onChange={updateShape} />
+                        <MaterialEditor
+                            label="Fill"
+                            value={ep.fill}
+                            onChange={updateFill}
+                            defaultColor={{
+                                r: 150,
+                                g: 150,
+                                b: 150,
+                                a: 1,
+                            }}
+                        />
 
                         <KeyableEntityPropertyEditor
                             label="Position"
                             value={ep.position}
-                            toPartial={(v) => ({ type: 'shape', position: v })}
+                            toPartial={toPositionPartial}
                             control={CoordinateInput}
                             {...kpeProps}
                         />
                         <KeyableEntityPropertyEditor
                             label="Rotation"
                             value={ep.rotation ?? 0}
-                            toPartial={(v) => ({ type: 'shape', rotation: v })}
-                            control={NumberInput}
+                            toPartial={toRotationPartial}
+                            control={AngleInput}
                             {...kpeProps}
                         />
                         <div className="flex flex-row items-center gap-2 py-2">

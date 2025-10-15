@@ -64,7 +64,7 @@ export const ScenesPanel = () => {
     const commands = useCommands();
 
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col">
+        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col min-h-0 overflow-auto">
             <div className="flex flex-row items-center mb-2">
                 <div className="px-4 font-semibold">Scenes</div>
                 <div className="flex-grow" />

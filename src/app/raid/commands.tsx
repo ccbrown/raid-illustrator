@@ -234,7 +234,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !nextStepId,
             hotKey: {
                 key: 'ArrowRight',
-                shift: true,
             },
             execute: () => {
                 if (raidId && sceneId && nextStepId) {
@@ -247,7 +246,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !previousStepId,
             hotKey: {
                 key: 'ArrowLeft',
-                shift: true,
             },
             execute: () => {
                 if (raidId && sceneId && previousStepId) {

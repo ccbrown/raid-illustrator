@@ -23,7 +23,7 @@ const normalize = (rads: number) => {
     return rads;
 };
 
-const snap = (rads: number) => {
+export const snapAngle = (rads: number) => {
     const snapIncrement = Math.PI / 4;
     return Math.round(rads / snapIncrement) * snapIncrement;
 };
@@ -55,7 +55,7 @@ export const AngleInput = ({ value, onChange }: Props) => {
             const x = e.clientX - (rect.left + rect.width / 2);
             const y = e.clientY - (rect.top + rect.height / 2);
             const rads = Math.atan2(x, -y);
-            throttledOnChange(normalize(e.shiftKey ? snap(rads) : rads));
+            throttledOnChange(normalize(e.shiftKey ? snapAngle(rads) : rads));
             e.preventDefault();
         };
         window.addEventListener('mousemove', moveListener);

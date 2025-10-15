@@ -8,7 +8,7 @@ interface Props {
     defaultColor?: { r: number; g: number; b: number; a: number };
 }
 
-export const MaterialEditor = ({ label, value, onChange }: Props) => {
+export const MaterialEditor = ({ label, value, onChange, defaultColor }: Props) => {
     return (
         <div className="flex flex-row gap-2 items-center">
             <Dropdown
@@ -25,7 +25,7 @@ export const MaterialEditor = ({ label, value, onChange }: Props) => {
                             onChange(undefined);
                             return;
                         case 'color':
-                            onChange({ type: 'color', color: { r: 255, g: 255, b: 255, a: 1 } });
+                            onChange({ type: 'color', color: defaultColor || { r: 255, g: 255, b: 255, a: 1 } });
                             return;
                         case 'image':
                             onChange({ type: 'image', url: '' });

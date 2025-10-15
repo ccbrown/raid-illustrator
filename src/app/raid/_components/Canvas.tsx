@@ -1,8 +1,8 @@
 import { useAnimationFrame } from 'motion/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { snapAngle } from '@/components/AngleInput';
 import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
-import { shapeDimensions } from '@/models/raids/utils';
 import { EntityPresetDragData } from '@/models/workspaces/types';
 import { Hit, useSceneRenderer } from '@/renderer';
 import { useDispatch } from '@/store';
@@ -41,7 +41,6 @@ export const Canvas = () => {
     const zoom = sceneWorkspace?.zoom || 1;
     const center = useMemo(() => sceneWorkspace?.center || { x: 0, y: 0 }, [sceneWorkspace]);
     const pixelsPerMeterZoomed = zoom * PIXELS_PER_METER;
-    const sceneDimensions = scene ? shapeDimensions(scene.shape) : { width: 0, height: 0 };
     const entityPresetDragData = raidWorkspace?.entityPresetDragData;
 
     const mouseDown = useRef<{
@@ -176,8 +175,9 @@ export const Canvas = () => {
                 ) {
                     const startAngle = angle(mouseDown.current.scenePosition, mouseDown.current.hit.pivot);
                     const currentAngle = angle(pos, mouseDown.current.hit.pivot);
+                    const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
                     for (const entityId of selection.entityIds) {
-                        renderer.setEntityDragRotation(entityId, currentAngle - startAngle);
+                        renderer.setEntityDragRotation(entityId, rotation);
                     }
                 }
 
@@ -226,7 +226,7 @@ export const Canvas = () => {
                 ) {
                     const startAngle = angle(mouseDown.current.scenePosition, mouseDown.current.hit.pivot);
                     const currentAngle = angle(pos, mouseDown.current.hit.pivot);
-                    const rotation = currentAngle - startAngle;
+                    const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
                     if (rotation) {
                         dispatch.raids.rotateEntities({
                             stepId: stepId || '',
@@ -303,7 +303,7 @@ export const Canvas = () => {
     );
 
     return (
-        <div className="relative w-full h-full" ref={containerRef}>
+        <div className="w-full h-full" ref={containerRef}>
             <canvas
                 ref={canvasRef}
                 className="w-full h-full"
@@ -314,12 +314,6 @@ export const Canvas = () => {
                 onDragLeave={() => renderer.hideDropIndicator()}
                 onDrop={dropHandler}
             />
-            <div className="absolute bottom-0 w-full flex flex-row justify-center pointer-events-none">
-                <div className="px-6 py-1 bg-elevation-1/80 rounded-t-md text-xs text-white/80 backdrop-blur-sm pointer-events-auto">
-                    Scene: {sceneDimensions.width}m × {sceneDimensions.height}m, Zoom:{' '}
-                    {Math.round(pixelsPerMeterZoomed)}px/m
-                </div>
-            </div>
         </div>
     );
 };

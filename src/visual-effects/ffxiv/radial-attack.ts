@@ -1,7 +1,7 @@
 import { Animated, smoothstep } from '@/animated';
 import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
-class LineAttack extends VisualEffect {
+class RadialAttack extends VisualEffect {
     enabled: Animated<number> = new Animated(0);
     enableTime?: number;
 
@@ -20,39 +20,43 @@ class LineAttack extends VisualEffect {
             this.enableTime = now;
         }
 
+        const { distance, direction, innerRadius, outerRadius, degrees } = properties;
+
         ctx.scale(scale, scale);
         ctx.translate(center.x, center.y);
-        ctx.rotate(rotation + properties.direction);
+        ctx.rotate(rotation + direction);
+        ctx.translate(0, -distance);
 
-        const { width, length, distance } = properties;
-        const left = -width / 2;
-        const end = -distance - length;
         const color1 = properties.color1;
         const color2 = properties.color2;
+        const rads = degrees * (Math.PI / 180);
+        const ccwAngle = -rads / 2 - Math.PI / 2;
+        const cwAngle = ccwAngle + rads;
 
         ctx.beginPath();
-        ctx.rect(left, end, width, length);
+        ctx.arc(0, 0, outerRadius, ccwAngle, cwAngle);
+        ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
         ctx.clip();
 
         ctx.save();
         ctx.globalAlpha = enabled;
-        ctx.fillStyle = `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.25)`;
-        ctx.fillRect(left, end, width, length);
+        ctx.fillStyle = `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0.10)`;
+        ctx.beginPath();
+        ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
+
+        const edgeGlowSize = Math.min(1, (outerRadius - innerRadius) / 5);
 
         const waveAnimationProgress = ((now - this.enableTime) % 1600) / 1600;
         const waveIsVisible = waveAnimationProgress < 0.6;
         const waveMovementProgress = Math.min(waveAnimationProgress / 0.6, 1);
-        const waveEnd = end + length * (1 - waveMovementProgress);
         const waveOpacity = smoothstep(1 - Math.abs(waveMovementProgress - 0.5) * 2);
-        const waveLength = 0.25 * length;
-        const waveGradient = ctx.createLinearGradient(0, waveEnd, 0, waveEnd + waveLength);
-        waveGradient.addColorStop(0, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0)`);
-        waveGradient.addColorStop(0.25, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0.3)`);
-        waveGradient.addColorStop(0.45, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0.3)`);
-        waveGradient.addColorStop(1, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0)`);
-
-        const edgeGlowSize = Math.min(1, Math.min(width, length) / 5);
+        const ringWidth = outerRadius - innerRadius;
+        const waveRadius = innerRadius + ringWidth * waveMovementProgress;
+        const waveGradient = ctx.createRadialGradient(0, 0, innerRadius, 0, 0, waveRadius);
+        waveGradient.addColorStop(0, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.05)`);
+        waveGradient.addColorStop(1, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.2)`);
 
         // edge glow
         ctx.globalAlpha = enabled;
@@ -60,8 +64,14 @@ class LineAttack extends VisualEffect {
         ctx.shadowColor = `rgba(${color2.r}, ${color2.g}, ${color2.b}, 1)`;
         ctx.shadowBlur = edgeGlowSize * scale;
         ctx.beginPath();
-        ctx.rect(left - 1, end - 1, width + 2, length + 2);
-        ctx.rect(left, end, width, length);
+        ctx.arc(0, 0, outerRadius + 1, 0, Math.PI * 2);
+        ctx.moveTo(Math.cos(ccwAngle) * outerRadius, Math.sin(ccwAngle) * outerRadius);
+        ctx.arc(0, 0, outerRadius, ccwAngle, cwAngle);
+        ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
+        if (innerRadius > 1) {
+            ctx.moveTo(0, innerRadius - 1);
+            ctx.arc(0, 0, innerRadius - 1, 0, Math.PI * 2);
+        }
         ctx.fill('evenodd');
 
         // wave
@@ -69,7 +79,10 @@ class LineAttack extends VisualEffect {
         if (waveIsVisible) {
             ctx.shadowBlur = 0;
             ctx.fillStyle = waveGradient;
-            ctx.fillRect(left, waveEnd, width, waveLength);
+            ctx.beginPath();
+            ctx.arc(0, 0, waveRadius, ccwAngle, cwAngle);
+            ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
+            ctx.fill();
         }
 
         ctx.globalCompositeOperation = 'lighter';
@@ -80,8 +93,14 @@ class LineAttack extends VisualEffect {
         ctx.shadowColor = `rgba(${color2.r}, ${color2.g}, ${color2.b}, 1)`;
         ctx.shadowBlur = edgeGlowSize * scale;
         ctx.beginPath();
-        ctx.rect(left - 1, end - 1, width + 2, length + 2);
-        ctx.rect(left, end, width, length);
+        ctx.arc(0, 0, outerRadius + 1, 0, Math.PI * 2);
+        ctx.moveTo(Math.cos(ccwAngle) * outerRadius, Math.sin(ccwAngle) * outerRadius);
+        ctx.arc(0, 0, outerRadius, ccwAngle, cwAngle);
+        ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
+        if (innerRadius > 1) {
+            ctx.moveTo(0, innerRadius - 1);
+            ctx.arc(0, 0, innerRadius - 1, 0, Math.PI * 2);
+        }
         ctx.fill('evenodd');
 
         // wave
@@ -89,24 +108,28 @@ class LineAttack extends VisualEffect {
         if (waveIsVisible) {
             ctx.shadowBlur = 0;
             ctx.fillStyle = waveGradient;
-            ctx.fillRect(left, waveEnd, width, waveLength);
+            ctx.beginPath();
+            ctx.arc(0, 0, waveRadius, ccwAngle, cwAngle);
+            ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
+            ctx.fill();
         }
     }
 }
 
 interface Properties {
     enabled: boolean;
-    width: number;
-    length: number;
+    degrees: number;
+    innerRadius: number;
+    outerRadius: number;
     direction: number;
     distance: number;
     color1: { r: number; g: number; b: number };
     color2: { r: number; g: number; b: number };
 }
 
-export const lineAttack: VisualEffectFactory = {
-    name: 'Line Attack',
-    create: () => new LineAttack(),
+export const radialAttack: VisualEffectFactory = {
+    name: 'Radial Attack',
+    create: () => new RadialAttack(),
     properties: [
         {
             name: 'Enabled',
@@ -116,18 +139,25 @@ export const lineAttack: VisualEffectFactory = {
             default: true,
         },
         {
-            name: 'Width',
+            name: 'Degrees',
             type: 'number',
-            key: 'width',
+            key: 'degrees',
             keyable: true,
-            default: 5,
+            default: 90,
         },
         {
-            name: 'Length',
+            name: 'Inner Radius',
             type: 'number',
-            key: 'length',
+            key: 'innerRadius',
             keyable: true,
-            default: 10,
+            default: 0,
+        },
+        {
+            name: 'Outer Radius',
+            type: 'number',
+            key: 'outerRadius',
+            keyable: true,
+            default: 5,
         },
         {
             name: 'Direction',
@@ -148,14 +178,14 @@ export const lineAttack: VisualEffectFactory = {
             type: 'color',
             key: 'color1',
             keyable: true,
-            default: { r: 136, g: 17, b: 0 },
+            default: { r: 150, g: 50, b: 0 },
         },
         {
             name: 'Color 2',
             type: 'color',
             key: 'color2',
             keyable: true,
-            default: { r: 232, g: 204, b: 138 },
+            default: { r: 255, g: 180, b: 100 },
         },
     ],
 };

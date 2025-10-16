@@ -719,13 +719,13 @@ export const raids = createModel<RootModel>()({
                 }
                 if (p.type === 'scene') {
                     const idx = newSceneEntityIds.indexOf(id);
-                    newSceneEntityIds.splice(idx + 1, 0, clone.id);
+                    newSceneEntityIds.splice(idx, 0, clone.id);
                 } else if (p.type === 'entity') {
                     const dest = updatedEntities.get(p.entity.id) || p.entity;
                     const dp = dest.properties;
                     if (dp.type === 'group') {
                         const idx = dp.children.indexOf(id);
-                        const newChildren = [...dp.children.slice(0, idx + 1), clone.id, ...dp.children.slice(idx + 1)];
+                        const newChildren = [...dp.children.slice(0, idx), clone.id, ...dp.children.slice(idx)];
                         updatedEntities.set(p.entity.id, {
                             ...dest,
                             properties: {

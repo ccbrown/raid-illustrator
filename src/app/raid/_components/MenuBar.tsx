@@ -8,6 +8,7 @@ import {
     Icon,
     PlusIcon,
     SparkleIcon,
+    StackIcon,
     TrashIcon,
     XIcon,
 } from '@phosphor-icons/react';
@@ -112,6 +113,7 @@ export const MenuBar = () => {
             label: 'Entity',
             items: [
                 menuItemForCommand(commands.newEntity, PlusIcon),
+                menuItemForCommand(commands.groupEntities, StackIcon),
                 menuItemForCommand(commands.addEntityEffect, SparkleIcon),
             ],
         },

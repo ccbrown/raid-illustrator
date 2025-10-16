@@ -1,3 +1,10 @@
+export interface RaidsState {
+    metadata: Record<string, RaidMetadata>;
+    scenes: Record<string, RaidScene>;
+    steps: Record<string, RaidStep>;
+    entities: Record<string, RaidEntity>;
+}
+
 export interface ShapeRectangle {
     type: 'rectangle';
     width: number;

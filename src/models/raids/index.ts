@@ -2,6 +2,14 @@ import { createModel } from '@rematch/core';
 
 import { RootModel } from '..';
 import {
+    selectGroupByChildId,
+    selectParentByChildIds,
+    selectRaidSharedBySceneIds,
+    selectRelativeOrderOfEntityIds,
+    selectSceneSharedByEntityIds,
+    selectSceneSharedByStepIds,
+} from './selectors';
+import {
     Material,
     PartialRaidEntityProperties,
     RaidBatchOperation,
@@ -11,15 +19,9 @@ import {
     RaidScene,
     RaidSceneShape,
     RaidStep,
+    RaidsState,
 } from './types';
 import { keyableValueAtStep, keyableWithValueAtStep } from './utils';
-
-interface RaidsState {
-    metadata: Record<string, RaidMetadata>;
-    scenes: Record<string, RaidScene>;
-    steps: Record<string, RaidStep>;
-    entities: Record<string, RaidEntity>;
-}
 
 export const raids = createModel<RootModel>()({
     state: {
@@ -212,9 +214,9 @@ export const raids = createModel<RootModel>()({
                 raidId: string;
                 afterSceneId?: string;
             },
-            _state,
+            state,
         ) {
-            const raid = _state.raids.metadata[payload.raidId];
+            const raid = state.raids.metadata[payload.raidId];
             if (!raid) {
                 throw new Error('Raid not found');
             }
@@ -253,6 +255,185 @@ export const raids = createModel<RootModel>()({
             });
 
             return newScene.id;
+        },
+        reorderScenes(
+            payload: {
+                sceneIds: string[];
+                destinationSceneId: string;
+                destinationPosition: 'before' | 'after';
+            },
+            state,
+        ) {
+            const movingSceneIds = payload.sceneIds.filter((id) => id !== payload.destinationSceneId);
+            if (movingSceneIds.length === 0) {
+                return;
+            }
+
+            const raid = selectRaidSharedBySceneIds(state.raids, [...movingSceneIds, payload.destinationSceneId]);
+            if (!raid) {
+                return;
+            }
+
+            const unmovingSceneIds = raid.sceneIds.filter((id) => !movingSceneIds.includes(id));
+            let insertIndex = unmovingSceneIds.indexOf(payload.destinationSceneId);
+            if (payload.destinationPosition === 'after') {
+                insertIndex += 1;
+            }
+
+            const newSceneIds = [
+                ...unmovingSceneIds.slice(0, insertIndex),
+                ...movingSceneIds,
+                ...unmovingSceneIds.slice(insertIndex),
+            ];
+            const newRaid = {
+                ...raid,
+                sceneIds: newSceneIds,
+            };
+            dispatch.raids.undoableBatchOperation({
+                name: 'Reorder Scenes',
+                raidId: raid.id,
+                operation: {
+                    putMetadata: newRaid,
+                },
+            });
+        },
+        reorderSteps(
+            payload: {
+                stepIds: string[];
+                destinationStepId: string;
+                destinationPosition: 'before' | 'after';
+            },
+            state,
+        ) {
+            const movingStepIds = payload.stepIds.filter((id) => id !== payload.destinationStepId);
+            if (movingStepIds.length === 0) {
+                return;
+            }
+
+            const scene = selectSceneSharedByStepIds(state.raids, [...movingStepIds, payload.destinationStepId]);
+            if (!scene) {
+                return;
+            }
+
+            const unmovingStepIds = scene.stepIds.filter((id) => !movingStepIds.includes(id));
+            let insertIndex = unmovingStepIds.indexOf(payload.destinationStepId);
+            if (payload.destinationPosition === 'after') {
+                insertIndex += 1;
+            }
+
+            const newStepIds = [
+                ...unmovingStepIds.slice(0, insertIndex),
+                ...movingStepIds,
+                ...unmovingStepIds.slice(insertIndex),
+            ];
+            const newScene = {
+                ...scene,
+                stepIds: newStepIds,
+            };
+            dispatch.raids.undoableBatchOperation({
+                name: 'Reorder Steps',
+                raidId: scene.raidId,
+                operation: {
+                    putScenes: [newScene],
+                },
+            });
+        },
+        reorderEntities(
+            payload: {
+                entityIds: string[];
+                destinationEntityId: string;
+                destinationPosition: 'before' | 'after';
+            },
+            state,
+        ) {
+            // buckle up...
+
+            const movingEntityIds = payload.entityIds.filter((id) => id !== payload.destinationEntityId);
+            if (movingEntityIds.length === 0) {
+                return;
+            }
+
+            const scene = selectSceneSharedByEntityIds(state.raids, [...movingEntityIds, payload.destinationEntityId]);
+            if (!scene) {
+                return;
+            }
+
+            const orderedMovingEntityIds = selectRelativeOrderOfEntityIds(state.raids, scene.entityIds);
+
+            // remove all of the moving entity ids from the scene and their groups
+            let newSceneEntityIds = scene.entityIds.filter((id) => !movingEntityIds.includes(id));
+
+            const updatedEntities = new Map<
+                string,
+                {
+                    before: RaidEntity;
+                    after: RaidEntity;
+                }
+            >();
+
+            for (const movingEntityId of movingEntityIds) {
+                const group = selectGroupByChildId(state.raids, movingEntityId);
+                if (!group || group.properties.type !== 'group') {
+                    continue;
+                }
+                const newChildren = group.properties.children.filter((id) => id !== movingEntityId);
+                if (newChildren.length === group.properties.children.length) {
+                    continue;
+                }
+                const updatedGroup = {
+                    ...group,
+                    properties: {
+                        ...group.properties,
+                        children: newChildren,
+                    },
+                };
+                updatedEntities.set(group.id, { before: group, after: updatedGroup });
+            }
+
+            // insert the moving entities at the destination
+            const destinationGroup = selectGroupByChildId(state.raids, payload.destinationEntityId);
+            let destinationSiblings = newSceneEntityIds;
+            if (destinationGroup) {
+                const dest = updatedEntities.get(destinationGroup.id)?.after || destinationGroup;
+                if (dest && dest.properties.type === 'group') {
+                    destinationSiblings = dest.properties.children;
+                }
+            }
+            let insertIndex = destinationSiblings.indexOf(payload.destinationEntityId);
+            if (payload.destinationPosition === 'after') {
+                insertIndex += 1;
+            }
+            const newDestinationChildren = [
+                ...destinationSiblings.slice(0, insertIndex),
+                ...orderedMovingEntityIds,
+                ...destinationSiblings.slice(insertIndex),
+            ];
+            if (destinationGroup && destinationGroup.properties.type === 'group') {
+                const newGroup = {
+                    ...destinationGroup,
+                    properties: {
+                        ...destinationGroup.properties,
+                        children: newDestinationChildren,
+                    },
+                };
+                updatedEntities.set(destinationGroup.id, { before: destinationGroup, after: newGroup });
+            } else {
+                newSceneEntityIds = newDestinationChildren;
+            }
+
+            // phew! time to commit the updates
+            const newScene = {
+                ...scene,
+                entityIds: newSceneEntityIds,
+            };
+            dispatch.raids.undoableBatchOperation({
+                name: 'Reorder Entities',
+                raidId: scene.raidId,
+                operation: {
+                    putScenes: [newScene],
+                    putEntities: Array.from(updatedEntities.values()).map((e) => e.after),
+                },
+            });
         },
         updateScene(
             payload: {
@@ -670,6 +851,87 @@ export const raids = createModel<RootModel>()({
             });
 
             dispatch.workspaces.removeEntitiesFromSelection({ raidId, entityIds: payload.ids });
+        },
+        groupEntities(
+            payload: {
+                entityIds: string[];
+            },
+            state,
+        ) {
+            const p = selectParentByChildIds(state.raids, payload.entityIds);
+            const orderedIds = selectRelativeOrderOfEntityIds(state.raids, payload.entityIds);
+            switch (p?.type) {
+                case 'scene': {
+                    const newGroup: RaidEntity = {
+                        id: crypto.randomUUID(),
+                        raidId: p.scene.raidId,
+                        sceneId: p.scene.id,
+                        name: 'Group',
+                        creationTime: Date.now(),
+                        properties: {
+                            type: 'group',
+                            children: orderedIds,
+                        },
+                    };
+                    const insertIndex = p.scene.entityIds.findIndex((id) => id === orderedIds[0]);
+                    const newEntityIds = [
+                        ...p.scene.entityIds.slice(0, insertIndex).filter((id) => !orderedIds.includes(id)),
+                        newGroup.id,
+                        ...p.scene.entityIds.slice(insertIndex).filter((id) => !orderedIds.includes(id)),
+                    ];
+                    const newScene = {
+                        ...p.scene,
+                        entityIds: newEntityIds,
+                    };
+                    dispatch.raids.undoableBatchOperation({
+                        name: 'Group Entities',
+                        raidId: p.scene.raidId,
+                        operation: {
+                            putEntities: [newGroup],
+                            putScenes: [newScene],
+                        },
+                    });
+                    break;
+                }
+                case 'entity': {
+                    if (p.entity.properties.type !== 'group') {
+                        return;
+                    }
+
+                    const newGroup: RaidEntity = {
+                        id: crypto.randomUUID(),
+                        raidId: p.entity.raidId,
+                        sceneId: p.entity.sceneId,
+                        name: 'Group',
+                        creationTime: Date.now(),
+                        properties: {
+                            type: 'group',
+                            children: orderedIds,
+                        },
+                    };
+                    const insertIndex = p.entity.properties.children.findIndex((id) => id === orderedIds[0]);
+                    const newEntityIds = [
+                        ...p.entity.properties.children.slice(0, insertIndex).filter((id) => !orderedIds.includes(id)),
+                        newGroup.id,
+                        ...p.entity.properties.children.slice(insertIndex).filter((id) => !orderedIds.includes(id)),
+                    ];
+                    const newParentGroup = {
+                        ...p.entity,
+                        properties: {
+                            ...p.entity.properties,
+                            children: newEntityIds,
+                        },
+                    };
+                    dispatch.raids.undoableBatchOperation({
+                        name: 'Group Entities',
+                        raidId: p.entity.raidId,
+                        operation: {
+                            putEntities: [newGroup, newParentGroup],
+                        },
+                    });
+                    break;
+                }
+            }
         },
     }),
 });

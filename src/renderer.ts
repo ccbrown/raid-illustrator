@@ -447,7 +447,6 @@ class Renderer {
                     }
                     default: {
                         const bounds = entity.renderBounds();
-
                         ctx.strokeStyle = '#ffffff';
                         ctx.lineWidth = window.devicePixelRatio * 2;
                         ctx.strokeRect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);

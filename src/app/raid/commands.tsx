@@ -10,7 +10,8 @@ import {
     useSceneWorkspace,
     useSelection,
 } from '@/hooks';
-import { useDispatch } from '@/store';
+import { selectParentByChildIds } from '@/models/raids/selectors';
+import { useDispatch, useSelector } from '@/store';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
 import { EntitySettingsDialog } from './_components/EntitySettingsDialog';
@@ -45,6 +46,7 @@ interface Commands {
     openPreviousStep: Command;
     newEntity: Command;
     addEntityEffect: Command;
+    groupEntities: Command;
 }
 
 const findCommandByHotKey = (commands: Commands, hotKey: HotKey): Command | null => {
@@ -107,6 +109,9 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const openStepIndex = scene?.stepIds.indexOf(sceneWorkspace?.openStepId || '');
     const nextStepId = scene?.stepIds[openStepIndex === undefined ? 0 : openStepIndex + 1];
     const previousStepId = scene?.stepIds[openStepIndex === undefined ? scene?.stepIds.length - 1 : openStepIndex - 1];
+    const selectedEntitiesHaveCommonParent = useSelector(
+        (state) => !!selectParentByChildIds(state.raids, selection?.entityIds || []),
+    );
 
     const hotKeyBase = useMacLikeHotKeys
         ? {
@@ -265,6 +270,13 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !selectedEntity || selectedEntity.properties.type !== 'shape',
             execute: () => {
                 setEffectSelectionDialogOpen(true);
+            },
+        },
+        groupEntities: {
+            name: 'Group Entities',
+            disabled: (selection?.entityIds?.length || 0) < 2 || !selectedEntitiesHaveCommonParent,
+            execute: () => {
+                dispatch.raids.groupEntities({ entityIds: selection?.entityIds || [] });
             },
         },
         zoomIn: {

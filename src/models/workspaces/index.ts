@@ -1,12 +1,14 @@
 import { createModel } from '@rematch/core';
 
 import { RootModel } from '..';
-import { EntityPresetDragData, RaidWorkspace, SceneWorkspace, Selection, UndoRedoStackAction } from './types';
-
-interface WorkspacesState {
-    raids: Record<string, RaidWorkspace>;
-    scenes: Record<string, SceneWorkspace>;
-}
+import {
+    EntityPresetDragData,
+    RaidWorkspace,
+    SceneWorkspace,
+    Selection,
+    UndoRedoStackAction,
+    WorkspacesState,
+} from './types';
 
 export const workspaces = createModel<RootModel>()({
     state: {

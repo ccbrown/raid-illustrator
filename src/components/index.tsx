@@ -8,5 +8,6 @@ export { Dialog } from './Dialog';
 export { Dropdown } from './Dropdown';
 export { EditableText } from './EditableText';
 export { NumberInput } from './NumberInput';
+export { ScrollList, ScrollListItem } from './ScrollList';
 export { StandaloneTextInput } from './StandaloneTextInput';
 export { TextField } from './TextField';

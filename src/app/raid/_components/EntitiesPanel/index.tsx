@@ -42,7 +42,7 @@ export const EntitiesPanel = () => {
     }
 
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg flex flex-col">
+        <div className="bg-elevation-1 rounded-lg shadow-lg flex flex-col min-h-0">
             <div className="flex flex-row items-center border-b-1 border-elevation-2">
                 <Tab id="entities" label="Entities" activeTabId={tab} />
                 <Tab id="presets" label="Presets" activeTabId={tab} />

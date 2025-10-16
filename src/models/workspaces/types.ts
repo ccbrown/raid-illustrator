@@ -1,5 +1,10 @@
 import { RaidBatchOperation, RaidEntityPropertiesShape } from '@/models/raids/types';
 
+export interface WorkspacesState {
+    raids: Record<string, RaidWorkspace>;
+    scenes: Record<string, SceneWorkspace>;
+}
+
 export interface SceneWorkspace {
     id: string;
 

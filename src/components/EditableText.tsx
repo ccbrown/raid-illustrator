@@ -1,8 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 
-import { disablePasswordManagers } from '@/components/TextField';
-
 interface Props {
     value: string;
     onChange: (newValue: string) => void;
@@ -13,7 +11,6 @@ interface Props {
 export const EditableText = ({ className, disabled, value, onChange }: Props) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [editedValue, setEditedValue] = useState(value);
 
     useEffect(() => {
         if (disabled && isEditing) {
@@ -24,51 +21,64 @@ export const EditableText = ({ className, disabled, value, onChange }: Props) =>
         }
     }, [disabled, isEditing]);
 
-    const commit = () => {
-        if (!disabled && editedValue.trim() !== '' && editedValue !== value) {
-            onChange(editedValue);
+    useEffect(() => {
+        if (!isEditing && inputRef.current) {
+            inputRef.current.innerText = value;
         }
-        setIsEditing(false);
+    }, [value, isEditing]);
+
+    const commit = () => {
+        if (inputRef.current) {
+            const editedValue = inputRef.current.innerText;
+            if (!disabled && editedValue.trim() !== '' && editedValue !== value) {
+                onChange(editedValue);
+            }
+        }
     };
 
     return (
-        <input
-            className={clsx(
-                'border-0 rounded-md shadow-none px-2 py-1 focus:bg-black/20 focus:outline-1 outline-cyan-500 ring-none',
-                {
-                    'pointer-events-none': disabled,
-                    'cursor-text': !disabled,
-                },
-                className,
-            )}
-            autoComplete="off"
-            disabled={disabled}
-            readOnly={!isEditing || disabled}
-            type="text"
-            onFocus={() => {
-                setEditedValue(value);
-                setIsEditing(true);
-            }}
-            onChange={(e) => {
-                setEditedValue(e.target.value);
-            }}
-            onBlur={() => {
-                commit();
-            }}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
+        <div className="pointer-events-none">
+            <div
+                className={clsx(
+                    'border-0 select-none rounded-md shadow-none px-2 py-1 focus:bg-black/20 focus:outline-1 outline-cyan-500 ring-none',
+                    {
+                        'pointer-events-none': disabled,
+                        'pointer-events-auto cursor-text': !disabled,
+                    },
+                    className,
+                )}
+                onClick={() => {
+                    if (!disabled && inputRef.current && !isEditing) {
+                        inputRef.current.contentEditable = 'plaintext-only';
+                        inputRef.current.focus();
+                    }
+                }}
+                onFocus={() => {
+                    setIsEditing(true);
+                }}
+                onBlur={() => {
                     commit();
-                    e.currentTarget.blur();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
                     setIsEditing(false);
-                    e.currentTarget.blur();
-                }
-            }}
-            ref={inputRef}
-            value={isEditing ? editedValue : value}
-            {...disablePasswordManagers}
-        />
+                    inputRef.current!.contentEditable = 'false';
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commit();
+                        e.currentTarget.blur();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (inputRef.current) {
+                            inputRef.current.innerText = value;
+                        }
+                        setIsEditing(false);
+                        e.currentTarget.blur();
+                    }
+                }}
+                ref={inputRef}
+            >
+                {value}
+            </div>
+        </div>
     );
 };

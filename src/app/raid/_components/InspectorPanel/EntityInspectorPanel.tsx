@@ -1,7 +1,16 @@
 import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 
-import { AngleInput, Button, Checkbox, CoordinateInput, Dropdown, NumberInput, RGBInput } from '@/components';
+import {
+    AngleInput,
+    Button,
+    Checkbox,
+    CoordinateInput,
+    Dropdown,
+    NumberInput,
+    RGBInput,
+    StandaloneTextInput,
+} from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
 import {
     AnyProperties,
@@ -196,6 +205,12 @@ const PropertySpecPropertyEditor = ({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             control = ({ value, onChange }: PropertyControlProps<any>) => (
                 <RGBInput value={value} onChange={onChange} />
+            );
+            break;
+        case 'text':
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            control = ({ value, onChange }: PropertyControlProps<any>) => (
+                <StandaloneTextInput value={value} onChange={onChange} />
             );
             break;
         default:

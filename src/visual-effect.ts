@@ -1,6 +1,10 @@
 import { AnyProperties, Shape } from '@/models/raids/types';
 import { PropertySpec } from '@/property-spec';
 
+interface VisualEffectRenderParamsRenderer {
+    getEntityPositionByName: (name: string) => { x: number; y: number } | undefined;
+}
+
 export interface VisualEffectRenderParams {
     ctx: CanvasRenderingContext2D;
     shape: Shape;
@@ -8,10 +12,12 @@ export interface VisualEffectRenderParams {
     center: { x: number; y: number };
     rotation: number;
     properties: AnyProperties;
+    renderer: VisualEffectRenderParamsRenderer;
 }
 
 export abstract class VisualEffect {
     renderGround?(params: VisualEffectRenderParams): void;
+    renderAboveGround?(params: VisualEffectRenderParams): void;
     renderOverlay?(params: VisualEffectRenderParams): void;
 }
 

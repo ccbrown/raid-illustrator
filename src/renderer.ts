@@ -287,10 +287,21 @@ class Renderer {
     private images = new ImageManager();
     private sceneDragMovement: { x: number; y: number } = { x: 0, y: 0 };
     private entities: Map<string, RendererEntity> = new Map();
+    private entityIdsByName: Map<string, string[]> = new Map();
     private entityDrawOrder: string[] = [];
 
     // When a preset is being dragged over the canvas, this can be used to render an indicator.
     private dropIndicator?: { position: { x: number; y: number }; shape: Shape };
+
+    getEntityPositionByName(name: string): { x: number; y: number } | undefined {
+        for (const e of this.entityIdsByName.get(name) || []) {
+            const entity = this.entities.get(e);
+            if (entity) {
+                return entity.renderPosition();
+            }
+        }
+        return undefined;
+    }
 
     render(ctx: CanvasRenderingContext2D, scale: number, center: { x: number; y: number }) {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -327,6 +338,35 @@ class Renderer {
                     scale,
                     center: pos,
                     rotation: rot || 0,
+                    renderer: this,
+                });
+                ctx.restore();
+            }
+        }
+
+        for (const entityId of this.entityDrawOrder) {
+            const entity = this.entities.get(entityId);
+            if (!entity) {
+                continue;
+            }
+
+            const pos = entity.renderPosition();
+            for (const { id, visualEffect } of entity.visualEffects) {
+                const ep = entity.entity.properties;
+                if (ep.type !== 'shape' || !visualEffect.renderAboveGround) {
+                    continue;
+                }
+
+                const rot = entity.renderRotation();
+                ctx.save();
+                visualEffect.renderAboveGround({
+                    ctx,
+                    properties: entity.renderEffectProperties(id) || {},
+                    shape: ep.shape,
+                    scale,
+                    center: pos,
+                    rotation: rot || 0,
+                    renderer: this,
                 });
                 ctx.restore();
             }
@@ -381,6 +421,7 @@ class Renderer {
                     scale,
                     center: pos,
                     rotation: rot || 0,
+                    renderer: this,
                 });
                 ctx.restore();
             }
@@ -730,6 +771,10 @@ class Renderer {
 
                     if (entityIsVisible) {
                         this.entityDrawOrder.push(id);
+                        this.entityIdsByName.set(
+                            entity.name,
+                            (this.entityIdsByName.get(entity.name) || []).concat([id]),
+                        );
                     }
                     break;
                 }
@@ -756,6 +801,7 @@ class Renderer {
     ) {
         const entitiesToRemove = new Set(this.entities.keys());
         this.entityDrawOrder = [];
+        this.entityIdsByName.clear();
         this.updateEntitiesImpl(allEntities, entitiesToUpdate, entitiesToRemove, stepIds, currentStepId, true);
         this.entityDrawOrder.reverse();
         for (const id of entitiesToRemove) {

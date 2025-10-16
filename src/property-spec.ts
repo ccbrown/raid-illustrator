@@ -8,6 +8,11 @@ interface PropertySpecBase {
     keyable?: boolean;
 }
 
+interface PropertySpecText extends PropertySpecBase {
+    type: 'text';
+    default: string;
+}
+
 interface PropertySpecBoolean extends PropertySpecBase {
     type: 'boolean';
     default: boolean;
@@ -42,6 +47,7 @@ interface PropertySpecColor extends PropertySpecBase {
 // PropertySpec is used for run-time defined properties, e.g. for visual effects.
 export type PropertySpec =
     | PropertySpecBoolean
+    | PropertySpecText
     | PropertySpecEnum
     | PropertySpecColor
     | PropertySpecNumber

@@ -265,7 +265,7 @@ export const raids = createModel<RootModel>()({
                 },
             });
 
-            return newScene.id;
+            return newScene;
         },
         reorderScenes(
             payload: {
@@ -369,7 +369,7 @@ export const raids = createModel<RootModel>()({
                 return;
             }
 
-            const orderedMovingEntityIds = selectRelativeOrderOfEntityIds(state.raids, scene.entityIds);
+            const orderedMovingEntityIds = selectRelativeOrderOfEntityIds(state.raids, movingEntityIds);
 
             // remove all of the moving entity ids from the scene and their groups
             let newSceneEntityIds = scene.entityIds.filter((id) => !movingEntityIds.includes(id));
@@ -378,17 +378,22 @@ export const raids = createModel<RootModel>()({
 
             for (const movingEntityId of movingEntityIds) {
                 const group = selectGroupByChildId(state.raids, movingEntityId);
-                if (!group || group.properties.type !== 'group') {
+                if (!group) {
                     continue;
                 }
-                const newChildren = group.properties.children.filter((id) => id !== movingEntityId);
-                if (newChildren.length === group.properties.children.length) {
+                const dest = updatedEntities.get(group.id) || group;
+                if (dest.properties.type !== 'group') {
+                    continue;
+                }
+                const dp = dest.properties;
+                const newChildren = dp.children.filter((id) => id !== movingEntityId);
+                if (newChildren.length === dp.children.length) {
                     continue;
                 }
                 const updatedGroup = {
                     ...group,
                     properties: {
-                        ...group.properties,
+                        ...dp,
                         children: newChildren,
                     },
                 };

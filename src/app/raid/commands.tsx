@@ -203,7 +203,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             disabled: !raidId,
             execute: () => {
                 if (raidId) {
-                    const id = dispatch.raids.createScene({
+                    const newScene = dispatch.raids.createScene({
                         raidId,
                         name: 'New Scene',
                         shape: scene
@@ -226,8 +226,11 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                               },
                         afterSceneId: raidWorkspace?.openSceneId,
                     });
-                    dispatch.workspaces.openScene({ id, raidId });
-                    dispatch.workspaces.select({ raidId, selection: { sceneIds: [id] } });
+                    dispatch.workspaces.openScene({ id: newScene.id, raidId });
+                    if (newScene.stepIds[0]) {
+                        dispatch.workspaces.openStep({ sceneId: newScene.id, id: newScene.stepIds[0] });
+                    }
+                    dispatch.workspaces.select({ raidId, selection: { sceneIds: [newScene.id] } });
                 }
             },
         },

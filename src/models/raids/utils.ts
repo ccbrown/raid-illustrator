@@ -120,14 +120,16 @@ export const keyableWithUnkeyedStep = <T>(k: Keyable<T>, stepId: string): Keyabl
 
 // Returns a new entity with its id(s) changed.
 const cloneEntity = (entity: RaidEntity): RaidEntity => {
-    const ep = entity.properties;
-    const props = { ...ep };
+    const newEntity = structuredClone(entity);
+    newEntity.id = crypto.randomUUID();
+    newEntity.creationTime = Date.now();
+    const ep = newEntity.properties;
 
-    switch (props.type) {
+    switch (ep.type) {
         case 'shape': {
             // also generate new effect ids
-            if (props.effects) {
-                props.effects = props.effects.map((effect) => ({
+            if (ep.effects) {
+                ep.effects = ep.effects.map((effect) => ({
                     ...effect,
                     id: crypto.randomUUID(),
                 }));
@@ -136,13 +138,7 @@ const cloneEntity = (entity: RaidEntity): RaidEntity => {
         }
     }
 
-    return {
-        ...entity,
-        id: crypto.randomUUID(),
-        creationTime: Date.now(),
-        name: entity.name,
-        properties: props,
-    };
+    return newEntity;
 };
 
 // Clones an entity, returning it and its new children (if any), returning the cloned entity and an array of its descendants.

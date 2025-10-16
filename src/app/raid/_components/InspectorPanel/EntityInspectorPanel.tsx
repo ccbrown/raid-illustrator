@@ -156,10 +156,8 @@ interface PropertySpecPropertyEditorProps {
     spec: PropertySpec;
     sceneStepIds: string[];
     stepId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    value?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChange: (newValue: any) => void;
+    value?: unknown;
+    onChange: (newValue: unknown) => void;
 }
 
 const PropertySpecPropertyEditor = ({
@@ -169,48 +167,42 @@ const PropertySpecPropertyEditor = ({
     stepId,
     value,
 }: PropertySpecPropertyEditorProps) => {
-    const currentValue = value !== undefined ? value : spec.default;
+    const currentValue: unknown = value !== undefined ? value : spec.default;
 
     let control = null;
     switch (spec.type) {
         case 'boolean':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <Checkbox checked={value} onChange={onChange} />
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <Checkbox checked={value as boolean} onChange={onChange} />
             );
             break;
         case 'enum':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
                 <Dropdown
-                    selectedOptionKey={value}
+                    selectedOptionKey={value as string}
                     onChange={(o) => onChange(o.key)}
                     options={spec.choices.map((c) => ({ key: c.value, label: c.label }))}
                 />
             );
             break;
         case 'number':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <NumberInput value={value} onChange={onChange} />
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <NumberInput value={value as number} onChange={onChange} />
             );
             break;
         case 'angle':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <AngleInput value={value} onChange={onChange} />
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <AngleInput value={value as number} onChange={onChange} />
             );
             break;
         case 'color':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <RGBInput value={value} onChange={onChange} />
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <RGBInput value={value as { r: number; g: number; b: number }} onChange={onChange} />
             );
             break;
         case 'text':
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            control = ({ value, onChange }: PropertyControlProps<any>) => (
-                <StandaloneTextInput value={value} onChange={onChange} />
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <StandaloneTextInput value={value as string} onChange={onChange} />
             );
             break;
         default:

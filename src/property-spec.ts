@@ -73,8 +73,7 @@ export const resolveProperties = (
             continue;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const currentValue = keyableValueAtStep(v as Keyable<any>, sceneStepIds, currentStepId);
+        const currentValue = keyableValueAtStep(v as Keyable<unknown>, sceneStepIds, currentStepId);
         result[spec.key] = currentValue;
     }
     return result;

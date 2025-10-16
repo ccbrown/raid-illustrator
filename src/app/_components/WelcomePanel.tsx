@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from '@/store';
 
 export const WelcomePanel = () => {
     const raids = Object.values(useSelector((state) => state.raids.metadata));
+    const raidWorkspaces = Object.values(useSelector((state) => state.workspaces.raids));
     const dispatch = useDispatch();
     const router = useRouter();
     const [isBusy, setIsBusy] = useState(false);
@@ -19,6 +20,14 @@ export const WelcomePanel = () => {
         const id = dispatch.raids.create({ name: 'Untitled Raid' });
         router.push(`/raid#id=${id}`);
     };
+
+    const sortedRaids = raids.slice().sort((a, b) => {
+        const aWorkspace = raidWorkspaces.find((rw) => rw.id === a.id);
+        const bWorkspace = raidWorkspaces.find((rw) => rw.id === b.id);
+        const aTime = aWorkspace?.lastActivityTime || 0;
+        const bTime = bWorkspace?.lastActivityTime || 0;
+        return bTime - aTime;
+    });
 
     return (
         <div className="bg-elevation-1 rounded-lg w-full max-w-3xl shadow-lg p-6">
@@ -34,9 +43,9 @@ export const WelcomePanel = () => {
                         <Button disabled={isBusy} text="New Raid" icon={SwordIcon} onClick={createProject} />
                     </div>
                 </div>
-                {raids.length > 0 && (
+                {sortedRaids.length > 0 && (
                     <div className="flex flex-col border-l border-white/10 pl-4 gap-4">
-                        {raids.map((raid) => (
+                        {sortedRaids.map((raid) => (
                             <Link key={raid.id} href={`/raid#id=${raid.id}`}>
                                 {raid.name}
                             </Link>

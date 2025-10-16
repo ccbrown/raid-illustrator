@@ -11,6 +11,7 @@ import {
     useSelection,
 } from '@/hooks';
 import { selectParentByChildIds } from '@/models/raids/selectors';
+import { Selection } from '@/models/workspaces/types';
 import { useDispatch, useSelector } from '@/store';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
@@ -37,6 +38,7 @@ interface Commands {
     close: Command;
     undo: Command;
     redo: Command;
+    duplicate: Command;
     delete: Command;
     zoomIn: Command;
     zoomOut: Command;
@@ -160,6 +162,21 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 }
             },
         },
+        duplicate: {
+            name: 'Duplicate',
+            disabled: !selection?.entityIds?.length,
+            hotKey: {
+                ...hotKeyBase,
+                key: 'd',
+            },
+            execute: () => {
+                const newSelection: Selection = {};
+                if (selection?.entityIds?.length) {
+                    newSelection.entityIds = dispatch.raids.duplicateEntities({ ids: selection.entityIds });
+                }
+                dispatch.workspaces.select({ raidId: raidId || '', selection: newSelection });
+            },
+        },
         delete: {
             name: 'Delete',
             disabled:
@@ -275,6 +292,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         groupEntities: {
             name: 'Group Entities',
             disabled: (selection?.entityIds?.length || 0) < 2 || !selectedEntitiesHaveCommonParent,
+            hotKey: {
+                ...hotKeyBase,
+                key: 'g',
+            },
             execute: () => {
                 dispatch.raids.groupEntities({ entityIds: selection?.entityIds || [] });
             },

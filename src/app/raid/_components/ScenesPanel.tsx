@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 
 import { Button, EditableText, ScrollList, ScrollListItem } from '@/components';
 import { useRaid, useRaidWorkspace, useScene, useSelection } from '@/hooks';
+import { RaidMetadata } from '@/models/raids/types';
+import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch } from '@/store';
 
 import { useCommands } from '../commands';
@@ -13,9 +15,10 @@ interface ListItemProps {
     id: string;
     openSceneId?: string;
     selectedSceneIds?: string[];
+    raid: RaidMetadata;
 }
 
-const ListItem = ({ id, openSceneId, selectedSceneIds }: ListItemProps) => {
+const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) => {
     const scene = useScene(id);
     const dispatch = useDispatch();
 
@@ -30,6 +33,11 @@ const ListItem = ({ id, openSceneId, selectedSceneIds }: ListItemProps) => {
         }
     };
 
+    const fillSelection = () => {
+        const newSelection = fillSelectionRange(raid.sceneIds, selectedSceneIds || [], scene.id);
+        dispatch.workspaces.select({ raidId: scene.raidId, selection: { sceneIds: newSelection } });
+    };
+
     const isOpen = scene.id === openSceneId;
     const isSelected = selectedSceneIds?.includes(scene.id);
 
@@ -41,8 +49,16 @@ const ListItem = ({ id, openSceneId, selectedSceneIds }: ListItemProps) => {
                 'bg-white/10 hover:bg-white/20': isOpen && !isSelected,
                 'hover:bg-white/10': !isOpen && !isSelected,
             })}
+            onContextMenu={(e) => {
+                if (e.ctrlKey) {
+                    // let the click handler deal handle control clicks
+                    e.preventDefault();
+                }
+            }}
             onClick={(e) => {
-                if (e.shiftKey || e.ctrlKey) {
+                if (e.shiftKey) {
+                    fillSelection();
+                } else if (e.ctrlKey) {
                     // don't open the scene, just select or deselect it
                     if (isSelected) {
                         dispatch.workspaces.select({
@@ -116,6 +132,7 @@ export const ScenesPanel = () => {
                             id={id}
                             openSceneId={raidWorkspace?.openSceneId}
                             selectedSceneIds={selectedSceneIds || []}
+                            raid={raid}
                         />
                     </ScrollListItem>
                 ))}

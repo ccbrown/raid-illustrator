@@ -10,6 +10,8 @@ export interface SceneWorkspace {
 
     openStepId?: string;
 
+    expandedGroupIds?: string[];
+
     zoom?: number;
     center?: {
         x: number;

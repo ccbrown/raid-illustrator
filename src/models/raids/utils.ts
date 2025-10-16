@@ -1,4 +1,4 @@
-import { Keyable, Shape } from './types';
+import { Keyable, RaidEntity, Shape } from './types';
 
 export const shapeDimensions = (shape: Shape) => {
     switch (shape.type) {
@@ -116,4 +116,56 @@ export const keyableWithUnkeyedStep = <T>(k: Keyable<T>, stepId: string): Keyabl
               steps: remainingSteps,
           }
         : norm.initial;
+};
+
+// Returns a new entity with its id(s) changed.
+const cloneEntity = (entity: RaidEntity): RaidEntity => {
+    const ep = entity.properties;
+    const props = { ...ep };
+
+    switch (props.type) {
+        case 'shape': {
+            // also generate new effect ids
+            if (props.effects) {
+                props.effects = props.effects.map((effect) => ({
+                    ...effect,
+                    id: crypto.randomUUID(),
+                }));
+            }
+            break;
+        }
+    }
+
+    return {
+        ...entity,
+        id: crypto.randomUUID(),
+        creationTime: Date.now(),
+        name: entity.name,
+        properties: props,
+    };
+};
+
+// Clones an entity, returning it and its new children (if any), returning the cloned entity and an array of its descendants.
+export const cloneEntityAndChildren = (
+    entity: RaidEntity,
+    allEntities: Record<string, RaidEntity>,
+): [RaidEntity, RaidEntity[]] => {
+    const clone = cloneEntity(entity);
+    const ep = clone.properties;
+
+    const descendants: RaidEntity[] = [];
+    if (ep.type === 'group') {
+        const newChildren: string[] = [];
+        for (const childId of ep.children) {
+            const child = allEntities[childId];
+            if (child) {
+                const [newChild, newDescendants] = cloneEntityAndChildren(child, allEntities);
+                newChildren.push(newChild.id);
+                descendants.push(newChild, ...newDescendants);
+            }
+        }
+        ep.children = newChildren;
+    }
+
+    return [clone, descendants];
 };

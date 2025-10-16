@@ -155,6 +155,13 @@ export const Canvas = () => {
                     x: pos.x - mouseDown.current.scenePosition.x,
                     y: pos.y - mouseDown.current.scenePosition.y,
                 };
+                if (e.shiftKey) {
+                    if (Math.abs(movement.x) > Math.abs(movement.y)) {
+                        movement.y = 0;
+                    } else {
+                        movement.x = 0;
+                    }
+                }
 
                 // apply drag movement for selected entities
                 if (
@@ -202,6 +209,13 @@ export const Canvas = () => {
                     x: pos.x - mouseDown.current.scenePosition.x,
                     y: pos.y - mouseDown.current.scenePosition.y,
                 };
+                if (e.shiftKey) {
+                    if (Math.abs(movement.x) > Math.abs(movement.y)) {
+                        movement.y = 0;
+                    } else {
+                        movement.x = 0;
+                    }
+                }
 
                 // apply the drag movement to the entities' positions
                 if (mouseDown.current.hit?.type === 'entity') {

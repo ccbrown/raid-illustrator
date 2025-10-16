@@ -130,6 +130,26 @@ export const workspaces = createModel<RootModel>()({
                 dispatch.workspaces.putScene({ ...existing, ...payload });
             }
         },
+        toggleGroupExpansion(
+            payload: {
+                id: string;
+                sceneId: string;
+            },
+            state,
+        ) {
+            dispatch.workspaces.ensureScene(payload.sceneId);
+            const existing = state.workspaces.scenes[payload.sceneId];
+            if (existing) {
+                const expandedGroupIds = [...(existing.expandedGroupIds || [])];
+                const index = expandedGroupIds.indexOf(payload.id);
+                if (index === -1) {
+                    expandedGroupIds.push(payload.id);
+                } else {
+                    expandedGroupIds.splice(index, 1);
+                }
+                dispatch.workspaces.putScene({ ...existing, expandedGroupIds });
+            }
+        },
         openStep(
             payload: {
                 id: string;

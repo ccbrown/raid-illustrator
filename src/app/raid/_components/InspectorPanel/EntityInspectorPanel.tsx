@@ -3,7 +3,15 @@ import { useCallback } from 'react';
 
 import { AngleInput, Button, Checkbox, CoordinateInput, Dropdown, NumberInput, RGBInput } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
-import { AnyProperties, Keyable, Material, PartialRaidEntityProperties, RaidEntity, Shape } from '@/models/raids/types';
+import {
+    AnyProperties,
+    Keyable,
+    Material,
+    PartialRaidEntityProperties,
+    RaidEntity,
+    RaidEntityUpdate,
+    Shape,
+} from '@/models/raids/types';
 import {
     keyableIsKeyedAtStep,
     keyableValueAtStep,
@@ -100,7 +108,7 @@ interface KeyableEntityPropertyEditorProps<T> {
     sceneStepIds: string[];
     stepId: string;
     value: Keyable<T>;
-    toPartial: (newValue: Keyable<T>) => PartialRaidEntityProperties;
+    toUpdate: (newValue: Keyable<T>) => Omit<RaidEntityUpdate, 'id'>;
     control: (props: PropertyControlProps<T>) => React.ReactNode;
 }
 
@@ -110,17 +118,17 @@ const KeyableEntityPropertyEditor = <T,>({
     value,
     sceneStepIds,
     stepId,
-    toPartial,
+    toUpdate,
     control,
 }: KeyableEntityPropertyEditorProps<T>) => {
     const dispatch = useDispatch();
 
     const update = useCallback(
         (nextValue: Keyable<T>) => {
-            const partial = toPartial(nextValue);
-            dispatch.raids.updateEntity({ id: entityId, properties: partial });
+            const update = toUpdate(nextValue);
+            dispatch.raids.updateEntity({ id: entityId, ...update });
         },
-        [dispatch, entityId, toPartial],
+        [dispatch, entityId, toUpdate],
     );
 
     return (
@@ -311,12 +319,20 @@ interface Props {
     id: string;
 }
 
-const toPositionPartial = (v: Keyable<{ x: number; y: number }>): PartialRaidEntityProperties => ({
-    type: 'shape',
-    position: v,
+interface PropertiesUpdate {
+    properties: PartialRaidEntityProperties;
+}
+
+const toPositionUpdate = (v: Keyable<{ x: number; y: number }>): PropertiesUpdate => ({
+    properties: {
+        type: 'shape',
+        position: v,
+    },
 });
 
-const toRotationPartial = (v: Keyable<number>): PartialRaidEntityProperties => ({ type: 'shape', rotation: v });
+const toRotationUpdate = (v: Keyable<number>): PropertiesUpdate => ({ properties: { type: 'shape', rotation: v } });
+
+const toVisibleUpdate = (v: Keyable<boolean>): { visible: Keyable<boolean> } => ({ visible: v });
 
 export const EntityInspectorPanel = ({ id }: Props) => {
     const entity = useEntity(id);
@@ -363,6 +379,15 @@ export const EntityInspectorPanel = ({ id }: Props) => {
         <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col h-full overflow-auto">
             <div className="flex flex-col gap-2 px-4">
                 <div className="font-semibold">{entity.name}</div>
+                <KeyableEntityPropertyEditor
+                    label="Visible"
+                    value={entity.visible ?? true}
+                    toUpdate={toVisibleUpdate}
+                    control={({ value, onChange }: PropertyControlProps<boolean>) => (
+                        <Checkbox checked={value} onChange={onChange} />
+                    )}
+                    {...kpeProps}
+                />
                 {ep.type === 'shape' && (
                     <>
                         <ShapeEditor value={ep.shape} onChange={updateShape} />
@@ -381,14 +406,14 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                         <KeyableEntityPropertyEditor
                             label="Position"
                             value={ep.position}
-                            toPartial={toPositionPartial}
+                            toUpdate={toPositionUpdate}
                             control={CoordinateInput}
                             {...kpeProps}
                         />
                         <KeyableEntityPropertyEditor
                             label="Rotation"
                             value={ep.rotation ?? 0}
-                            toPartial={toRotationPartial}
+                            toUpdate={toRotationUpdate}
                             control={AngleInput}
                             {...kpeProps}
                         />

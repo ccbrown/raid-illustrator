@@ -9,6 +9,7 @@ import {
     PlusIcon,
     SparkleIcon,
     StackIcon,
+    StackSimpleIcon,
     TrashIcon,
     XIcon,
 } from '@phosphor-icons/react';
@@ -94,6 +95,7 @@ export const MenuBar = () => {
             items: [
                 menuItemForCommand(commands.undo, ArrowUUpLeftIcon),
                 menuItemForCommand(commands.redo, ArrowUUpRightIcon),
+                menuItemForCommand(commands.duplicate, StackSimpleIcon),
                 menuItemForCommand(commands.delete, TrashIcon),
             ],
         },
@@ -148,21 +150,27 @@ export const MenuBar = () => {
                             },
                             menuitem: (options) => {
                                 // see: https://github.com/primefaces/primereact/issues/8330
-                                const context = options!.context as {
-                                    active: boolean;
-                                    disabled: boolean;
-                                    focused: boolean;
-                                    level: number;
-                                };
+                                const context = options?.context as
+                                    | {
+                                          active: boolean;
+                                          disabled: boolean;
+                                          focused: boolean;
+                                          level: number;
+                                      }
+                                    | undefined;
+                                const level = context?.level || 0;
+                                const disabled = context?.disabled || false;
+                                const focused = context?.focused || false;
+                                const active = context?.active || false;
                                 return {
                                     className: clsx({
                                         'flex flex-row relative py-1 px-2 items-center gap-2 hover:bg-black/20 rounded-md':
-                                            context.level === 0,
-                                        'bg-black/20': context.level === 0 && (context.focused || context.active),
-                                        'bg-white/10': context.level > 0 && context.focused,
-                                        'opacity-50': context.disabled,
-                                        'cursor-pointer': !context.disabled,
-                                        'cursor-default': context.disabled,
+                                            level === 0,
+                                        'bg-black/20': level === 0 && (focused || active),
+                                        'bg-white/10': level > 0 && focused,
+                                        'opacity-50': disabled,
+                                        'cursor-pointer': !disabled,
+                                        'cursor-default': disabled,
                                     }),
                                 };
                             },

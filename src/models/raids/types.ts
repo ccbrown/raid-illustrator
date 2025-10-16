@@ -79,6 +79,13 @@ type PartialRaidEntityPropertiesShape = Partial<Omit<RaidEntityPropertiesShape, 
     Pick<RaidEntityPropertiesShape, 'type'>;
 export type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
 
+export interface RaidEntityUpdate {
+    id: string;
+    name?: string;
+    visible?: Keyable<boolean>;
+    properties?: PartialRaidEntityProperties;
+}
+
 export interface RaidEntity {
     id: string;
     raidId: string;
@@ -86,6 +93,10 @@ export interface RaidEntity {
 
     name: string;
     creationTime: number;
+
+    // Defaults to true if not set.
+    visible?: Keyable<boolean>;
+
     properties: RaidEntityProperties;
 }
 

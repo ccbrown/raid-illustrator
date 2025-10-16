@@ -68,6 +68,7 @@ const EntitySettings = (props: EntitySettingsProps) => {
                 properties: {
                     type: 'shape' as const,
                     shape,
+                    fill: { type: 'color' as const, color: { r: 150, g: 150, b: 150, a: 1 } },
                 },
             };
 

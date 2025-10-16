@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 
 import { Button, EditableText, ScrollList, ScrollListItem } from '@/components';
 import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection, useStep } from '@/hooks';
+import { RaidScene } from '@/models/raids/types';
+import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch } from '@/store';
 
 import { useCommands } from '../commands';
@@ -13,9 +15,10 @@ interface ListItemProps {
     id: string;
     openStepId?: string;
     selectedStepIds?: string[];
+    scene: RaidScene;
 }
 
-const ListItem = ({ id, openStepId, selectedStepIds }: ListItemProps) => {
+const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => {
     const step = useStep(id);
     const dispatch = useDispatch();
 
@@ -30,6 +33,11 @@ const ListItem = ({ id, openStepId, selectedStepIds }: ListItemProps) => {
         }
     };
 
+    const fillSelection = () => {
+        const newSelection = fillSelectionRange(scene.stepIds, selectedStepIds || [], step.id);
+        dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: newSelection } });
+    };
+
     const isOpen = step.id === openStepId;
     const isSelected = selectedStepIds?.includes(step.id);
 
@@ -41,8 +49,16 @@ const ListItem = ({ id, openStepId, selectedStepIds }: ListItemProps) => {
                 'bg-white/10 hover:bg-white/20': isOpen && !isSelected,
                 'hover:bg-white/10': !isOpen && !isSelected,
             })}
+            onContextMenu={(e) => {
+                if (e.ctrlKey) {
+                    // let the click handler deal handle control clicks
+                    e.preventDefault();
+                }
+            }}
             onClick={(e) => {
-                if (e.shiftKey || e.ctrlKey) {
+                if (e.shiftKey) {
+                    fillSelection();
+                } else if (e.ctrlKey) {
                     // don't open the step, just select or deselect it
                     if (isSelected) {
                         dispatch.workspaces.select({
@@ -117,6 +133,7 @@ export const StepsPanel = () => {
                             id={id}
                             openStepId={sceneWorkspace?.openStepId}
                             selectedStepIds={selectedStepIds || []}
+                            scene={scene}
                         />
                     </ScrollListItem>
                 ))}

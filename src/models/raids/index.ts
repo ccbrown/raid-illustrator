@@ -11,16 +11,17 @@ import {
 } from './selectors';
 import {
     Material,
-    PartialRaidEntityProperties,
     RaidBatchOperation,
     RaidEntity,
     RaidEntityProperties,
+    RaidEntityUpdate,
     RaidMetadata,
     RaidScene,
     RaidSceneShape,
     RaidStep,
     RaidsState,
 } from './types';
+import { cloneEntityAndChildren } from './utils';
 import { keyableValueAtStep, keyableWithValueAtStep } from './utils';
 
 export const raids = createModel<RootModel>()({
@@ -221,7 +222,7 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Raid not found');
             }
 
-            const newScene = {
+            const newScene: RaidScene = {
                 id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 name: payload.name,
@@ -231,6 +232,15 @@ export const raids = createModel<RootModel>()({
                 stepIds: [],
                 entityIds: [],
             };
+
+            const newStep = {
+                id: crypto.randomUUID(),
+                raidId: payload.raidId,
+                sceneId: newScene.id,
+                name: 'Start',
+                creationTime: Date.now(),
+            };
+            newScene.stepIds.push(newStep.id);
 
             let newSceneIds: string[];
             if (payload.afterSceneId) {
@@ -251,6 +261,7 @@ export const raids = createModel<RootModel>()({
                 operation: {
                     putMetadata: newRaid,
                     putScenes: [newScene],
+                    putSteps: [newStep],
                 },
             });
 
@@ -363,13 +374,7 @@ export const raids = createModel<RootModel>()({
             // remove all of the moving entity ids from the scene and their groups
             let newSceneEntityIds = scene.entityIds.filter((id) => !movingEntityIds.includes(id));
 
-            const updatedEntities = new Map<
-                string,
-                {
-                    before: RaidEntity;
-                    after: RaidEntity;
-                }
-            >();
+            const updatedEntities = new Map<string, RaidEntity>();
 
             for (const movingEntityId of movingEntityIds) {
                 const group = selectGroupByChildId(state.raids, movingEntityId);
@@ -387,14 +392,14 @@ export const raids = createModel<RootModel>()({
                         children: newChildren,
                     },
                 };
-                updatedEntities.set(group.id, { before: group, after: updatedGroup });
+                updatedEntities.set(group.id, updatedGroup);
             }
 
             // insert the moving entities at the destination
             const destinationGroup = selectGroupByChildId(state.raids, payload.destinationEntityId);
             let destinationSiblings = newSceneEntityIds;
             if (destinationGroup) {
-                const dest = updatedEntities.get(destinationGroup.id)?.after || destinationGroup;
+                const dest = updatedEntities.get(destinationGroup.id) || destinationGroup;
                 if (dest && dest.properties.type === 'group') {
                     destinationSiblings = dest.properties.children;
                 }
@@ -416,7 +421,7 @@ export const raids = createModel<RootModel>()({
                         children: newDestinationChildren,
                     },
                 };
-                updatedEntities.set(destinationGroup.id, { before: destinationGroup, after: newGroup });
+                updatedEntities.set(destinationGroup.id, newGroup);
             } else {
                 newSceneEntityIds = newDestinationChildren;
             }
@@ -431,7 +436,7 @@ export const raids = createModel<RootModel>()({
                 raidId: scene.raidId,
                 operation: {
                     putScenes: [newScene],
-                    putEntities: Array.from(updatedEntities.values()).map((e) => e.after),
+                    putEntities: Array.from(updatedEntities.values()),
                 },
             });
         },
@@ -646,14 +651,7 @@ export const raids = createModel<RootModel>()({
 
             return newEntity.id;
         },
-        updateEntity(
-            payload: {
-                id: string;
-                name?: string;
-                properties?: PartialRaidEntityProperties;
-            },
-            state,
-        ) {
+        updateEntity(payload: RaidEntityUpdate, state) {
             const existing = state.raids.entities[payload.id];
             if (!existing) {
                 return;
@@ -683,6 +681,74 @@ export const raids = createModel<RootModel>()({
                     putEntities: [newEntity],
                 },
             });
+        },
+        duplicateEntities(
+            payload: {
+                ids: string[];
+            },
+            state,
+        ): string[] {
+            const scene = selectSceneSharedByEntityIds(state.raids, payload.ids);
+            if (!scene) {
+                return [];
+            }
+
+            const newSceneEntityIds = [...scene.entityIds];
+            const duplicatedEntityIds: string[] = [];
+            const newEntities = [];
+            const updatedEntities = new Map<string, RaidEntity>();
+
+            for (const id of payload.ids) {
+                const entity = state.raids.entities[id];
+                if (!entity) {
+                    continue;
+                }
+
+                const [clone, newDescendants] = cloneEntityAndChildren(entity, state.raids.entities);
+                newEntities.push(clone, ...newDescendants);
+                duplicatedEntityIds.push(clone.id);
+
+                const p = selectParentByChildIds(state.raids, [id]);
+                if (!p) {
+                    continue;
+                }
+                if (p.type === 'scene') {
+                    const idx = newSceneEntityIds.indexOf(id);
+                    newSceneEntityIds.splice(idx + 1, 0, clone.id);
+                } else if (p.type === 'entity') {
+                    const dest = updatedEntities.get(p.entity.id) || p.entity;
+                    const dp = dest.properties;
+                    if (dp.type === 'group') {
+                        const idx = dp.children.indexOf(id);
+                        const newChildren = [...dp.children.slice(0, idx + 1), clone.id, ...dp.children.slice(idx + 1)];
+                        updatedEntities.set(p.entity.id, {
+                            ...dest,
+                            properties: {
+                                ...dp,
+                                children: newChildren,
+                            },
+                        });
+                    }
+                }
+            }
+            for (const e of updatedEntities.values()) {
+                newEntities.push(e);
+            }
+
+            const newScene = {
+                ...scene,
+                entityIds: newSceneEntityIds,
+            };
+            dispatch.raids.undoableBatchOperation({
+                name: `Duplicate Entit${payload.ids.length > 1 ? 'ies' : 'y'}`,
+                raidId: scene.raidId,
+                operation: {
+                    putScenes: [newScene],
+                    putEntities: newEntities,
+                },
+            });
+
+            return duplicatedEntityIds;
         },
         moveEntities(
             payload: {

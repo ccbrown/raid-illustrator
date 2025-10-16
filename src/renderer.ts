@@ -704,14 +704,19 @@ class Renderer {
     private updateEntitiesImpl(
         allEntities: Record<string, RaidEntity>,
         entitiesToUpdate: string[],
+        entitiesToRemove: Set<string>,
         stepIds: string[],
         currentStepId: string,
+        visible: boolean,
     ) {
         for (const id of entitiesToUpdate) {
             const entity = allEntities[id];
             if (!entity) {
                 continue;
             }
+            entitiesToRemove.delete(id);
+
+            const entityIsVisible = visible && (keyableValueAtStep(entity.visible, stepIds, currentStepId) ?? true);
 
             const ep = entity.properties;
             switch (ep.type) {
@@ -723,11 +728,20 @@ class Renderer {
                         this.entities.set(id, new RendererEntity(entity, stepIds, currentStepId));
                     }
 
-                    this.entityDrawOrder.push(id);
+                    if (entityIsVisible) {
+                        this.entityDrawOrder.push(id);
+                    }
                     break;
                 }
                 case 'group': {
-                    this.updateEntitiesImpl(allEntities, ep.children, stepIds, currentStepId);
+                    this.updateEntitiesImpl(
+                        allEntities,
+                        ep.children,
+                        entitiesToRemove,
+                        stepIds,
+                        currentStepId,
+                        entityIsVisible,
+                    );
                     break;
                 }
             }
@@ -740,9 +754,13 @@ class Renderer {
         stepIds: string[],
         currentStepId: string,
     ) {
+        const entitiesToRemove = new Set(this.entities.keys());
         this.entityDrawOrder = [];
-        this.updateEntitiesImpl(allEntities, entitiesToUpdate, stepIds, currentStepId);
+        this.updateEntitiesImpl(allEntities, entitiesToUpdate, entitiesToRemove, stepIds, currentStepId, true);
         this.entityDrawOrder.reverse();
+        for (const id of entitiesToRemove) {
+            this.entities.delete(id);
+        }
     }
 }
 

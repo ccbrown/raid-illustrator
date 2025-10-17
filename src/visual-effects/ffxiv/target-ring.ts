@@ -269,6 +269,7 @@ interface Properties {
 
 export const targetRing: VisualEffectFactory = {
     name: 'Target Ring',
+    description: 'This effect displays a target ring around the entity, indicating the direction it is facing.',
     create: () => new TargetRing(),
     properties: [
         {

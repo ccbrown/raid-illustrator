@@ -27,7 +27,7 @@ export const workspaces = createModel<RootModel>()({
         ensureScene(state, id: string) {
             const existing = state.scenes[id];
             if (!existing) {
-                state.scenes[id] = { id };
+                state.scenes[id] = { id, zoom: 0.35 };
             }
         },
         putRaid(state, workspace: RaidWorkspace) {
@@ -114,6 +114,14 @@ export const workspaces = createModel<RootModel>()({
             const existing = state.workspaces.raids[payload.raidId];
             if (existing) {
                 dispatch.workspaces.putRaid({ ...existing, openSceneId: payload.id });
+            }
+            const scene = state.workspaces.scenes[payload.id];
+            if (scene && !scene.openStepId) {
+                const raidState = state.raids;
+                const raidScene = raidState.scenes[payload.id];
+                if (raidScene && raidScene.stepIds.length > 0) {
+                    dispatch.workspaces.openStep({ id: raidScene.stepIds[0], sceneId: payload.id });
+                }
             }
         },
         updateScene(

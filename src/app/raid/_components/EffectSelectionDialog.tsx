@@ -1,6 +1,7 @@
+import clsx from 'clsx';
 import { useState } from 'react';
 
-import { Button, Dialog, Dropdown } from '@/components';
+import { Button, Dialog } from '@/components';
 import { RaidEntity } from '@/models/raids/types';
 import { defaultProperties } from '@/property-spec';
 import { useDispatch } from '@/store';
@@ -13,13 +14,17 @@ interface Props {
 }
 
 export const EffectSelectionDialog = (props: Props) => {
-    const options = Object.keys(visualEffectFactories).map((key) => ({
-        label: visualEffectFactories[key].name,
-        key,
-    }));
+    const options = Object.keys(visualEffectFactories).map((key) => {
+        const f = visualEffectFactories[key];
+        return {
+            label: f.name,
+            description: f.description,
+            key,
+        };
+    });
     options.sort((a, b) => a.label.localeCompare(b.label));
 
-    const [selectedFactoryId, setSelectedFactoryId] = useState(options[0]?.key || '');
+    const [selectedFactoryId, setSelectedFactoryId] = useState('');
     const selectedFactory = visualEffectFactories[selectedFactoryId];
 
     const dispatch = useDispatch();
@@ -51,12 +56,21 @@ export const EffectSelectionDialog = (props: Props) => {
                     }
                 }}
             >
-                <Dropdown
-                    options={options}
-                    label="Effect"
-                    selectedOptionKey={selectedFactoryId}
-                    onChange={(option) => setSelectedFactoryId(option.key)}
-                />
+                <div className="flex flex-col gap-2 max-h-96 overflow-y-auto bg-elevation-1 rounded-sm">
+                    {options.map((option) => (
+                        <div
+                            key={option.key}
+                            className={clsx('flex flex-col cursor-pointer px-4 py-2', {
+                                'bg-indigo-500': selectedFactoryId === option.key,
+                                'hover:bg-white/3': selectedFactoryId !== option.key,
+                            })}
+                            onClick={() => setSelectedFactoryId(option.key)}
+                        >
+                            <div className="font-semibold text-sm">{option.label}</div>
+                            <div className="text-xs text-white/70">{option.description}</div>
+                        </div>
+                    ))}
+                </div>
                 <div className="flex flex-row justify-end">
                     <Button text="Add Effect" type="submit" disabled={!selectedFactoryId} />
                 </div>

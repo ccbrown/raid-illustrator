@@ -164,7 +164,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         duplicate: {
             name: 'Duplicate',
-            disabled: !selection?.entityIds?.length,
+            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
             hotKey: {
                 ...hotKeyBase,
                 key: 'd',
@@ -174,15 +174,18 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 if (selection?.entityIds?.length) {
                     newSelection.entityIds = dispatch.raids.duplicateEntities({ ids: selection.entityIds });
                 }
+                if (selection?.stepIds?.length) {
+                    newSelection.stepIds = dispatch.raids.duplicateSteps({ ids: selection.stepIds });
+                }
+                if (selection?.sceneIds?.length) {
+                    newSelection.sceneIds = dispatch.raids.duplicateScenes({ ids: selection.sceneIds });
+                }
                 dispatch.workspaces.select({ raidId: raidId || '', selection: newSelection });
             },
         },
         delete: {
             name: 'Delete',
-            disabled:
-                (!selection?.entityIds || selection.entityIds.length === 0) &&
-                (!selection?.stepIds || selection.stepIds.length === 0) &&
-                (!selection?.sceneIds || selection.sceneIds.length === 0),
+            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
             hotKey: {
                 key: 'Backspace',
             },

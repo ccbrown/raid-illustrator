@@ -129,6 +129,7 @@ interface Properties {
 
 export const radialAttack: VisualEffectFactory = {
     name: 'Radial Attack',
+    description: 'This effect renders a circular, conal, or donut-shaped attack indicator with customizable colors.',
     create: () => new RadialAttack(),
     properties: [
         {

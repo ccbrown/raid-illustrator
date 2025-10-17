@@ -43,11 +43,12 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => 
 
     return (
         <div
-            className={clsx('flex flex-row gap-2 px-2 py-1 transition', {
+            className={clsx('flex flex-row gap-2 px-2 py-1 transition border-indigo-400', {
                 'bg-indigo-500': isSelected,
                 'cursor-pointer': !isSelected,
                 'bg-white/10 hover:bg-white/20': isOpen && !isSelected,
                 'hover:bg-white/10': !isOpen && !isSelected,
+                'border-l-4 pl-[4px]': isOpen,
             })}
             onContextMenu={(e) => {
                 if (e.ctrlKey) {
@@ -112,9 +113,9 @@ export const StepsPanel = () => {
     );
 
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col min-h-64 overflow-auto">
-            <div className="flex flex-row items-center mb-2">
-                <div className="px-4 font-semibold">Steps</div>
+        <div className="bg-elevation-1 rounded-lg shadow-lg flex flex-col min-h-64 overflow-auto">
+            <div className="flex flex-row items-center py-2 border-b-1 border-elevation-2">
+                <div className="px-4 font-semibold text-sm">Steps</div>
                 <div className="flex-grow" />
                 <div className="px-4">
                     <Button

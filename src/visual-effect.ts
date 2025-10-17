@@ -23,6 +23,7 @@ export abstract class VisualEffect {
 
 export interface VisualEffectFactory {
     name: string;
+    description: string;
     properties?: PropertySpec[];
     create: () => VisualEffect;
 }

@@ -106,6 +106,7 @@ interface Properties {
 
 export const lineAttack: VisualEffectFactory = {
     name: 'Line Attack',
+    description: 'This effect renders a rectangular attack indicator with customizable colors.',
     create: () => new LineAttack(),
     properties: [
         {

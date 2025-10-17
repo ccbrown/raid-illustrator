@@ -168,6 +168,7 @@ interface Properties {
 
 export const limitCut: VisualEffectFactory = {
     name: 'Limit Cut',
+    description: 'This effect renders one of eight numbers above the entity in the FFXIV limit cut style.',
     create: () => new LimitCut(),
     properties: [
         {

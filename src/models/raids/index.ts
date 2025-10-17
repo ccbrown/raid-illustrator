@@ -2,6 +2,7 @@ import { createModel } from '@rematch/core';
 
 import { RootModel } from '..';
 import {
+    selectEntitiesInScene,
     selectGroupByChildId,
     selectParentByChildIds,
     selectRaidSharedBySceneIds,
@@ -10,6 +11,7 @@ import {
     selectSceneSharedByStepIds,
 } from './selectors';
 import {
+    Keyable,
     Material,
     RaidBatchOperation,
     RaidEntity,
@@ -21,8 +23,15 @@ import {
     RaidStep,
     RaidsState,
 } from './types';
-import { cloneEntityAndChildren } from './utils';
-import { keyableValueAtStep, keyableWithValueAtStep } from './utils';
+import {
+    cloneEntityAndChildren,
+    cloneSceneStepsAndEntities,
+    cloneStep,
+    keyableValueAtStep,
+    keyableWithUnkeyedSteps,
+    keyableWithValueAtStep,
+    updateKeyedEntitiesValues,
+} from './utils';
 
 export const raids = createModel<RootModel>()({
     state: {
@@ -602,6 +611,11 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete steps from one scene at a time');
             }
 
+            const entitiesInScene = selectEntitiesInScene(state.raids, sceneId);
+            const updatedEntities = updateKeyedEntitiesValues(entitiesInScene, (k) =>
+                keyableWithUnkeyedSteps(k, payload.ids),
+            );
+
             const scene = state.raids.scenes[sceneId];
             const newScene = {
                 ...scene,
@@ -613,6 +627,7 @@ export const raids = createModel<RootModel>()({
                 raidId,
                 operation: {
                     putScenes: [newScene],
+                    putEntities: updatedEntities,
                     removeSteps: existingSteps.map((s) => s.id),
                 },
             });
@@ -754,6 +769,116 @@ export const raids = createModel<RootModel>()({
             });
 
             return duplicatedEntityIds;
+        },
+        duplicateSteps(
+            payload: {
+                ids: string[];
+            },
+            state,
+        ): string[] {
+            const scene = selectSceneSharedByStepIds(state.raids, payload.ids);
+            if (!scene) {
+                return [];
+            }
+
+            const newSceneStepIds = [...scene.stepIds];
+            const newSteps = [];
+            const idMap = new Map<string, string>(); // old id -> new id
+
+            for (const id of payload.ids) {
+                const step = state.raids.steps[id];
+                if (!step) {
+                    continue;
+                }
+
+                const newStep = cloneStep(step);
+                const idx = newSceneStepIds.indexOf(id);
+                newSceneStepIds.splice(idx + 1, 0, newStep.id);
+                idMap.set(id, newStep.id);
+                newSteps.push(newStep);
+            }
+
+            const entities = selectEntitiesInScene(state.raids, scene.id);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const updatedEntities = updateKeyedEntitiesValues(entities, (k: Keyable<any>) => {
+                const newSteps = { ...k.steps };
+                let didChange = false;
+                for (const [oldId, newId] of idMap.entries()) {
+                    if (oldId in newSteps) {
+                        newSteps[newId] = newSteps[oldId];
+                        didChange = true;
+                    }
+                }
+                if (didChange) {
+                    return {
+                        initial: k.initial,
+                        steps: newSteps,
+                    };
+                }
+                return k;
+            });
+
+            const newScene = {
+                ...scene,
+                stepIds: newSceneStepIds,
+            };
+
+            dispatch.raids.undoableBatchOperation({
+                name: `Duplicate Step${payload.ids.length > 1 ? 's' : ''}`,
+                raidId: scene.raidId,
+                operation: {
+                    putScenes: [newScene],
+                    putSteps: newSteps,
+                    putEntities: updatedEntities,
+                },
+            });
+
+            return newSteps.map((s) => s.id);
+        },
+        duplicateScenes(
+            payload: {
+                ids: string[];
+            },
+            state,
+        ): string[] {
+            const raid = selectRaidSharedBySceneIds(state.raids, payload.ids);
+            if (!raid) {
+                return [];
+            }
+
+            const newRaidSceneIds = [...raid.sceneIds];
+            const newScenes = [];
+            const newSteps = [];
+            const newEntities = [];
+
+            for (const id of payload.ids) {
+                const scene = state.raids.scenes[id];
+                if (scene) {
+                    const [newScene, sceneSteps, sceneEntities] = cloneSceneStepsAndEntities(scene, state.raids);
+                    const idx = newRaidSceneIds.indexOf(id);
+                    newRaidSceneIds.splice(idx + 1, 0, newScene.id);
+                    newScenes.push(newScene);
+                    newSteps.push(...sceneSteps);
+                    newEntities.push(...sceneEntities);
+                }
+            }
+
+            const newRaid = {
+                ...raid,
+                sceneIds: newRaidSceneIds,
+            };
+            dispatch.raids.undoableBatchOperation({
+                name: `Duplicate Scene${payload.ids.length > 1 ? 's' : ''}`,
+                raidId: raid.id,
+                operation: {
+                    putMetadata: newRaid,
+                    putScenes: newScenes,
+                    putSteps: newSteps,
+                    putEntities: newEntities,
+                },
+            });
+
+            return newScenes.map((s) => s.id);
         },
         moveEntities(
             payload: {

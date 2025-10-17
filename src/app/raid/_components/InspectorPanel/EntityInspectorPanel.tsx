@@ -22,6 +22,7 @@ import {
     Shape,
 } from '@/models/raids/types';
 import {
+    keyableIsKeyed,
     keyableIsKeyedAtStep,
     keyableValueAtStep,
     keyableWithKeyedStep,
@@ -92,7 +93,7 @@ const KeyablePropertyEditor = <T,>({
             <div className="text-sm text-gray-300">{label}</div>
             <DiamondIcon
                 size={12}
-                className="text-yellow-400 cursor-pointer"
+                className={`${keyableIsKeyed(value) ? 'text-yellow-400' : 'text-white/40'} cursor-pointer`}
                 weight={currentStepIsKeyed ? 'fill' : 'regular'}
                 onClick={() => {
                     if (currentStepIsKeyed) {

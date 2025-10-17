@@ -87,6 +87,7 @@ interface Properties {
 
 export const tether: VisualEffectFactory = {
     name: 'Tether',
+    description: 'This effect draws a line effect linking two entities together.',
     create: () => new Tether(),
     properties: [
         {

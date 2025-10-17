@@ -168,3 +168,7 @@ export const selectRaidSharedBySceneIds = (state: RaidsState, sceneIds: string[]
     }
     return state.metadata[raidId];
 };
+
+export const selectEntitiesInScene = (state: RaidsState, sceneId: string): RaidEntity[] => {
+    return Object.values(state.entities).filter((e) => e.sceneId === sceneId);
+};

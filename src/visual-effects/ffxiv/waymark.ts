@@ -248,6 +248,8 @@ interface Properties {
 
 export const waymark: VisualEffectFactory = {
     name: 'Waymark',
+    description:
+        'This effect displays an FFXIV-style waymark on the ground, customizable with any shape, color, and marker combination.',
     create: () => new Waymark(),
     properties: [
         {

@@ -1,5 +1,5 @@
 import { Animated, smoothstep } from '@/animated';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams, loop } from '@/visual-effect';
 
 type ClusterFormation = 'dot' | 'horizontal-pair' | 'upward-triangle' | 'downward-triangle' | 'square';
 
@@ -31,7 +31,7 @@ const BASE_CLUSTER_SPACING = BASE_HORIZONTAL_DOT_SPACING * 2;
 const OFFSET_Y = -1.8;
 
 class LimitCut extends VisualEffect {
-    enabled: Animated<number> = new Animated(0);
+    enabled: Animated<number> = new Animated();
 
     renderOverlay({ ctx, properties: anyProperties, scale, center, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
@@ -48,7 +48,7 @@ class LimitCut extends VisualEffect {
 
         ctx.translate(center.x * scale, (center.y + OFFSET_Y) * scale);
 
-        const spread = smoothstep(now % 2000 >= 1000 ? 1 - (now % 1000) / 1000 : (now % 1000) / 1000) * 0.3;
+        const spread = smoothstep(now % 2000 >= 1000 ? 1 - loop(now, 1000) : loop(now, 1000)) * 0.3;
         const dotRadius = BASE_DOT_RADIUS * enabled;
 
         if (variant.cluster2) {

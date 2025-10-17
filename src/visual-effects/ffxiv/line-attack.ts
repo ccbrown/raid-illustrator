@@ -1,8 +1,8 @@
 import { Animated, smoothstep } from '@/animated';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { LoopDuration, VisualEffect, VisualEffectFactory, VisualEffectRenderParams, loop } from '@/visual-effect';
 
 class LineAttack extends VisualEffect {
-    enabled: Animated<number> = new Animated(0);
+    enabled: Animated<number> = new Animated();
     enableTime?: number;
 
     renderGround({ ctx, properties: anyProperties, rotation, scale, center, now }: VisualEffectRenderParams) {
@@ -39,7 +39,7 @@ class LineAttack extends VisualEffect {
         ctx.fillRect(left, end, width, length);
         ctx.restore();
 
-        const waveAnimationProgress = ((now - this.enableTime) % 1600) / 1600;
+        const waveAnimationProgress = loop(now - this.enableTime, LoopDuration.D1667);
         const waveIsVisible = waveAnimationProgress < 0.6;
         const waveMovementProgress = Math.min(waveAnimationProgress / 0.6, 1);
         const waveEnd = end + length * (1 - waveMovementProgress);

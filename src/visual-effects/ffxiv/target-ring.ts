@@ -1,10 +1,10 @@
 import { Animated } from '@/animated';
 import { shapeDimensions } from '@/models/raids/utils';
 import { Image, LazyImage } from '@/renderer';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams, loop } from '@/visual-effect';
 
 class TargetRing extends VisualEffect {
-    enabled: Animated<number> = new Animated(0);
+    enabled: Animated<number> = new Animated();
     color: Animated<{ r: number; g: number; b: number }> = new Animated();
     sideMarkImage: Image;
     sideMarkGlowImage: Image;
@@ -214,7 +214,7 @@ class TargetRing extends VisualEffect {
 
         // swirls
 
-        ctx.rotate(-((now % 3000) / 3000) * 2 * Math.PI);
+        ctx.rotate(-loop(now, 3000) * 2 * Math.PI);
 
         {
             ctx.save();

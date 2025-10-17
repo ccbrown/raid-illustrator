@@ -1,7 +1,7 @@
 import { Animated } from '@/animated';
 import { shapeDimensions } from '@/models/raids/utils';
 import { Image, LazyImage } from '@/renderer';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams, loop } from '@/visual-effect';
 
 interface Marker {
     imageUrl: string;
@@ -54,7 +54,7 @@ class Waymark extends VisualEffect {
     markerImage?: Image;
     circleRingImage: LazyImage;
     squareRingImage: LazyImage;
-    enabled: Animated<number> = new Animated(0);
+    enabled: Animated<number> = new Animated();
     color1: Animated<{ r: number; g: number; b: number }> = new Animated();
     color2: Animated<{ r: number; g: number; b: number }> = new Animated();
 
@@ -131,7 +131,7 @@ class Waymark extends VisualEffect {
                     }
 
                     for (let i = 0; i < 2; i++) {
-                        const growth = (now % 700) / 700;
+                        const growth = loop(now, 750);
                         const offset = (i + growth) * size * 0.05;
 
                         ctx.save();
@@ -195,7 +195,7 @@ class Waymark extends VisualEffect {
                 ctx.fillStyle = beamGradient;
 
                 for (let i = 0; i < 11; i++) {
-                    const rads = (i / 11) * Math.PI * 2 - ((now % 12000) / 12000) * (Math.PI * 2);
+                    const rads = (i / 11) * Math.PI * 2 - loop(now, 1000) * ((Math.PI * 2) / 11);
                     ctx.save();
                     ctx.globalAlpha = enabled * 0.5;
                     ctx.rotate(rads);
@@ -221,7 +221,7 @@ class Waymark extends VisualEffect {
 
         const img = this.markerImage?.get();
         if (marker && img) {
-            const floatHeight = 0.1 * Math.sin(((now % 5000) / 5000) * Math.PI * 2) * scale;
+            const floatHeight = 0.1 * Math.sin(loop(now, 5000) * Math.PI * 2) * scale;
 
             const imgHeight = size * 1.3 * marker.imageScale.height;
             const imgWidth = size * 1.3 * 0.5 * marker.imageScale.width;

@@ -62,10 +62,6 @@ export class Animated<T extends AnimatableType> {
     private transitionDuration?: number;
     private easingFunction?: EasingFunction;
 
-    constructor(initialValue?: T) {
-        this.latestValue = initialValue;
-    }
-
     update(currentValue: T, now: number, params?: UpdateParams): T {
         if (this.latestValue === undefined) {
             this.latestValue = currentValue;

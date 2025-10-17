@@ -1,8 +1,8 @@
 import { Animated } from '@/animated';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams, loop } from '@/visual-effect';
 
 class Tether extends VisualEffect {
-    enabled: Animated<number> = new Animated(0);
+    enabled: Animated<number> = new Animated();
 
     renderAboveGround({ ctx, properties: anyProperties, scale, center, renderer, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
@@ -47,7 +47,7 @@ class Tether extends VisualEffect {
 
         ctx.globalCompositeOperation = 'lighter';
 
-        const orbMovement = (now % 1000) / 1000;
+        const orbMovement = loop(now, 1000);
         const orbSpacing = 1;
         const orbRadius = lineWidth * 0.7;
         const orbGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, orbRadius);

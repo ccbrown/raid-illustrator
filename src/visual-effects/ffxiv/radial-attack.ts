@@ -5,9 +5,9 @@ class RadialAttack extends VisualEffect {
     enabled: Animated<number> = new Animated(0);
     enableTime?: number;
 
-    renderGround({ ctx, properties: anyProperties, rotation, scale, center }: VisualEffectRenderParams) {
+    renderGround({ ctx, properties: anyProperties, rotation, scale, center, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, now, {
             transitionDuration: 300,
         });
         if (!enabled) {
@@ -15,7 +15,6 @@ class RadialAttack extends VisualEffect {
             return;
         }
 
-        const now = Date.now();
         if (this.enableTime === undefined) {
             this.enableTime = now;
         }

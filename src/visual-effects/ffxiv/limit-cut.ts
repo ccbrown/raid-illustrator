@@ -33,9 +33,9 @@ const OFFSET_Y = -1.8;
 class LimitCut extends VisualEffect {
     enabled: Animated<number> = new Animated(0);
 
-    renderOverlay({ ctx, properties: anyProperties, scale, center }: VisualEffectRenderParams) {
+    renderOverlay({ ctx, properties: anyProperties, scale, center, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, now, {
             easingFunction: smoothstep,
             transitionDuration: 500,
         });
@@ -48,7 +48,6 @@ class LimitCut extends VisualEffect {
 
         ctx.translate(center.x * scale, (center.y + OFFSET_Y) * scale);
 
-        const now = Date.now();
         const spread = smoothstep(now % 2000 >= 1000 ? 1 - (now % 1000) / 1000 : (now % 1000) / 1000) * 0.3;
         const dotRadius = BASE_DOT_RADIUS * enabled;
 

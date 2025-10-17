@@ -64,17 +64,17 @@ class Waymark extends VisualEffect {
         this.squareRingImage = new LazyImage('/images/ffxiv/waymarks/square-ring.png');
     }
 
-    renderGround({ ctx, properties: anyProperties, scale, rotation, shape, center }: VisualEffectRenderParams) {
+    renderGround({ ctx, properties: anyProperties, scale, rotation, shape, center, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, now, {
             transitionDuration: 300,
         });
         if (!enabled) {
             return;
         }
 
-        const color1 = this.color1.update(properties.color1, { transitionDuration: 300 });
-        const color2 = this.color2.update(properties.color2, { transitionDuration: 300 });
+        const color1 = this.color1.update(properties.color1, now, { transitionDuration: 300 });
+        const color2 = this.color2.update(properties.color2, now, { transitionDuration: 300 });
 
         const marker = MARKERS[properties.marker];
         if (this.markerKey !== properties.marker) {
@@ -95,8 +95,6 @@ class Waymark extends VisualEffect {
         innerGradient.addColorStop(1, `rgba(${color2.r}, ${color2.g}, ${color2.b}, 0.13)`);
 
         const opaqueColor2 = `rgb(${color2.r}, ${color2.g}, ${color2.b})`;
-
-        const now = Date.now();
 
         switch (properties.shape) {
             case 'square': {

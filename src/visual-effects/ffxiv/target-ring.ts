@@ -23,9 +23,9 @@ class TargetRing extends VisualEffect {
         this.ddFrontMarkGlowImage = new LazyImage('/images/ffxiv/target-ring/dd-front-mark-glow.png');
     }
 
-    renderGround({ ctx, properties: anyProperties, shape, rotation, scale, center }: VisualEffectRenderParams) {
+    renderGround({ ctx, properties: anyProperties, shape, rotation, scale, center, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, now, {
             transitionDuration: 300,
         });
         if (!enabled) {
@@ -46,7 +46,7 @@ class TargetRing extends VisualEffect {
         const arcStart = properties.directionalDisregard ? 0 : Math.PI * -0.25;
         const arcEnd = properties.directionalDisregard ? 2 * Math.PI : Math.PI * 1.25;
 
-        const color = this.color.update(properties.color);
+        const color = this.color.update(properties.color, now);
 
         // glows
 
@@ -214,7 +214,7 @@ class TargetRing extends VisualEffect {
 
         // swirls
 
-        ctx.rotate(-((Date.now() % 3000) / 3000) * 2 * Math.PI);
+        ctx.rotate(-((now % 3000) / 3000) * 2 * Math.PI);
 
         {
             ctx.save();

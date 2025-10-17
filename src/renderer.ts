@@ -316,6 +316,8 @@ class Renderer {
             this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, this.scene.fill);
         }
 
+        const now = Date.now();
+
         for (const entityId of this.entityDrawOrder) {
             const entity = this.entities.get(entityId);
             if (!entity) {
@@ -339,6 +341,7 @@ class Renderer {
                     center: pos,
                     rotation: rot || 0,
                     renderer: this,
+                    now,
                 });
                 ctx.restore();
             }
@@ -367,6 +370,7 @@ class Renderer {
                     center: pos,
                     rotation: rot || 0,
                     renderer: this,
+                    now,
                 });
                 ctx.restore();
             }
@@ -422,6 +426,7 @@ class Renderer {
                     center: pos,
                     rotation: rot || 0,
                     renderer: this,
+                    now,
                 });
                 ctx.restore();
             }

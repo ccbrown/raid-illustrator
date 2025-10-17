@@ -66,18 +66,18 @@ export class Animated<T extends AnimatableType> {
         this.latestValue = initialValue;
     }
 
-    update(currentValue: T, params?: UpdateParams): T {
+    update(currentValue: T, now: number, params?: UpdateParams): T {
         if (this.latestValue === undefined) {
             this.latestValue = currentValue;
             return currentValue;
         } else if (!equals(this.latestValue, currentValue)) {
-            this.previousValue = this.get();
+            this.previousValue = this.get(now);
             this.latestValue = currentValue;
-            this.transitionStartTime = Date.now();
+            this.transitionStartTime = now;
             this.transitionDuration = params?.transitionDuration;
             this.easingFunction = params?.easingFunction;
         }
-        return this.get()!;
+        return this.get(now)!;
     }
 
     private ease(t: number): number {
@@ -87,7 +87,7 @@ export class Animated<T extends AnimatableType> {
         return easeOutCubic(t);
     }
 
-    get(): T | undefined {
+    get(now: number): T | undefined {
         if (this.latestValue === undefined) {
             return undefined;
         }
@@ -96,7 +96,6 @@ export class Animated<T extends AnimatableType> {
             return this.latestValue;
         }
 
-        const now = Date.now();
         const elapsed = now - this.transitionStartTime;
         const progress = this.ease(Math.min(elapsed / (this.transitionDuration ?? 300), 1));
 

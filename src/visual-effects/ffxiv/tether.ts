@@ -4,9 +4,9 @@ import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/v
 class Tether extends VisualEffect {
     enabled: Animated<number> = new Animated(0);
 
-    renderAboveGround({ ctx, properties: anyProperties, scale, center, renderer }: VisualEffectRenderParams) {
+    renderAboveGround({ ctx, properties: anyProperties, scale, center, renderer, now }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
-        const enabled = this.enabled.update(properties.enabled ? 1 : 0, {
+        const enabled = this.enabled.update(properties.enabled ? 1 : 0, now, {
             transitionDuration: 300,
         });
         if (!enabled) {
@@ -47,7 +47,7 @@ class Tether extends VisualEffect {
 
         ctx.globalCompositeOperation = 'lighter';
 
-        const orbMovement = (Date.now() % 1000) / 1000;
+        const orbMovement = (now % 1000) / 1000;
         const orbSpacing = 1;
         const orbRadius = lineWidth * 0.7;
         const orbGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, orbRadius);

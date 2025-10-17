@@ -13,6 +13,7 @@ export interface VisualEffectRenderParams {
     rotation: number;
     properties: AnyProperties;
     renderer: VisualEffectRenderParamsRenderer;
+    now: number;
 }
 
 export abstract class VisualEffect {

@@ -38,19 +38,14 @@ export const EffectSelectionDialog = (props: Props) => {
                 onSubmit={(e) => {
                     e.preventDefault();
                     if (ep.type === 'shape') {
-                        dispatch.raids.updateEntity({
-                            id: props.entity.id,
-                            properties: {
-                                type: 'shape',
-                                effects: [
-                                    ...(ep.effects || []),
-                                    {
-                                        id: crypto.randomUUID(),
-                                        factoryId: selectedFactoryId,
-                                        properties: defaultProperties(selectedFactory?.properties || []),
-                                    },
-                                ],
-                            },
+                        dispatch.raids.addEffects({
+                            entityId: props.entity.id,
+                            effects: [
+                                {
+                                    factoryId: selectedFactoryId,
+                                    properties: defaultProperties(selectedFactory?.properties || []),
+                                },
+                            ],
                         });
                         props.onClose();
                     }

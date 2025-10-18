@@ -136,3 +136,24 @@ export type Material = ColorMaterial | ImageMaterial;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyProperties = { [key: string]: any };
+
+export interface RaidSceneExport {
+    scene: RaidScene;
+    steps: RaidStep[];
+    entities: RaidEntity[];
+}
+
+export interface RaidStepExport {
+    step: RaidStep;
+}
+
+export interface RaidEntityExport {
+    id: string;
+    entities: RaidEntity[];
+}
+
+export interface Exports {
+    scenes?: RaidSceneExport[];
+    steps?: RaidStepExport[];
+    entities?: RaidEntityExport[];
+}

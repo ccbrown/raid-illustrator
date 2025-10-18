@@ -57,6 +57,54 @@ export const useKeyDownEvents = (callback: (e: KeyboardEvent) => void) => {
     }, []);
 };
 
+export const usePasteEvents = (callback: (e: ClipboardEvent) => void) => {
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useEffect(() => {
+        const handlePaste = (e: ClipboardEvent) => {
+            callbackRef.current(e);
+        };
+
+        window.addEventListener('paste', handlePaste);
+        return () => {
+            window.removeEventListener('paste', handlePaste);
+        };
+    }, []);
+};
+
+export const useCopyEvents = (callback: (e: ClipboardEvent) => void) => {
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useEffect(() => {
+        const handleCopy = (e: ClipboardEvent) => {
+            callbackRef.current(e);
+        };
+
+        window.addEventListener('copy', handleCopy);
+        return () => {
+            window.removeEventListener('copy', handleCopy);
+        };
+    }, []);
+};
+
+export const useCutEvents = (callback: (e: ClipboardEvent) => void) => {
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useEffect(() => {
+        const handleCut = (e: ClipboardEvent) => {
+            callbackRef.current(e);
+        };
+
+        window.addEventListener('cut', handleCut);
+        return () => {
+            window.removeEventListener('cut', handleCut);
+        };
+    }, []);
+};
+
 export const useRaid = (raidId: string) => useSelector((state) => state.raids.metadata[raidId]);
 export const useRaidWorkspace = (raidId: string) => useSelector((state) => state.workspaces.raids[raidId]);
 export const useScene = (sceneId: string) => useSelector((state) => state.raids.scenes[sceneId]);

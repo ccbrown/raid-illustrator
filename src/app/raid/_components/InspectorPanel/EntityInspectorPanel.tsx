@@ -1,4 +1,4 @@
-import { DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { ClipboardIcon, CopyIcon, DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 
 import {
@@ -31,6 +31,7 @@ import {
 } from '@/models/raids/utils';
 import { PropertySpec } from '@/property-spec';
 import { useDispatch } from '@/store';
+import { readVisualEffectFromClipboard, writeVisualEffectToClipboard } from '@/visual-effect';
 import { visualEffectFactories } from '@/visual-effects';
 
 import { useCommands } from '../../commands';
@@ -306,6 +307,38 @@ const EffectEditor = ({ entity, index, sceneStepIds, stepId }: EffectEditorProps
                     className="subtle"
                     onClick={(e) => {
                         e.stopPropagation();
+                        writeVisualEffectToClipboard([{ factoryId: effect.factoryId, properties: effect.properties }]);
+                    }}
+                >
+                    <CopyIcon size={16} />
+                </button>
+                <button
+                    className="subtle"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        const pasteEffect = async () => {
+                            const data = await readVisualEffectFromClipboard();
+                            if (!data) {
+                                alert('No effect data found in clipboard.');
+                                return;
+                            }
+                            for (const effectData of data) {
+                                if (effectData.factoryId === effect.factoryId) {
+                                    updateEffectProperties(effectData.properties);
+                                    return;
+                                }
+                            }
+                            alert('No matching effect data found in clipboard.');
+                        };
+                        pasteEffect();
+                    }}
+                >
+                    <ClipboardIcon size={16} />
+                </button>
+                <button
+                    className="subtle"
+                    onClick={(e) => {
+                        e.stopPropagation();
                         deleteEffect();
                     }}
                 >
@@ -428,6 +461,37 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                         <div className="flex flex-row items-center gap-2 py-2">
                             <div className="text-sm font-semibold">Effects</div>
                             <div className="flex-grow" />
+                            <Button
+                                icon={CopyIcon}
+                                size="small"
+                                onClick={() => {
+                                    if (ep.effects && ep.effects.length > 0) {
+                                        const data = ep.effects.map((effect) => ({
+                                            factoryId: effect.factoryId,
+                                            properties: effect.properties,
+                                        }));
+                                        writeVisualEffectToClipboard(data);
+                                    }
+                                }}
+                            />
+                            <Button
+                                icon={ClipboardIcon}
+                                size="small"
+                                onClick={() => {
+                                    const pasteEffects = async () => {
+                                        const data = await readVisualEffectFromClipboard();
+                                        if (!data) {
+                                            alert('No effect data found in clipboard.');
+                                            return;
+                                        }
+                                        dispatch.raids.addEffects({
+                                            entityId: entity.id,
+                                            effects: data,
+                                        });
+                                    };
+                                    pasteEffects();
+                                }}
+                            />
                             <Button
                                 icon={PlusIcon}
                                 size="small"

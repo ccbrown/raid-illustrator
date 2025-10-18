@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 
 import { EditableText, ScrollList, ScrollListItem } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
-import { selectParentByChildIds } from '@/models/raids/selectors';
+import { selectParentByChildId } from '@/models/raids/selectors';
 import { RaidEntity } from '@/models/raids/types';
 import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch, useSelector } from '@/store';
@@ -20,7 +20,7 @@ interface ListItemProps {
 
 const ListItem = ({ entity, isGroupExpanded, selectedEntityIds, level }: ListItemProps) => {
     const dispatch = useDispatch();
-    const entityParent = useSelector((state) => selectParentByChildIds(state.raids, [entity.id]));
+    const entityParent = useSelector((state) => selectParentByChildId(state.raids, entity.id));
 
     const selectEntity = () => {
         dispatch.workspaces.select({ raidId: entity.raidId, selection: { entityIds: [entity.id] } });

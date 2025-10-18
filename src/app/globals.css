@@ -44,9 +44,6 @@ body {
 
 button.subtle {
     opacity: 0.4;
-    transition-property: opacity;
-    transition-timing-function: var(--default-transition-timing-function);
-    transition-duration: var(--default-transition-duration);
 }
 
 button.subtle:hover {

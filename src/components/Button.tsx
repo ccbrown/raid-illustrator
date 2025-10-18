@@ -13,7 +13,7 @@ interface Props {
 export const Button = (props: Props) => {
     return (
         <button
-            className={`flex flex-row gap-2 bg-cyan-500 shadow-md shadow-cyan-500/50 cursor-pointer rounded-full ${props.text ? 'py-2 px-4' : 'p-1'} items-center hover:brightness-110 active:brightness-90 transition outline-none`}
+            className={`flex flex-row gap-2 bg-cyan-500 shadow-md shadow-cyan-500/50 cursor-pointer rounded-full ${props.text ? 'py-2 px-4' : 'p-1'} items-center hover:brightness-110 active:brightness-90 outline-none`}
             onClick={props.onClick}
             disabled={props.disabled}
             type={props.type}

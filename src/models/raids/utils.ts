@@ -1,5 +1,15 @@
-import { selectEntitiesInScene } from './selectors';
-import { Keyable, Keyed, RaidEntity, RaidScene, RaidStep, RaidsState, Shape } from './types';
+import {
+    Exports,
+    Keyable,
+    Keyed,
+    RaidBatchOperation,
+    RaidEntity,
+    RaidMetadata,
+    RaidScene,
+    RaidStep,
+    RaidsState,
+    Shape,
+} from './types';
 
 export const shapeDimensions = (shape: Shape) => {
     switch (shape.type) {
@@ -205,7 +215,8 @@ const cloneScene = (scene: RaidScene): RaidScene => {
 // Clones a scene, its steps, and its entities (and their children), returning the new scene, steps, and entities.
 export const cloneSceneStepsAndEntities = (
     scene: RaidScene,
-    state: RaidsState,
+    allSteps: Record<string, RaidStep>,
+    allEntities: Record<string, RaidEntity>,
 ): [RaidScene, RaidStep[], RaidEntity[]] => {
     const newSteps = [];
     let newEntities = [];
@@ -215,16 +226,16 @@ export const cloneSceneStepsAndEntities = (
     const stepIdMap = new Map<string, string>();
 
     // clone entities
-    const sceneEntities = selectEntitiesInScene(state, scene.id);
+    const sceneEntities = Object.values(allEntities).filter((e) => e.sceneId === scene.id);
     for (const entity of sceneEntities) {
-        const [newEntity, newDescendants] = cloneEntityAndChildren(entity, state.entities);
+        const [newEntity, newDescendants] = cloneEntityAndChildren(entity, allEntities);
         newEntities.push(newEntity, ...newDescendants);
         entityIdMap.set(entity.id, newEntity.id);
     }
 
     // clone steps
     for (const stepId of scene.stepIds) {
-        const step = state.steps[stepId];
+        const step = allSteps[stepId];
         if (step) {
             const newStep = cloneStep(step);
             newSteps.push(newStep);
@@ -329,7 +340,10 @@ const updateKeyedValuesImpl = (thing: unknown, update: (k: Keyed<unknown>) => Ke
 // The function should NOT mutate the given Keyable, but instead return a new one if it wants to make a change.
 //
 // If any changes are made, returns a new RaidEntity with the changes. Otherwise, returns the original entity.
-const updateKeyedEntityValues = (entity: RaidEntity, update: (k: Keyed<unknown>) => Keyable<unknown>): RaidEntity => {
+export const updateKeyedEntityValues = (
+    entity: RaidEntity,
+    update: (k: Keyed<unknown>) => Keyable<unknown>,
+): RaidEntity => {
     return updateKeyedValuesImpl(entity, update) as RaidEntity;
 };
 
@@ -350,4 +364,150 @@ export const updateKeyedEntitiesValues = (
         }
     }
     return updatedEntities;
+};
+
+interface ImportOperation {
+    sceneIds: string[];
+    stepIds: string[];
+    entityIds: string[];
+    operation: RaidBatchOperation;
+}
+
+export const importOperation = (
+    state: RaidsState,
+    raidId: string,
+    sceneId: string | undefined,
+    data: Exports,
+): ImportOperation | undefined => {
+    const raid = state.metadata[raidId];
+    if (!raid || (!data.scenes?.length && (!sceneId || (!data.steps?.length && !data.entities?.length)))) {
+        return undefined;
+    }
+
+    const pastedStepIds = [];
+    const newSteps: RaidStep[] = [];
+    const pastedEntityIds = [];
+    let newEntities: RaidEntity[] = [];
+    const newScenes = [];
+    let updatedScene: RaidScene | undefined = undefined;
+    let updatedRaid: RaidMetadata | undefined = undefined;
+    const pastedSceneIds = [];
+
+    if (sceneId) {
+        const scene = state.scenes[sceneId];
+        if (scene) {
+            // steps are the easiest, start with them
+            const stepIdMap = new Map<string, string>();
+            for (const stepExport of data.steps || []) {
+                const newStep = cloneStep(stepExport.step);
+                pastedStepIds.push(newStep.id);
+                newStep.raidId = raidId;
+                newStep.sceneId = sceneId;
+                newSteps.push(newStep);
+                stepIdMap.set(stepExport.step.id, newStep.id);
+            }
+            if (pastedStepIds.length > 0) {
+                // update the scene to include the new steps
+                updatedScene = {
+                    ...(updatedScene || scene),
+                    stepIds: [...scene.stepIds, ...pastedStepIds],
+                };
+            }
+
+            // next are entities
+            for (const entityExport of data.entities || []) {
+                const allEntities: Record<string, RaidEntity> = {};
+                for (const e of entityExport.entities) {
+                    allEntities[e.id] = e;
+                }
+                const original = allEntities[entityExport.id];
+                if (original) {
+                    const [clone, descendants] = cloneEntityAndChildren(original, allEntities);
+                    pastedEntityIds.push(clone.id);
+                    newEntities.push(clone, ...descendants);
+                }
+            }
+            for (const e of newEntities) {
+                e.raidId = raidId;
+                e.sceneId = sceneId;
+                // add the new entities to the beginning of the scene's entity list
+                updatedScene = {
+                    ...(updatedScene || scene),
+                    entityIds: [e.id, ...(updatedScene || scene).entityIds],
+                };
+            }
+            // now update any keyed values to point to the new step ids or remove them if
+            // the step doesn't exist in this scene
+            newEntities = newEntities.map((entity) =>
+                updateKeyedEntityValues(entity, (k) => {
+                    const newSteps: Record<string, unknown> = {};
+                    for (const [stepId, value] of Object.entries(k.steps)) {
+                        if (state.steps[stepId]?.sceneId === sceneId) {
+                            newSteps[stepId] = value;
+                        } else {
+                            const newStepId = stepIdMap.get(stepId);
+                            if (newStepId) {
+                                newSteps[newStepId] = value;
+                            }
+                        }
+                    }
+                    return Object.keys(newSteps).length > 0
+                        ? {
+                              initial: k.initial,
+                              steps: newSteps,
+                          }
+                        : k.initial;
+                }),
+            );
+        }
+    }
+
+    // lastly, bring in new scenes
+    for (const scene of data.scenes || []) {
+        const allSteps: Record<string, RaidStep> = {};
+        for (const step of scene.steps || []) {
+            allSteps[step.id] = step;
+        }
+
+        const allEntities: Record<string, RaidEntity> = {};
+        for (const entity of scene.entities || []) {
+            allEntities[entity.id] = entity;
+        }
+
+        const [newScene, steps, entities] = cloneSceneStepsAndEntities(scene.scene, allSteps, allEntities);
+        newScene.raidId = raidId;
+        for (const step of steps) {
+            step.raidId = raidId;
+        }
+        for (const entity of entities) {
+            entity.raidId = raidId;
+        }
+        newScenes.push(newScene);
+        newSteps.push(...steps);
+        newEntities.push(...entities);
+        pastedSceneIds.push(newScene.id);
+    }
+
+    if (pastedSceneIds.length > 0) {
+        updatedRaid = {
+            ...raid,
+            sceneIds: [...raid.sceneIds, ...pastedSceneIds],
+        };
+    }
+
+    if (updatedScene) {
+        newScenes.push(updatedScene);
+    }
+
+    return {
+        sceneIds: pastedSceneIds,
+        stepIds: pastedStepIds,
+        entityIds: pastedEntityIds,
+        operation: {
+            putScenes: newScenes,
+            putSteps: newSteps,
+            putEntities: newEntities,
+            putMetadata: updatedRaid,
+        },
+    };
 };

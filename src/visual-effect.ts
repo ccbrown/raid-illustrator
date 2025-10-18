@@ -50,3 +50,45 @@ export interface VisualEffectFactory {
     properties?: PropertySpec[];
     create: () => VisualEffect;
 }
+
+interface ClipboardVisualEffectData {
+    factoryId: string;
+    properties: AnyProperties;
+}
+
+export const writeVisualEffectToClipboard = (data: ClipboardVisualEffectData[]) => {
+    const serializedData = btoa(JSON.stringify(data));
+    const clipboardItem = new ClipboardItem({
+        ['text/html']: `<div id="raid-illustrator-clipboard" data-raid-illustrator-effect="${serializedData}">Raid Illustrator Effect Clipping</div>`,
+    });
+    navigator.clipboard.write([clipboardItem]);
+};
+
+export const visualEffectDataFromClipboardElement = (element: HTMLElement): ClipboardVisualEffectData[] | null => {
+    const dataAttr = element.getAttribute('data-raid-illustrator-effect');
+    if (dataAttr) {
+        const data: ClipboardVisualEffectData[] = JSON.parse(atob(dataAttr));
+        return data;
+    }
+    return null;
+};
+
+export const readVisualEffectFromClipboard = async (): Promise<ClipboardVisualEffectData[] | null> => {
+    const clipboardItems = await navigator.clipboard.read();
+    for (const item of clipboardItems) {
+        if (item.types.includes('text/html')) {
+            const blob = await item.getType('text/html');
+            const text = await blob.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            const div = doc.getElementById('raid-illustrator-clipboard');
+            if (div) {
+                const data = visualEffectDataFromClipboardElement(div);
+                if (data) {
+                    return data;
+                }
+            }
+        }
+    }
+    return null;
+};

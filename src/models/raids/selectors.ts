@@ -1,4 +1,15 @@
-import { RaidEntity, RaidMetadata, RaidScene, RaidsState } from './types';
+import { createSelector } from 'reselect';
+
+import {
+    RaidEntity,
+    RaidEntityExport,
+    RaidMetadata,
+    RaidScene,
+    RaidSceneExport,
+    RaidStep,
+    RaidStepExport,
+    RaidsState,
+} from './types';
 
 // Sorts entity ids based on their relative order in the scene.
 export const selectRelativeOrderOfEntityIds = (state: RaidsState, entityIds: string[]): string[] => {
@@ -59,44 +70,6 @@ export const selectGroupByChildId = (state: RaidsState, entityId: string): RaidE
     return selectGroupByChild(state, entity);
 };
 
-// The parent must have ALL the given entity ids as direct descendants (not just some of them).
-export const selectParentByChildIds = (
-    state: RaidsState,
-    entityIds: string[],
-):
-    | {
-          type: 'entity';
-          entity: RaidEntity;
-      }
-    | {
-          type: 'scene';
-          scene: RaidScene;
-      }
-    | undefined => {
-    if (entityIds.length === 0) {
-        return undefined;
-    }
-
-    const scene = selectSceneSharedByEntityIds(state, entityIds);
-    if (!scene) {
-        return undefined;
-    }
-    if (entityIds.every((id) => scene.entityIds.includes(id))) {
-        return { type: 'scene', scene };
-    }
-
-    const group = selectGroupByChildId(state, entityIds[0]);
-    if (!group || group.properties.type !== 'group') {
-        return undefined;
-    }
-    for (let i = 1; i < entityIds.length; i++) {
-        if (!group.properties.children.includes(entityIds[i])) {
-            return undefined;
-        }
-    }
-    return { type: 'entity', entity: group };
-};
-
 const selectSceneIdSharedByEntityIds = (state: RaidsState, entityIds: string[]): string | undefined => {
     let sharedSceneId: string | undefined = undefined;
     for (const entityId of entityIds) {
@@ -120,6 +93,66 @@ export const selectSceneSharedByEntityIds = (state: RaidsState, entityIds: strin
     }
     return state.scenes[sceneId];
 };
+
+type Parent =
+    | {
+          type: 'entity';
+          entity: RaidEntity;
+      }
+    | {
+          type: 'scene';
+          scene: RaidScene;
+      };
+
+// The parent must have ALL the given entity ids as direct descendants (not just some of them).
+export const selectParentByChildIds = createSelector(
+    [
+        selectSceneSharedByEntityIds,
+        (state: RaidsState, entityIds: string[]) => selectGroupByChildId(state, entityIds[0] || ''),
+        (_state: RaidsState, entityIds: string[]) => entityIds,
+    ],
+    (scene, group, entityIds): Parent | undefined => {
+        if (!scene) {
+            return undefined;
+        }
+        if (entityIds.every((id) => scene.entityIds.includes(id))) {
+            return { type: 'scene', scene };
+        }
+
+        if (!group || group.properties.type !== 'group') {
+            return undefined;
+        }
+        for (let i = 1; i < entityIds.length; i++) {
+            if (!group.properties.children.includes(entityIds[i])) {
+                return undefined;
+            }
+        }
+        return { type: 'entity', entity: group };
+    },
+);
+
+export const selectParentByChildId = createSelector(
+    [
+        (state: RaidsState, id: string) => selectSceneSharedByEntityIds(state, [id]),
+        (state: RaidsState, id: string) => selectGroupByChildId(state, id),
+        (_state: RaidsState, id: string) => id,
+    ],
+    (scene, group, id): Parent | undefined => {
+        if (!scene) {
+            return undefined;
+        }
+        if (scene.entityIds.includes(id)) {
+            return { type: 'scene', scene };
+        }
+        if (!group || group.properties.type !== 'group') {
+            return undefined;
+        }
+        if (!group.properties.children.includes(id)) {
+            return undefined;
+        }
+        return { type: 'entity', entity: group };
+    },
+);
 
 const selectSceneIdSharedByStepIds = (state: RaidsState, stepIds: string[]): string | undefined => {
     let sharedSceneId: string | undefined = undefined;
@@ -169,6 +202,59 @@ export const selectRaidSharedBySceneIds = (state: RaidsState, sceneIds: string[]
     return state.metadata[raidId];
 };
 
+export const selectStepsInScene = (state: RaidsState, sceneId: string): RaidStep[] => {
+    return Object.values(state.steps).filter((s) => s.sceneId === sceneId);
+};
+
 export const selectEntitiesInScene = (state: RaidsState, sceneId: string): RaidEntity[] => {
     return Object.values(state.entities).filter((e) => e.sceneId === sceneId);
+};
+
+export const selectEntityAndDescendants = (state: RaidsState, entityId: string): RaidEntity[] => {
+    const entity = state.entities[entityId];
+    if (!entity) {
+        return [];
+    }
+    const ret = [entity];
+    if (entity.properties.type === 'group') {
+        for (const childId of entity.properties.children) {
+            ret.push(...selectEntityAndDescendants(state, childId));
+        }
+    }
+    return ret;
+};
+
+export const selectSceneExport = (state: RaidsState, sceneId: string): RaidSceneExport | undefined => {
+    const scene = state.scenes[sceneId];
+    if (!scene) {
+        return undefined;
+    }
+    const steps = selectStepsInScene(state, sceneId);
+    const entities = selectEntitiesInScene(state, sceneId);
+    return {
+        scene,
+        steps,
+        entities,
+    };
+};
+
+export const selectStepExport = (state: RaidsState, stepId: string): RaidStepExport | undefined => {
+    const step = state.steps[stepId];
+    if (!step) {
+        return undefined;
+    }
+    return {
+        step,
+    };
+};
+
+export const selectEntityExport = (state: RaidsState, entityId: string): RaidEntityExport | undefined => {
+    const entities = selectEntityAndDescendants(state, entityId);
+    if (entities.length === 0) {
+        return undefined;
+    }
+    return {
+        id: entityId,
+        entities,
+    };
 };

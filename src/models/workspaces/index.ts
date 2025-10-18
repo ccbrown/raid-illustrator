@@ -44,16 +44,6 @@ export const workspaces = createModel<RootModel>()({
                 }
             });
         },
-        removeEntitiesFromSelection(state, payload: { raidId: string; entityIds: string[] }) {
-            const raid = state.raids[payload.raidId];
-            if (!raid || !raid.selection || !raid.selection.entityIds) {
-                return;
-            }
-            raid.selection.entityIds = raid.selection.entityIds.filter((id) => !payload.entityIds.includes(id));
-            if (raid.selection.entityIds.length === 0) {
-                raid.selection = undefined;
-            }
-        },
         pushUndo(state, payload: { raidId: string; action: UndoRedoStackAction; preserveRedo?: boolean }) {
             const raid = state.raids[payload.raidId];
             if (!raid) {
@@ -123,6 +113,24 @@ export const workspaces = createModel<RootModel>()({
                     dispatch.workspaces.openStep({ id: raidScene.stepIds[0], sceneId: payload.id });
                 }
             }
+        },
+        revalidateSelection(payload: { raidId: string }, state) {
+            const raid = state.workspaces.raids[payload.raidId];
+            if (!raid || !raid.selection) {
+                return;
+            }
+
+            const sel = { ...raid.selection };
+            if (sel.entityIds) {
+                sel.entityIds = sel.entityIds.filter((id) => !!state.raids.entities[id]);
+            }
+            if (sel.stepIds) {
+                sel.stepIds = sel.stepIds.filter((id) => !!state.raids.steps[id]);
+            }
+            if (sel.sceneIds) {
+                sel.sceneIds = sel.sceneIds.filter((id) => !!state.raids.scenes[id]);
+            }
+            dispatch.workspaces.putRaid({ ...raid, selection: sel });
         },
         updateScene(
             payload: {

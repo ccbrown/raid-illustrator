@@ -5,8 +5,11 @@ import {
     ArrowFatRightIcon,
     ArrowUUpLeftIcon,
     ArrowUUpRightIcon,
+    ClipboardIcon,
+    CopyIcon,
     Icon,
     PlusIcon,
+    ScissorsIcon,
     SparkleIcon,
     StackIcon,
     StackSimpleIcon,
@@ -62,7 +65,7 @@ const menuItemRenderer = (item: MenuItem) => {
 const menuItemForCommand = (command: Command, icon: Icon): MenuItem => ({
     label: command.name,
     disabled: command.disabled,
-    hotKey: command.hotKey,
+    hotKey: command.fakeHotKey ?? command.hotKey,
     icon,
     template: menuItemRenderer,
     command: () => {
@@ -95,6 +98,10 @@ export const MenuBar = () => {
             items: [
                 menuItemForCommand(commands.undo, ArrowUUpLeftIcon),
                 menuItemForCommand(commands.redo, ArrowUUpRightIcon),
+                { separator: true },
+                menuItemForCommand(commands.cut, ScissorsIcon),
+                menuItemForCommand(commands.copy, CopyIcon),
+                menuItemForCommand(commands.paste, ClipboardIcon),
                 menuItemForCommand(commands.duplicate, StackSimpleIcon),
                 menuItemForCommand(commands.delete, TrashIcon),
             ],
@@ -173,6 +180,9 @@ export const MenuBar = () => {
                                         'cursor-default': disabled,
                                     }),
                                 };
+                            },
+                            separator: {
+                                className: 'my-1 border-t border-white/20',
                             },
                             popupIcon: {
                                 className: 'hidden',

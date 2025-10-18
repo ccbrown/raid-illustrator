@@ -1,18 +1,23 @@
 import { useRouter } from 'next/navigation';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 
 import {
+    useCopyEvents,
+    useCutEvents,
     useEntity,
     useKeyDownEvents,
     useKeyPressEvents,
+    usePasteEvents,
     useRaidWorkspace,
     useScene,
     useSceneWorkspace,
     useSelection,
 } from '@/hooks';
 import { selectParentByChildIds } from '@/models/raids/selectors';
+import { Exports } from '@/models/raids/types';
 import { Selection } from '@/models/workspaces/types';
 import { useDispatch, useSelector } from '@/store';
+import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
 import { EntitySettingsDialog } from './_components/EntitySettingsDialog';
@@ -30,6 +35,7 @@ export interface Command {
     name: string;
     disabled?: boolean;
     hotKey?: HotKey;
+    fakeHotKey?: HotKey;
     additionalHotKeys?: HotKey[];
     execute: () => void;
 }
@@ -38,6 +44,9 @@ interface Commands {
     close: Command;
     undo: Command;
     redo: Command;
+    cut: Command;
+    copy: Command;
+    paste: Command;
     duplicate: Command;
     delete: Command;
     zoomIn: Command;
@@ -115,6 +124,92 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         (state) => !!selectParentByChildIds(state.raids, selection?.entityIds || []),
     );
 
+    const writeClipboard = useCallback((e: ClipboardEvent | undefined, data: Exports) => {
+        const serializedData = btoa(JSON.stringify(data));
+        const clipboardItem = new ClipboardItem({
+            ['text/html']: `<div id="raid-illustrator-clipboard" data-raid-illustrator="${serializedData}">Raid Illustrator Clipping</div>`,
+        });
+        navigator.clipboard.write([clipboardItem]);
+        e?.preventDefault();
+    }, []);
+
+    const copy = useCallback(
+        (e?: ClipboardEvent) => {
+            if (selection) {
+                const data = dispatch.raids.copy(selection);
+                writeClipboard(e, data);
+            }
+        },
+        [dispatch, selection, writeClipboard],
+    );
+
+    const cut = useCallback(
+        (e?: ClipboardEvent) => {
+            if (selection) {
+                const data = dispatch.raids.cut(selection);
+                writeClipboard(e, data);
+            }
+        },
+        [dispatch, selection, writeClipboard],
+    );
+
+    const paste = useCallback(
+        async (e?: ClipboardEvent) => {
+            const clipboardItems = await navigator.clipboard.read();
+            for (const item of clipboardItems) {
+                if (item.types.includes('text/html')) {
+                    const blob = await item.getType('text/html');
+                    const text = await blob.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const div = doc.getElementById('raid-illustrator-clipboard');
+                    if (div) {
+                        const effects = visualEffectDataFromClipboardElement(div);
+                        if (effects) {
+                            if (selection?.entityIds?.length) {
+                                // apply the visual effects to the entities
+                                for (const id of selection.entityIds) {
+                                    dispatch.raids.addEffects({
+                                        entityId: id,
+                                        effects,
+                                    });
+                                }
+                            }
+                        } else {
+                            const serializedData = div.getAttribute('data-raid-illustrator');
+                            if (raidId && serializedData) {
+                                const data: Exports = JSON.parse(atob(serializedData));
+                                const pastedIds = dispatch.raids.paste({
+                                    raidId,
+                                    sceneId,
+                                    data,
+                                });
+                                if (pastedIds.sceneIds.length > 0) {
+                                    // switch to one of the new scenes
+                                    dispatch.workspaces.openScene({ id: pastedIds.sceneIds[0], raidId });
+                                } else if (sceneId && pastedIds.stepIds.length > 0) {
+                                    // switch to one of the new steps
+                                    dispatch.workspaces.openStep({ id: pastedIds.stepIds[0], sceneId });
+                                }
+                                // select the pasted items
+                                dispatch.workspaces.select({
+                                    raidId,
+                                    selection: {
+                                        sceneIds: pastedIds.sceneIds,
+                                        stepIds: pastedIds.stepIds,
+                                        entityIds: pastedIds.entityIds,
+                                    },
+                                });
+                            }
+                        }
+                        e?.preventDefault();
+                    }
+                }
+            }
+        },
+        [dispatch, raidId, sceneId, selection],
+    );
+
     const hotKeyBase = useMacLikeHotKeys
         ? {
               meta: true,
@@ -161,6 +256,33 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                     dispatch.workspaces.redo({ raidId });
                 }
             },
+        },
+        cut: {
+            name: 'Cut',
+            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
+            fakeHotKey: {
+                ...hotKeyBase,
+                key: 'x',
+            },
+            execute: cut,
+        },
+        copy: {
+            name: 'Copy',
+            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
+            fakeHotKey: {
+                ...hotKeyBase,
+                key: 'c',
+            },
+            execute: copy,
+        },
+        paste: {
+            name: 'Paste',
+            disabled: !raidId,
+            fakeHotKey: {
+                ...hotKeyBase,
+                key: 'v',
+            },
+            execute: paste,
         },
         duplicate: {
             name: 'Duplicate',
@@ -393,6 +515,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             handleKeyEvent(e);
         }
     });
+
+    useCutEvents(cut);
+    useCopyEvents(copy);
+    usePasteEvents(paste);
 
     return (
         <CommandsContext.Provider value={commands}>

@@ -3,14 +3,20 @@ import { createModel } from '@rematch/core';
 import { RootModel } from '..';
 import {
     selectEntitiesInScene,
+    selectEntityAndDescendants,
+    selectEntityExport,
     selectGroupByChildId,
     selectParentByChildIds,
     selectRaidSharedBySceneIds,
     selectRelativeOrderOfEntityIds,
+    selectSceneExport,
     selectSceneSharedByEntityIds,
     selectSceneSharedByStepIds,
+    selectStepExport,
+    selectStepsInScene,
 } from './selectors';
 import {
+    Exports,
     Keyable,
     Material,
     RaidBatchOperation,
@@ -27,10 +33,12 @@ import {
     cloneEntityAndChildren,
     cloneSceneStepsAndEntities,
     cloneStep,
+    importOperation,
     keyableValueAtStep,
     keyableWithUnkeyedSteps,
     keyableWithValueAtStep,
     updateKeyedEntitiesValues,
+    updateKeyedEntityValues,
 } from './utils';
 
 export const raids = createModel<RootModel>()({
@@ -48,24 +56,63 @@ export const raids = createModel<RootModel>()({
             state.scenes[scene.id] = scene;
         },
         removeScene(state, sceneId: string) {
+            const scene = state.scenes[sceneId];
+            if (!scene) {
+                return;
+            }
             delete state.scenes[sceneId];
             for (const stepId in state.steps) {
                 if (state.steps[stepId].sceneId === sceneId) {
                     delete state.steps[stepId];
                 }
             }
+            for (const entityId in state.entities) {
+                if (state.entities[entityId].sceneId === sceneId) {
+                    delete state.entities[entityId];
+                }
+            }
+            const raid = state.metadata[scene.raidId];
+            if (raid) {
+                raid.sceneIds = raid.sceneIds.filter((id) => id !== sceneId);
+            }
         },
         putStep(state, step: RaidStep) {
             state.steps[step.id] = step;
         },
         removeStep(state, stepId: string) {
+            const step = state.steps[stepId];
+            if (!step) {
+                return;
+            }
+            const entitiesInScene = selectEntitiesInScene(state, step.sceneId);
+            const updatedEntities = updateKeyedEntitiesValues(entitiesInScene, (k) =>
+                keyableWithUnkeyedSteps(k, [stepId]),
+            );
+            for (const entity of updatedEntities) {
+                state.entities[entity.id] = entity;
+            }
             delete state.steps[stepId];
+            const scene = state.scenes[step.sceneId];
+            if (scene) {
+                scene.stepIds = scene.stepIds.filter((id) => id !== stepId);
+            }
         },
         putEntity(state, entity: RaidEntity) {
             state.entities[entity.id] = entity;
         },
         removeEntity(state, entityId: string) {
-            delete state.entities[entityId];
+            const entity = state.entities[entityId];
+            if (!entity) {
+                return;
+            }
+            const toDelete = selectEntityAndDescendants(state, entityId);
+            for (const entity of toDelete) {
+                delete state.entities[entity.id];
+            }
+            const scene = state.scenes[entity.sceneId];
+            if (scene) {
+                scene.entityIds = scene.entityIds.filter((id) => id !== entityId);
+            }
         },
     },
     effects: (dispatch) => ({
@@ -101,6 +148,7 @@ export const raids = createModel<RootModel>()({
         // performs a batch operation and returns the inverse operation to undo it
         batchOperation(payload: RaidBatchOperation, state) {
             const undo: RaidBatchOperation = {};
+            const undoScenes = new Set<string>();
 
             if (payload.putMetadata) {
                 const existing = state.raids.metadata[payload.putMetadata.id];
@@ -118,6 +166,7 @@ export const raids = createModel<RootModel>()({
                             undo.putScenes = [];
                         }
                         undo.putScenes.push(existing);
+                        undoScenes.add(existing.id);
                     } else {
                         undo.removeScenes = undo.removeScenes || [];
                         undo.removeScenes.push(scene.id);
@@ -129,13 +178,36 @@ export const raids = createModel<RootModel>()({
             if (payload.removeScenes) {
                 for (const sceneId of payload.removeScenes) {
                     const existing = state.raids.scenes[sceneId];
-                    if (existing) {
-                        if (!undo.putScenes) {
-                            undo.putScenes = [];
-                        }
-                        undo.putScenes.push(existing);
-                        dispatch.raids.removeScene(sceneId);
+                    if (!existing) {
+                        continue;
                     }
+
+                    const entitiesInScene = selectEntitiesInScene(state.raids, sceneId);
+                    for (const entity of entitiesInScene) {
+                        if (!undo.putEntities) {
+                            undo.putEntities = [];
+                        }
+                        undo.putEntities.push(entity);
+                    }
+
+                    const stepsInScene = selectStepsInScene(state.raids, sceneId);
+                    for (const step of stepsInScene) {
+                        if (!undo.putSteps) {
+                            undo.putSteps = [];
+                        }
+                        undo.putSteps.push(step);
+                    }
+
+                    const raid = state.raids.metadata[existing.raidId];
+                    if (raid && !undo.putMetadata) {
+                        undo.putMetadata = raid;
+                    }
+
+                    if (!undo.putScenes) {
+                        undo.putScenes = [];
+                    }
+                    undo.putScenes.push(existing);
+                    dispatch.raids.removeScene(sceneId);
                 }
             }
 
@@ -152,19 +224,6 @@ export const raids = createModel<RootModel>()({
                         undo.removeSteps.push(step.id);
                     }
                     dispatch.raids.putStep(step);
-                }
-            }
-
-            if (payload.removeSteps) {
-                for (const stepId of payload.removeSteps) {
-                    const existing = state.raids.steps[stepId];
-                    if (existing) {
-                        if (!undo.putSteps) {
-                            undo.putSteps = [];
-                        }
-                        undo.putSteps.push(existing);
-                        dispatch.raids.removeStep(stepId);
-                    }
                 }
             }
 
@@ -187,13 +246,70 @@ export const raids = createModel<RootModel>()({
             if (payload.removeEntities) {
                 for (const entityId of payload.removeEntities) {
                     const existing = state.raids.entities[entityId];
-                    if (existing) {
-                        if (!undo.putEntities) {
-                            undo.putEntities = [];
-                        }
-                        undo.putEntities.push(existing);
-                        dispatch.raids.removeEntity(entityId);
+                    if (!existing) {
+                        continue;
                     }
+
+                    if (!undoScenes.has(existing.sceneId)) {
+                        if (!undo.putScenes) {
+                            undo.putScenes = [];
+                        }
+                        undo.putScenes.push(state.raids.scenes[existing.sceneId]);
+                        undoScenes.add(existing.sceneId);
+                    }
+
+                    const toDelete = selectEntityAndDescendants(state.raids, entityId);
+                    if (!undo.putEntities) {
+                        undo.putEntities = [];
+                    }
+                    undo.putEntities.push(...toDelete);
+                    dispatch.raids.removeEntity(entityId);
+                }
+            }
+
+            if (payload.removeSteps) {
+                const entitiesWithKeyedStep = new Map<string, RaidEntity>();
+
+                for (const stepId of payload.removeSteps) {
+                    const existing = state.raids.steps[stepId];
+                    if (!existing) {
+                        continue;
+                    }
+
+                    if (!undoScenes.has(existing.sceneId)) {
+                        if (!undo.putScenes) {
+                            undo.putScenes = [];
+                        }
+                        undo.putScenes.push(state.raids.scenes[existing.sceneId]);
+                        undoScenes.add(existing.sceneId);
+                    }
+
+                    const entitiesInScene = selectEntitiesInScene(state.raids, existing.sceneId);
+                    for (const e of entitiesInScene) {
+                        let hasKey = false;
+                        updateKeyedEntityValues(e, (k) => {
+                            if (stepId in k.steps) {
+                                hasKey = true;
+                            }
+                            return k;
+                        });
+                        if (hasKey) {
+                            entitiesWithKeyedStep.set(e.id, e);
+                        }
+                    }
+
+                    if (!undo.putSteps) {
+                        undo.putSteps = [];
+                    }
+                    undo.putSteps.push(existing);
+                    dispatch.raids.removeStep(stepId);
+                }
+
+                for (const entity of entitiesWithKeyedStep.values()) {
+                    if (!undo.putEntities) {
+                        undo.putEntities = [];
+                    }
+                    undo.putEntities.push(entity);
                 }
             }
 
@@ -484,10 +600,6 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            if (payload.ids.length === 0) {
-                return;
-            }
-
             const existingScenes = payload.ids.map((id) => state.raids.scenes[id]).filter((s) => !!s);
             if (existingScenes.length === 0) {
                 return;
@@ -498,25 +610,109 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete scenes from one raid at a time');
             }
 
-            const stepsToRemove = Object.values(state.raids.steps).filter((s) => payload.ids.includes(s.sceneId));
-            const entitiesToRemove = Object.values(state.raids.entities).filter((e) => payload.ids.includes(e.sceneId));
-
-            const metadata = state.raids.metadata[raidId];
-            const newMetadata = {
-                ...metadata,
-                sceneIds: metadata.sceneIds.filter((id) => !payload.ids.includes(id)),
-            };
-
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Scene${existingScenes.length > 1 ? 's' : ''}`,
                 raidId,
                 operation: {
-                    putMetadata: newMetadata,
-                    removeEntities: entitiesToRemove.map((e) => e.id),
                     removeScenes: existingScenes.map((s) => s.id),
-                    removeSteps: stepsToRemove.map((s) => s.id),
                 },
             });
+
+            dispatch.workspaces.revalidateSelection({ raidId });
+        },
+        paste(
+            payload: {
+                raidId: string;
+                sceneId?: string;
+                data: Exports;
+            },
+            state,
+        ): {
+            sceneIds: string[];
+            stepIds: string[];
+            entityIds: string[];
+        } {
+            const op = importOperation(state.raids, payload.raidId, payload.sceneId, payload.data);
+            if (!op) {
+                return { sceneIds: [], stepIds: [], entityIds: [] };
+            }
+            dispatch.raids.undoableBatchOperation({
+                name: 'Paste',
+                raidId: payload.raidId,
+                operation: op.operation,
+            });
+            return {
+                sceneIds: op.sceneIds,
+                stepIds: op.stepIds,
+                entityIds: op.entityIds,
+            };
+        },
+        copy(
+            payload: {
+                sceneIds?: string[];
+                stepIds?: string[];
+                entityIds?: string[];
+            },
+            state,
+        ): Exports {
+            const sceneExports = [];
+            for (const id of payload.sceneIds || []) {
+                const exp = selectSceneExport(state.raids, id);
+                if (exp) {
+                    sceneExports.push(exp);
+                }
+            }
+
+            const stepExports = [];
+            for (const id of payload.stepIds || []) {
+                const exp = selectStepExport(state.raids, id);
+                if (exp) {
+                    stepExports.push(exp);
+                }
+            }
+
+            const entityExports = [];
+            for (const id of payload.entityIds || []) {
+                const exp = selectEntityExport(state.raids, id);
+                if (exp) {
+                    entityExports.push(exp);
+                }
+            }
+
+            return {
+                scenes: sceneExports.length > 0 ? sceneExports : undefined,
+                steps: stepExports.length > 0 ? stepExports : undefined,
+                entities: entityExports.length > 0 ? entityExports : undefined,
+            };
+        },
+        cut(
+            payload: {
+                sceneIds?: string[];
+                stepIds?: string[];
+                entityIds?: string[];
+            },
+            _state,
+        ): Exports {
+            const ret = dispatch.raids.copy(payload);
+            const raidId =
+                ret.scenes?.[0]?.scene.raidId || ret.steps?.[0]?.step.raidId || ret.entities?.[0]?.entities[0].raidId;
+            if (!raidId) {
+                return ret;
+            }
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Cut',
+                raidId,
+                operation: {
+                    removeScenes: payload.sceneIds,
+                    removeSteps: payload.stepIds,
+                    removeEntities: payload.entityIds,
+                },
+            });
+
+            dispatch.workspaces.revalidateSelection({ raidId });
+
+            return ret;
         },
         createStep(
             payload: {
@@ -606,31 +802,15 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete steps from one raid at a time');
             }
 
-            const sceneId = existingSteps[0].sceneId;
-            if (existingSteps.some((s) => s.sceneId !== sceneId)) {
-                throw new Error('Can only delete steps from one scene at a time');
-            }
-
-            const entitiesInScene = selectEntitiesInScene(state.raids, sceneId);
-            const updatedEntities = updateKeyedEntitiesValues(entitiesInScene, (k) =>
-                keyableWithUnkeyedSteps(k, payload.ids),
-            );
-
-            const scene = state.raids.scenes[sceneId];
-            const newScene = {
-                ...scene,
-                stepIds: scene.stepIds.filter((id) => !payload.ids.includes(id)),
-            };
-
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Step${existingSteps.length > 1 ? 's' : ''}`,
                 raidId,
                 operation: {
-                    putScenes: [newScene],
-                    putEntities: updatedEntities,
                     removeSteps: existingSteps.map((s) => s.id),
                 },
             });
+
+            dispatch.workspaces.revalidateSelection({ raidId });
         },
         createEntity(
             payload: {
@@ -670,6 +850,44 @@ export const raids = createModel<RootModel>()({
             });
 
             return newEntity.id;
+        },
+        addEffects(
+            payload: {
+                entityId: string;
+                effects: Array<{
+                    factoryId: string;
+                    properties: Partial<RaidEntityProperties>;
+                }>;
+            },
+            state,
+        ) {
+            const existing = state.raids.entities[payload.entityId];
+            if (!existing || existing.properties.type !== 'shape') {
+                return;
+            }
+
+            const newEntity = {
+                ...existing,
+                properties: {
+                    ...existing.properties,
+                    effects: [
+                        ...(existing.properties.effects || []),
+                        ...payload.effects.map((e) => ({
+                            id: crypto.randomUUID(),
+                            factoryId: e.factoryId,
+                            properties: e.properties,
+                        })),
+                    ],
+                },
+            };
+
+            dispatch.raids.undoableBatchOperation({
+                name: 'Add Effect',
+                raidId: existing.raidId,
+                operation: {
+                    putEntities: [newEntity],
+                },
+            });
         },
         updateEntity(payload: RaidEntityUpdate, state) {
             const existing = state.raids.entities[payload.id];
@@ -854,7 +1072,11 @@ export const raids = createModel<RootModel>()({
             for (const id of payload.ids) {
                 const scene = state.raids.scenes[id];
                 if (scene) {
-                    const [newScene, sceneSteps, sceneEntities] = cloneSceneStepsAndEntities(scene, state.raids);
+                    const [newScene, sceneSteps, sceneEntities] = cloneSceneStepsAndEntities(
+                        scene,
+                        state.raids.steps,
+                        state.raids.entities,
+                    );
                     const idx = newRaidSceneIds.indexOf(id);
                     newRaidSceneIds.splice(idx + 1, 0, newScene.id);
                     newScenes.push(newScene);
@@ -1012,10 +1234,6 @@ export const raids = createModel<RootModel>()({
             },
             state,
         ) {
-            if (payload.ids.length === 0) {
-                return;
-            }
-
             const existingEntities = payload.ids.map((id) => state.raids.entities[id]).filter((e) => !!e);
             if (existingEntities.length === 0) {
                 return;
@@ -1026,27 +1244,15 @@ export const raids = createModel<RootModel>()({
                 throw new Error('Can only delete entities from one raid at a time');
             }
 
-            const sceneId = existingEntities[0].sceneId;
-            if (existingEntities.some((e) => e.sceneId !== sceneId)) {
-                throw new Error('Can only delete entities from one scene at a time');
-            }
-
-            const scene = state.raids.scenes[sceneId];
-            const newScene = {
-                ...scene,
-                entityIds: scene.entityIds.filter((id) => !payload.ids.includes(id)),
-            };
-
             dispatch.raids.undoableBatchOperation({
                 name: `Delete Entit${existingEntities.length > 1 ? 'ies' : 'y'}`,
                 raidId,
                 operation: {
-                    putScenes: [newScene],
                     removeEntities: existingEntities.map((e) => e.id),
                 },
             });
 
-            dispatch.workspaces.removeEntitiesFromSelection({ raidId, entityIds: payload.ids });
+            dispatch.workspaces.revalidateSelection({ raidId });
         },
         groupEntities(
             payload: {

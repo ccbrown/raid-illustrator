@@ -68,7 +68,7 @@ export const Canvas = () => {
             if (canvasRef.current && canvasHeight !== canvasRef.current.height) {
                 canvasRef.current.height = canvasHeight * window.devicePixelRatio;
             }
-            renderer.render(canvasContext, pixelsPerMeterZoomed * window.devicePixelRatio, center);
+            renderer.render(canvasContext, pixelsPerMeterZoomed * window.devicePixelRatio, { center });
         }
     });
 

@@ -10,6 +10,7 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@diffusionstudio/core": "^3.8.3",
         "@headlessui/react": "^2.2.9",
         "@phosphor-icons/react": "^2.1.10",
         "@rematch/core": "^2.2.0",

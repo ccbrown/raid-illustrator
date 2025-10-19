@@ -128,3 +128,27 @@ export const useThrottledCallback = <T>(callback: (arg: T) => void, delay: numbe
         }
     };
 };
+
+// Like useState, but persists the state to localStorage.
+export const usePersistentState = <T>(key: string, defaultValue: T): [T, (newValue: T) => void] => {
+    const prefixedKey = `persistent-state-${key}`;
+
+    const [value, setValue] = useState<T>(() => {
+        const storedValue = localStorage.getItem(prefixedKey);
+        if (storedValue) {
+            try {
+                return JSON.parse(storedValue) as T;
+            } catch {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    });
+
+    const setPersistentValue = (newValue: T) => {
+        setValue(newValue);
+        localStorage.setItem(prefixedKey, JSON.stringify(newValue));
+    };
+
+    return [value, setPersistentValue];
+};

@@ -280,6 +280,12 @@ export type Hit =
     | { type: 'entity'; entity: RaidEntity }
     | { type: 'rotation-handle'; entity: RaidEntity; pivot: { x: number; y: number } };
 
+interface RenderParams {
+    now?: number;
+    center?: { x: number; y: number };
+    backgroundColor?: { r: number; g: number; b: number };
+}
+
 class Renderer {
     scene?: RaidScene;
     selection?: Selection;
@@ -303,9 +309,15 @@ class Renderer {
         return undefined;
     }
 
-    render(ctx: CanvasRenderingContext2D, scale: number, center: { x: number; y: number }) {
+    render(ctx: CanvasRenderingContext2D, scale: number, params?: RenderParams) {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        if (params?.backgroundColor) {
+            ctx.fillStyle = `rgb(${params.backgroundColor.r}, ${params.backgroundColor.g}, ${params.backgroundColor.b})`;
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+
+        const center = params?.center || { x: 0, y: 0 };
 
         ctx.translate(
             0.5 * ctx.canvas.width - (center.x - this.sceneDragMovement.x) * scale,
@@ -316,7 +328,7 @@ class Renderer {
             this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, this.scene.fill);
         }
 
-        const now = Date.now();
+        const now = params?.now ?? Date.now();
 
         for (const entityId of this.entityDrawOrder) {
             const entity = this.entities.get(entityId);

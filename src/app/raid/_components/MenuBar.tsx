@@ -7,6 +7,7 @@ import {
     ArrowUUpRightIcon,
     ClipboardIcon,
     CopyIcon,
+    DownloadIcon,
     Icon,
     PlusIcon,
     ScissorsIcon,
@@ -41,6 +42,7 @@ const KEY_STRINGS: { [key: string]: string } = {
     ArrowUp: '↑',
     ArrowDown: '↓',
     Backspace: '⌫',
+    Enter: '↵',
 };
 
 const menuItemRenderer = (item: MenuItem) => {
@@ -108,7 +110,7 @@ export const MenuBar = () => {
         },
         {
             label: 'Scene',
-            items: [menuItemForCommand(commands.newScene, PlusIcon)],
+            items: [menuItemForCommand(commands.newScene, PlusIcon), menuItemForCommand(commands.render, DownloadIcon)],
         },
         {
             label: 'Step',

@@ -48,7 +48,8 @@ class LimitCut extends VisualEffect {
 
         ctx.translate(center.x * scale, (center.y + OFFSET_Y) * scale);
 
-        const spread = smoothstep(now % 2000 >= 1000 ? 1 - loop(now, 1000) : loop(now, 1000)) * 0.3;
+        const spreadLoop = loop(now, 1875);
+        const spread = smoothstep(spreadLoop >= 0.5 ? 1 - (spreadLoop - 0.5) / 0.5 : spreadLoop / 0.5) * 0.3;
         const dotRadius = BASE_DOT_RADIUS * enabled;
 
         if (variant.cluster2) {

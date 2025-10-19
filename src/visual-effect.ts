@@ -4,6 +4,7 @@ import { PropertySpec } from '@/property-spec';
 // To allow for seamless loops, all looping visual effect animations should use these durations or factors thereof.
 export enum LoopDuration {
     D15000 = 15000,
+    Full = D15000,
     D7500 = D15000 / 2,
     D5000 = D15000 / 3,
     D3750 = D15000 / 4,

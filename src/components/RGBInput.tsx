@@ -1,13 +1,15 @@
 import { NumberInput } from '@/components';
 
 interface Props {
+    label?: string;
     value: { r: number; g: number; b: number };
     onChange: (newValue: { r: number; g: number; b: number }) => void;
 }
 
-export const RGBInput = ({ value, onChange }: Props) => {
+export const RGBInput = ({ label, value, onChange }: Props) => {
     return (
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-row items-center gap-2">
+            {label && <div className="text-white/60 text-xs whitespace-nowrap">{label}</div>}
             <NumberInput
                 label="R"
                 min={0}

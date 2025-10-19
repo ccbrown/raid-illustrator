@@ -21,6 +21,7 @@ import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
 import { EntitySettingsDialog } from './_components/EntitySettingsDialog';
+import { RenderDialog } from './_components/RenderDialog';
 import { useRaidId } from './hooks';
 
 export interface HotKey {
@@ -49,6 +50,7 @@ interface Commands {
     paste: Command;
     duplicate: Command;
     delete: Command;
+    render: Command;
     zoomIn: Command;
     zoomOut: Command;
     newScene: Command;
@@ -113,6 +115,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
     const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
+    const [renderDialogOpen, setRenderDialogOpen] = useState(false);
 
     const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
     const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
@@ -428,6 +431,17 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 dispatch.raids.groupEntities({ entityIds: selection?.entityIds || [] });
             },
         },
+        render: {
+            name: 'Render',
+            disabled: !sceneId,
+            hotKey: {
+                key: 'Enter',
+                shift: true,
+            },
+            execute: () => {
+                setRenderDialogOpen(true);
+            },
+        },
         zoomIn: {
             name: 'Zoom In',
             disabled: !sceneWorkspace || (sceneWorkspace.zoom || 1) >= 4,
@@ -537,6 +551,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                     onClose={() => setEffectSelectionDialogOpen(false)}
                     entity={selectedEntity}
                 />
+            )}
+
+            {sceneId && (
+                <RenderDialog isOpen={renderDialogOpen} onClose={() => setRenderDialogOpen(false)} sceneId={sceneId} />
             )}
 
             {props.children}

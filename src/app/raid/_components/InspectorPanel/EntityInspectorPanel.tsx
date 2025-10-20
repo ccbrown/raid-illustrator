@@ -202,6 +202,11 @@ const PropertySpecPropertyEditor = ({
                 <RGBInput value={value as { r: number; g: number; b: number }} onChange={onChange} />
             );
             break;
+        case 'coordinate':
+            control = ({ value, onChange }: PropertyControlProps<unknown>) => (
+                <CoordinateInput value={value as { x: number; y: number }} onChange={onChange} />
+            );
+            break;
         case 'text':
             control = ({ value, onChange }: PropertyControlProps<unknown>) => (
                 <StandaloneTextInput value={value as string} onChange={onChange} />

@@ -6,6 +6,8 @@ import { radialAttack } from './ffxiv/radial-attack';
 import { targetRing } from './ffxiv/target-ring';
 import { tether } from './ffxiv/tether';
 import { waymark } from './ffxiv/waymark';
+import { nameText } from './name-text';
+import { text } from './text';
 
 export const visualEffectFactories: Record<string, VisualEffectFactory> = {
     'ffxiv-waymark': waymark,
@@ -14,4 +16,6 @@ export const visualEffectFactories: Record<string, VisualEffectFactory> = {
     'ffxiv-line-attack': lineAttack,
     'ffxiv-target-ring': targetRing,
     'ffxiv-tether': tether,
+    text: text,
+    'name-text': nameText,
 };

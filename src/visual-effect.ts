@@ -30,6 +30,7 @@ interface VisualEffectRenderParamsRenderer {
 
 export interface VisualEffectRenderParams {
     ctx: CanvasRenderingContext2D;
+    name: string;
     shape: Shape;
     scale: number;
     center: { x: number; y: number };

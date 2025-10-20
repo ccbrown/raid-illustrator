@@ -15,27 +15,32 @@ interface Preset {
     generate: () => EntityPresetDragData;
 }
 
-const basicImagePreset = (name: string, shape: Shape, imageUrl: string): Preset => {
+const ffxivRoleFramePreset = (name: string, imageName: string): Preset => {
     return {
         name,
-        iconUrl: imageUrl,
+        iconUrl: `/images/ffxiv/role-frames/${imageName}`,
         generate: () => ({
             name,
             properties: {
                 type: 'shape',
-                shape,
+                shape: { type: 'rectangle', width: 1, height: 1 },
                 position: { x: 0, y: 0 },
                 fill: {
                     type: 'image',
-                    url: imageUrl,
+                    url: `/images/ffxiv/role-frames/${imageName}`,
                 },
+                effects: [
+                    {
+                        id: crypto.randomUUID(),
+                        factoryId: 'name-text',
+                        properties: {
+                            enabled: true,
+                        },
+                    },
+                ],
             },
         }),
     };
-};
-
-const ffxivRoleFramePreset = (name: string, imageName: string): Preset => {
-    return basicImagePreset(name, { type: 'rectangle', width: 1, height: 1 }, `/images/ffxiv/role-frames/${imageName}`);
 };
 
 const generateBasicEffectEntity = (

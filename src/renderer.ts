@@ -347,6 +347,7 @@ class Renderer {
                 ctx.save();
                 visualEffect.renderGround({
                     ctx,
+                    name: entity.entity.name,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
@@ -376,6 +377,7 @@ class Renderer {
                 ctx.save();
                 visualEffect.renderAboveGround({
                     ctx,
+                    name: entity.entity.name,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,
@@ -432,6 +434,7 @@ class Renderer {
                 ctx.save();
                 visualEffect.renderOverlay({
                     ctx,
+                    name: entity.entity.name,
                     properties: entity.renderEffectProperties(id) || {},
                     shape: ep.shape,
                     scale,

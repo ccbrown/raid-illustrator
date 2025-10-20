@@ -27,7 +27,7 @@ export const StandaloneTextInput = ({ className, disabled, label, value, onChang
     }, [disabled, isEditing]);
 
     const commit = () => {
-        if (!disabled && editedValue.trim() !== '' && editedValue !== value) {
+        if (!disabled && editedValue !== value) {
             onChange(editedValue);
         }
         setIsEditing(false);

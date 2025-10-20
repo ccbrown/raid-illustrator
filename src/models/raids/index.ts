@@ -764,6 +764,7 @@ export const raids = createModel<RootModel>()({
             payload: {
                 id: string;
                 name?: string;
+                renderDuration?: number;
             },
             state,
         ) {

@@ -48,6 +48,7 @@ export interface RaidStep {
 
     name: string;
     creationTime: number;
+    renderDuration?: number;
 }
 
 interface RaidEntityPropertiesGroup {

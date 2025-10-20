@@ -2,24 +2,22 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import { disablePasswordManagers } from './TextField';
 
-interface Props {
+interface OptionalInputInputProps {
     label?: string;
-    value: number;
-    onChange: (newValue: number) => void;
+    value: number | null;
+    onChange: (newValue: number | null) => void;
     min?: number;
     max?: number;
     maxFractionDigits?: number;
 }
 
-export const NumberInput = (props: Props) => (
+export const OptionalNumberInput = (props: OptionalInputInputProps) => (
     <div className="flex flex-row items-center gap-2">
         {props.label && <div className="text-white/60 text-xs whitespace-nowrap">{props.label}</div>}
         <InputNumber
             value={props.value}
             onValueChange={(e) => {
-                if (e.value !== null && e.value !== undefined) {
-                    props.onChange(e.value);
-                }
+                props.onChange(e.value ?? null);
             }}
             mode="decimal"
             min={props.min}
@@ -38,4 +36,28 @@ export const NumberInput = (props: Props) => (
             }}
         />
     </div>
+);
+
+interface NumberInputProps {
+    label?: string;
+    value: number;
+    onChange: (newValue: number) => void;
+    min?: number;
+    max?: number;
+    maxFractionDigits?: number;
+}
+
+export const NumberInput = (props: NumberInputProps) => (
+    <OptionalNumberInput
+        label={props.label}
+        value={props.value}
+        onChange={(newValue) => {
+            if (newValue !== null) {
+                props.onChange(newValue);
+            }
+        }}
+        min={props.min}
+        max={props.max}
+        maxFractionDigits={props.maxFractionDigits}
+    />
 );

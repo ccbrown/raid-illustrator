@@ -39,12 +39,12 @@ class RendererEntity {
         this.createVisualEffects();
     }
 
-    update(entity: RaidEntity, sceneStepIds: string[], currentStepId: string) {
+    update(entity: RaidEntity, sceneStepIds: string[], currentStepId: string, now: number) {
         this.entity = entity;
         const currentStep = this.step(entity, sceneStepIds, currentStepId);
         if (currentStep.id !== this.currentStep.id) {
             this.previousStep = this.currentStep;
-            this.stepChangeTime = Date.now();
+            this.stepChangeTime = now;
         }
         this.currentStep = currentStep;
         this.createVisualEffects();
@@ -124,15 +124,15 @@ class RendererEntity {
         return this.currentStep.effectProperties[effectId];
     }
 
-    stepTransitionProgress(): number {
+    stepTransitionProgress(now: number): number {
         if (!this.stepChangeTime) {
             return 1;
         }
-        const linear = Math.min(1, (Date.now() - this.stepChangeTime) / 300);
+        const linear = Math.min(1, (now - this.stepChangeTime) / 300);
         return linear * linear * (3 - 2 * linear);
     }
 
-    renderPosition(): { x: number; y: number } {
+    renderPosition(now: number): { x: number; y: number } {
         if (!this.previousStep || !this.stepChangeTime) {
             return {
                 x: this.currentStep.position.x + this.dragMovement.x,
@@ -140,7 +140,7 @@ class RendererEntity {
             };
         }
 
-        const transitionProgress = this.stepTransitionProgress();
+        const transitionProgress = this.stepTransitionProgress(now);
         return {
             x:
                 this.previousStep.position.x +
@@ -153,7 +153,7 @@ class RendererEntity {
         };
     }
 
-    renderRotation(): number {
+    renderRotation(now: number): number {
         const ep = this.entity.properties;
         if (ep.type !== 'shape' || !ep.rotation) {
             return this.dragRotation;
@@ -163,7 +163,7 @@ class RendererEntity {
             return this.currentStep.rotation + this.dragRotation;
         }
 
-        const transitionProgress = this.stepTransitionProgress();
+        const transitionProgress = this.stepTransitionProgress(now);
         return (
             this.previousStep.rotation +
             (this.currentStep.rotation - this.previousStep.rotation) * transitionProgress +
@@ -171,7 +171,7 @@ class RendererEntity {
         );
     }
 
-    renderBounds(): { x: number; y: number; width: number; height: number } {
+    renderBounds(now: number): { x: number; y: number; width: number; height: number } {
         if (!this.previousStep || !this.stepChangeTime) {
             return {
                 x: this.currentStep.bounds.x + this.dragMovement.x,
@@ -181,7 +181,7 @@ class RendererEntity {
             };
         }
 
-        const transitionProgress = this.stepTransitionProgress();
+        const transitionProgress = this.stepTransitionProgress(now);
         return {
             x:
                 this.previousStep.bounds.x +
@@ -287,6 +287,7 @@ interface RenderParams {
 }
 
 class Renderer {
+    allEntities: Record<string, RaidEntity> = {};
     scene?: RaidScene;
     selection?: Selection;
 
@@ -295,6 +296,7 @@ class Renderer {
     private entities: Map<string, RendererEntity> = new Map();
     private entityIdsByName: Map<string, string[]> = new Map();
     private entityDrawOrder: string[] = [];
+    private now: number = Date.now();
 
     // When a preset is being dragged over the canvas, this can be used to render an indicator.
     private dropIndicator?: { position: { x: number; y: number }; shape: Shape };
@@ -303,7 +305,7 @@ class Renderer {
         for (const e of this.entityIdsByName.get(name) || []) {
             const entity = this.entities.get(e);
             if (entity) {
-                return entity.renderPosition();
+                return entity.renderPosition(this.now);
             }
         }
         return undefined;
@@ -317,6 +319,9 @@ class Renderer {
             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         }
 
+        const now = params?.now ?? Date.now();
+        this.now = now;
+
         const center = params?.center || { x: 0, y: 0 };
 
         ctx.translate(
@@ -328,22 +333,20 @@ class Renderer {
             this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, this.scene.fill);
         }
 
-        const now = params?.now ?? Date.now();
-
         for (const entityId of this.entityDrawOrder) {
             const entity = this.entities.get(entityId);
             if (!entity) {
                 continue;
             }
 
-            const pos = entity.renderPosition();
+            const pos = entity.renderPosition(now);
             for (const { id, visualEffect } of entity.visualEffects) {
                 const ep = entity.entity.properties;
                 if (ep.type !== 'shape' || !visualEffect.renderGround) {
                     continue;
                 }
 
-                const rot = entity.renderRotation();
+                const rot = entity.renderRotation(now);
                 ctx.save();
                 visualEffect.renderGround({
                     ctx,
@@ -366,14 +369,14 @@ class Renderer {
                 continue;
             }
 
-            const pos = entity.renderPosition();
+            const pos = entity.renderPosition(now);
             for (const { id, visualEffect } of entity.visualEffects) {
                 const ep = entity.entity.properties;
                 if (ep.type !== 'shape' || !visualEffect.renderAboveGround) {
                     continue;
                 }
 
-                const rot = entity.renderRotation();
+                const rot = entity.renderRotation(now);
                 ctx.save();
                 visualEffect.renderAboveGround({
                     ctx,
@@ -397,8 +400,8 @@ class Renderer {
             }
 
             const ep = entity.entity.properties;
-            const pos = entity.renderPosition();
-            const rot = entity.renderRotation();
+            const pos = entity.renderPosition(now);
+            const rot = entity.renderRotation(now);
             switch (ep.type) {
                 case 'shape': {
                     this.drawShape(
@@ -423,14 +426,14 @@ class Renderer {
                 continue;
             }
 
-            const pos = entity.renderPosition();
+            const pos = entity.renderPosition(now);
             for (const { id, visualEffect } of entity.visualEffects) {
                 const ep = entity.entity.properties;
                 if (ep.type !== 'shape' || !visualEffect.renderOverlay) {
                     continue;
                 }
 
-                const rot = entity.renderRotation();
+                const rot = entity.renderRotation(now);
                 ctx.save();
                 visualEffect.renderOverlay({
                     ctx,
@@ -458,8 +461,8 @@ class Renderer {
                 const ep = entity.entity.properties;
                 switch (ep.type) {
                     case 'shape': {
-                        const pos = entity.renderPosition();
-                        const rot = entity.renderRotation();
+                        const pos = entity.renderPosition(now);
+                        const rot = entity.renderRotation(now);
 
                         ctx.save();
                         ctx.translate(pos.x * scale, pos.y * scale);
@@ -507,7 +510,7 @@ class Renderer {
                         break;
                     }
                     default: {
-                        const bounds = entity.renderBounds();
+                        const bounds = entity.renderBounds(now);
                         ctx.strokeStyle = '#ffffff';
                         ctx.lineWidth = window.devicePixelRatio * 2;
                         ctx.strokeRect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);
@@ -596,10 +599,10 @@ class Renderer {
         switch (ep.type) {
             case 'shape': {
                 const shape = ep.shape;
-                const entityPosition = entity.renderPosition();
+                const entityPosition = entity.renderPosition(this.now);
                 switch (shape.type) {
                     case 'rectangle': {
-                        const rot = entity.renderRotation();
+                        const rot = entity.renderRotation(this.now);
                         const cos = Math.cos(-rot);
                         const sin = Math.sin(-rot);
                         const dx = position.x - entityPosition.x;
@@ -622,7 +625,7 @@ class Renderer {
             }
         }
 
-        const bounds = entity.renderBounds();
+        const bounds = entity.renderBounds(this.now);
         return (
             position.x >= bounds.x &&
             position.x <= bounds.x + bounds.width &&
@@ -661,8 +664,8 @@ class Renderer {
                 const handleCenterDistance =
                     topDistance +
                     ((ROTATION_HANDLE_DISTANCE + ROTATION_HANDLE_RADIUS) / scale) * window.devicePixelRatio;
-                const entityPosition = entity.renderPosition();
-                const rot = entity.renderRotation();
+                const entityPosition = entity.renderPosition(this.now);
+                const rot = entity.renderRotation(this.now);
                 const handleCenterX = entityPosition.x + Math.sin(rot) * handleCenterDistance;
                 const handleCenterY = entityPosition.y - Math.cos(rot) * handleCenterDistance;
                 const dx = position.x - handleCenterX;
@@ -763,15 +766,15 @@ class Renderer {
     }
 
     private updateEntitiesImpl(
-        allEntities: Record<string, RaidEntity>,
         entitiesToUpdate: string[],
         entitiesToRemove: Set<string>,
         stepIds: string[],
         currentStepId: string,
+        now: number,
         visible: boolean,
     ) {
         for (const id of entitiesToUpdate) {
-            const entity = allEntities[id];
+            const entity = this.allEntities[id];
             if (!entity) {
                 continue;
             }
@@ -784,7 +787,7 @@ class Renderer {
                 case 'shape': {
                     const existing = this.entities.get(id);
                     if (existing) {
-                        existing.update(entity, stepIds, currentStepId);
+                        existing.update(entity, stepIds, currentStepId, now);
                     } else {
                         this.entities.set(id, new RendererEntity(entity, stepIds, currentStepId));
                     }
@@ -800,11 +803,11 @@ class Renderer {
                 }
                 case 'group': {
                     this.updateEntitiesImpl(
-                        allEntities,
                         ep.children,
                         entitiesToRemove,
                         stepIds,
                         currentStepId,
+                        now,
                         entityIsVisible,
                     );
                     break;
@@ -813,16 +816,13 @@ class Renderer {
         }
     }
 
-    updateEntities(
-        allEntities: Record<string, RaidEntity>,
-        entitiesToUpdate: string[],
-        stepIds: string[],
-        currentStepId: string,
-    ) {
+    update(currentStepId: string, now?: number) {
+        const entitiesToUpdate = this.scene?.entityIds || [];
+        const stepIds = this.scene?.stepIds || [];
         const entitiesToRemove = new Set(this.entities.keys());
         this.entityDrawOrder = [];
         this.entityIdsByName.clear();
-        this.updateEntitiesImpl(allEntities, entitiesToUpdate, entitiesToRemove, stepIds, currentStepId, true);
+        this.updateEntitiesImpl(entitiesToUpdate, entitiesToRemove, stepIds, currentStepId, now ?? Date.now(), true);
         this.entityDrawOrder.reverse();
         for (const id of entitiesToRemove) {
             this.entities.delete(id);
@@ -830,7 +830,7 @@ class Renderer {
     }
 }
 
-export const useSceneRenderer = (sceneId: string, stepId: string): Renderer => {
+export const useSceneRenderer = (sceneId: string, stepId?: string): Renderer => {
     const rendererRef = useRef(new Renderer());
     const renderer = rendererRef.current;
 
@@ -839,9 +839,12 @@ export const useSceneRenderer = (sceneId: string, stepId: string): Renderer => {
 
     const selection = useSelection(scene?.raidId || '');
 
+    renderer.allEntities = entities;
     renderer.scene = scene;
     renderer.selection = selection;
-    renderer.updateEntities(entities, scene?.entityIds || [], scene?.stepIds || [], stepId);
+    if (stepId) {
+        renderer.update(stepId);
+    }
 
     return renderer;
 };

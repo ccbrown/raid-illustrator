@@ -1,4 +1,5 @@
 import { Icon } from '@phosphor-icons/react';
+import clsx from 'clsx';
 import React from 'react';
 
 interface Props {
@@ -13,7 +14,15 @@ interface Props {
 export const Button = (props: Props) => {
     return (
         <button
-            className={`flex flex-row gap-2 bg-cyan-500 shadow-md shadow-cyan-500/50 cursor-pointer rounded-full ${props.text ? 'py-2 px-4' : 'p-1'} items-center hover:brightness-110 active:brightness-90 outline-none`}
+            className={clsx(
+                'flex flex-row gap-2 rounded-full items-center hover:brightness-110 active:brightness-90 outline-none',
+                {
+                    'py-2 px-4': !!props.text,
+                    'p-1': !props.text,
+                    'bg-cyan-500 cursor-pointer shadow-md shadow-cyan-500/50': !props.disabled,
+                    'bg-white/10 cursor-default text-white/50': props.disabled,
+                },
+            )}
             onClick={props.onClick}
             disabled={props.disabled}
             type={props.type}

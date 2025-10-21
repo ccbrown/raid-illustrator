@@ -7,7 +7,9 @@ import {
     Checkbox,
     CoordinateInput,
     Dropdown,
+    MultilineTextInput,
     NumberInput,
+    RGBAInput,
     RGBInput,
     StandaloneTextInput,
 } from '@/components';
@@ -369,14 +371,41 @@ interface PropertiesUpdate {
     properties: PartialRaidEntityProperties;
 }
 
-const toPositionUpdate = (v: Keyable<{ x: number; y: number }>): PropertiesUpdate => ({
+const toShapePositionUpdate = (v: Keyable<{ x: number; y: number }>): PropertiesUpdate => ({
     properties: {
         type: 'shape',
         position: v,
     },
 });
-
-const toRotationUpdate = (v: Keyable<number>): PropertiesUpdate => ({ properties: { type: 'shape', rotation: v } });
+const toShapeRotationUpdate = (v: Keyable<number>): PropertiesUpdate => ({
+    properties: { type: 'shape', rotation: v },
+});
+const toTextPositionUpdate = (v: Keyable<{ x: number; y: number }>): PropertiesUpdate => ({
+    properties: {
+        type: 'text',
+        position: v,
+    },
+});
+const toTextRotationUpdate = (v: Keyable<number>): PropertiesUpdate => ({ properties: { type: 'text', rotation: v } });
+const toTextContentUpdate = (v: Keyable<string>): PropertiesUpdate => ({ properties: { type: 'text', content: v } });
+const toTextHorizontalAlignmentUpdate = (v: Keyable<'left' | 'center' | 'right'>): PropertiesUpdate => ({
+    properties: { type: 'text', horizontalAlignment: v },
+});
+const toTextVerticalAlignmentUpdate = (v: Keyable<'top' | 'middle' | 'bottom'>): PropertiesUpdate => ({
+    properties: { type: 'text', verticalAlignment: v },
+});
+const toTextFontSizeUpdate = (v: Keyable<number>): PropertiesUpdate => ({
+    properties: { type: 'text', fontSize: v },
+});
+const toTextColorUpdate = (v: Keyable<{ r: number; g: number; b: number; a: number }>): PropertiesUpdate => ({
+    properties: { type: 'text', color: v },
+});
+const toTextOutlineColorUpdate = (v: Keyable<{ r: number; g: number; b: number; a: number }>): PropertiesUpdate => ({
+    properties: { type: 'text', outlineColor: v },
+});
+const toTextOutlineThicknessUpdate = (v: Keyable<number>): PropertiesUpdate => ({
+    properties: { type: 'text', outlineThickness: v },
+});
 
 const toVisibleUpdate = (v: Keyable<boolean>): { visible: Keyable<boolean> } => ({ visible: v });
 
@@ -434,6 +463,93 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                     )}
                     {...kpeProps}
                 />
+                {ep.type === 'text' && (
+                    <>
+                        <KeyableEntityPropertyEditor
+                            label="Position"
+                            value={ep.position}
+                            toUpdate={toTextPositionUpdate}
+                            control={CoordinateInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Rotation"
+                            value={ep.rotation ?? 0}
+                            toUpdate={toTextRotationUpdate}
+                            control={AngleInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Content"
+                            value={ep.content}
+                            toUpdate={toTextContentUpdate}
+                            control={(props) => <MultilineTextInput {...props} className="grow" />}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Font Size"
+                            value={ep.fontSize}
+                            toUpdate={toTextFontSizeUpdate}
+                            control={NumberInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Color"
+                            value={ep.color}
+                            toUpdate={toTextColorUpdate}
+                            control={RGBAInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Horizontal Alignment"
+                            value={ep.horizontalAlignment}
+                            toUpdate={toTextHorizontalAlignmentUpdate}
+                            control={({ value, onChange }: PropertyControlProps<'left' | 'center' | 'right'>) => (
+                                <Dropdown
+                                    selectedOptionKey={value}
+                                    onChange={(o) => onChange(o.key as 'left' | 'center' | 'right')}
+                                    options={[
+                                        { key: 'left', label: 'Left' },
+                                        { key: 'center', label: 'Center' },
+                                        { key: 'right', label: 'Right' },
+                                    ]}
+                                />
+                            )}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Vertical Alignment"
+                            value={ep.verticalAlignment}
+                            toUpdate={toTextVerticalAlignmentUpdate}
+                            control={({ value, onChange }: PropertyControlProps<'top' | 'middle' | 'bottom'>) => (
+                                <Dropdown
+                                    selectedOptionKey={value}
+                                    onChange={(o) => onChange(o.key as 'top' | 'middle' | 'bottom')}
+                                    options={[
+                                        { key: 'top', label: 'Top' },
+                                        { key: 'middle', label: 'Middle' },
+                                        { key: 'bottom', label: 'Bottom' },
+                                    ]}
+                                />
+                            )}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Outline Thickness"
+                            value={ep.outlineThickness}
+                            toUpdate={toTextOutlineThicknessUpdate}
+                            control={NumberInput}
+                            {...kpeProps}
+                        />
+                        <KeyableEntityPropertyEditor
+                            label="Outline Color"
+                            value={ep.outlineColor}
+                            toUpdate={toTextOutlineColorUpdate}
+                            control={RGBAInput}
+                            {...kpeProps}
+                        />
+                    </>
+                )}
                 {ep.type === 'shape' && (
                     <>
                         <ShapeEditor value={ep.shape} onChange={updateShape} />
@@ -452,14 +568,14 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                         <KeyableEntityPropertyEditor
                             label="Position"
                             value={ep.position}
-                            toUpdate={toPositionUpdate}
+                            toUpdate={toShapePositionUpdate}
                             control={CoordinateInput}
                             {...kpeProps}
                         />
                         <KeyableEntityPropertyEditor
                             label="Rotation"
                             value={ep.rotation ?? 0}
-                            toUpdate={toRotationUpdate}
+                            toUpdate={toShapeRotationUpdate}
                             control={AngleInput}
                             {...kpeProps}
                         />

@@ -11,9 +11,11 @@ import {
     Icon,
     PlusIcon,
     ScissorsIcon,
+    ShapesIcon,
     SparkleIcon,
     StackIcon,
     StackSimpleIcon,
+    TextAaIcon,
     TrashIcon,
     XIcon,
 } from '@phosphor-icons/react';
@@ -123,7 +125,9 @@ export const MenuBar = () => {
         {
             label: 'Entity',
             items: [
-                menuItemForCommand(commands.newEntity, PlusIcon),
+                menuItemForCommand(commands.newShapeEntity, ShapesIcon),
+                menuItemForCommand(commands.newTextEntity, TextAaIcon),
+                { separator: true },
                 menuItemForCommand(commands.groupEntities, StackIcon),
                 menuItemForCommand(commands.addEntityEffect, SparkleIcon),
             ],

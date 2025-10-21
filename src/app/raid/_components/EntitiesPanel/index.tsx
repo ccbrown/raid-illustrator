@@ -1,4 +1,4 @@
-import { PlusIcon } from '@phosphor-icons/react';
+import { ShapesIcon, TextAaIcon } from '@phosphor-icons/react';
 import clsx from 'clsx';
 
 import { Button } from '@/components';
@@ -48,12 +48,19 @@ export const EntitiesPanel = () => {
                 <Tab id="presets" label="Presets" activeTabId={tab} />
                 <div className="flex-grow" />
                 {tab === 'entities' && (
-                    <div className="px-4">
+                    <div className="flex flex-row gap-2 px-4">
                         <Button
-                            icon={PlusIcon}
+                            icon={ShapesIcon}
                             size="small"
                             onClick={() => {
-                                commands.newEntity.execute();
+                                commands.newShapeEntity.execute();
+                            }}
+                        />
+                        <Button
+                            icon={TextAaIcon}
+                            size="small"
+                            onClick={() => {
+                                commands.newTextEntity.execute();
                             }}
                         />
                     </div>

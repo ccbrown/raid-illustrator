@@ -20,7 +20,6 @@ import { useDispatch, useSelector } from '@/store';
 import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
-import { EntitySettingsDialog } from './_components/EntitySettingsDialog';
 import { RenderDialog } from './_components/RenderDialog';
 import { useRaidId } from './hooks';
 
@@ -57,7 +56,8 @@ interface Commands {
     newStep: Command;
     openNextStep: Command;
     openPreviousStep: Command;
-    newEntity: Command;
+    newShapeEntity: Command;
+    newTextEntity: Command;
     addEntityEffect: Command;
     groupEntities: Command;
 }
@@ -113,7 +113,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const selection = useSelection(raidId || '');
     const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
 
-    const [newEntityDialogOpen, setNewEntityDialogOpen] = useState(false);
     const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
     const [renderDialogOpen, setRenderDialogOpen] = useState(false);
 
@@ -406,11 +405,72 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 }
             },
         },
-        newEntity: {
-            name: 'New Entity',
+        newShapeEntity: {
+            name: 'New Shape Entity',
             disabled: !sceneId,
             execute: () => {
-                setNewEntityDialogOpen(true);
+                if (raidId && sceneId) {
+                    const id = dispatch.raids.createEntity({
+                        raidId,
+                        sceneId,
+                        name: 'New Shape',
+                        properties: {
+                            type: 'shape',
+                            shape: {
+                                type: 'rectangle',
+                                width: 2,
+                                height: 2,
+                            },
+                            position: { x: 0, y: 0 },
+                            fill: {
+                                type: 'color',
+                                color: {
+                                    r: 150,
+                                    g: 150,
+                                    b: 150,
+                                    a: 1,
+                                },
+                            },
+                        },
+                    });
+                    dispatch.workspaces.select({
+                        raidId,
+                        selection: { entityIds: [id] },
+                    });
+                }
+            },
+        },
+        newTextEntity: {
+            name: 'New Text Entity',
+            disabled: !sceneId,
+            execute: () => {
+                if (raidId && sceneId) {
+                    const id = dispatch.raids.createEntity({
+                        raidId,
+                        sceneId,
+                        name: 'New Text',
+                        properties: {
+                            type: 'text',
+                            shape: {
+                                type: 'rectangle',
+                                width: 2,
+                                height: 2,
+                            },
+                            position: { x: 0, y: 0 },
+                            content: 'New Text',
+                            horizontalAlignment: 'center',
+                            verticalAlignment: 'top',
+                            color: { r: 255, g: 255, b: 255, a: 1 },
+                            outlineColor: { r: 0, g: 0, b: 0, a: 0.8 },
+                            outlineThickness: 0.1,
+                            fontSize: 0.5,
+                        },
+                    });
+                    dispatch.workspaces.select({
+                        raidId,
+                        selection: { entityIds: [id] },
+                    });
+                }
             },
         },
         addEntityEffect: {
@@ -536,15 +596,6 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     return (
         <CommandsContext.Provider value={commands}>
-            {raidId && sceneId && (
-                <EntitySettingsDialog
-                    isOpen={newEntityDialogOpen}
-                    onClose={() => setNewEntityDialogOpen(false)}
-                    raidId={raidId}
-                    sceneId={sceneId}
-                />
-            )}
-
             {selectedEntity && (
                 <EffectSelectionDialog
                     isOpen={effectSelectionDialogOpen}

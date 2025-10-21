@@ -56,6 +56,20 @@ interface RaidEntityPropertiesGroup {
     children: string[];
 }
 
+export interface RaidEntityPropertiesText {
+    type: 'text';
+    shape: ShapeRectangle;
+    position: Keyable<{ x: number; y: number }>;
+    rotation?: Keyable<number>;
+    content: Keyable<string>;
+    color: Keyable<{ r: number; g: number; b: number; a: number }>;
+    outlineColor: Keyable<{ r: number; g: number; b: number; a: number }>;
+    outlineThickness: Keyable<number>;
+    fontSize: Keyable<number>;
+    horizontalAlignment: Keyable<'left' | 'center' | 'right'>;
+    verticalAlignment: Keyable<'top' | 'middle' | 'bottom'>;
+}
+
 interface RaidEntityPropertiesShapeEffect {
     id: string;
     factoryId: string;
@@ -71,14 +85,19 @@ export interface RaidEntityPropertiesShape {
     effects?: RaidEntityPropertiesShapeEffect[];
 }
 
-export type RaidEntityType = 'group' | 'shape';
-export type RaidEntityProperties = RaidEntityPropertiesGroup | RaidEntityPropertiesShape;
+export type RaidEntityType = 'group' | 'shape' | 'text';
+export type RaidEntityProperties = RaidEntityPropertiesGroup | RaidEntityPropertiesShape | RaidEntityPropertiesText;
 
 type PartialRaidEntityPropertiesGroup = Partial<Omit<RaidEntityPropertiesGroup, 'type'>> &
     Pick<RaidEntityPropertiesGroup, 'type'>;
 type PartialRaidEntityPropertiesShape = Partial<Omit<RaidEntityPropertiesShape, 'type'>> &
     Pick<RaidEntityPropertiesShape, 'type'>;
-export type PartialRaidEntityProperties = PartialRaidEntityPropertiesGroup | PartialRaidEntityPropertiesShape;
+type PartialRaidEntityPropertiesText = Partial<Omit<RaidEntityPropertiesText, 'type'>> &
+    Pick<RaidEntityPropertiesText, 'type'>;
+export type PartialRaidEntityProperties =
+    | PartialRaidEntityPropertiesGroup
+    | PartialRaidEntityPropertiesShape
+    | PartialRaidEntityPropertiesText;
 
 export interface RaidEntityUpdate {
     id: string;
@@ -117,6 +136,10 @@ export interface Keyed<T> {
 }
 
 export type Keyable<T> = T | Keyed<T>;
+
+export type ResolvedKeyables<T> = {
+    [P in keyof T]: T[P] extends Keyable<infer U> ? U : T[P];
+};
 
 interface ColorMaterial {
     type: 'color';

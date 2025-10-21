@@ -8,6 +8,7 @@ import {
     RaidScene,
     RaidStep,
     RaidsState,
+    ResolvedKeyables,
     Shape,
 } from './types';
 
@@ -333,6 +334,13 @@ const updateKeyedValuesImpl = (thing: unknown, update: (k: Keyed<unknown>) => Ke
     } else {
         return thing;
     }
+};
+
+// Returns a new version of the given thing where all Keyed Keyables have been resolved to their value.
+export const resolveKeyedValues = <T>(thing: T, sceneStepIds: string[], currentStepId: string): ResolvedKeyables<T> => {
+    return updateKeyedValuesImpl(thing, (k) => {
+        return keyableValueAtStep(k, sceneStepIds, currentStepId);
+    }) as ResolvedKeyables<T>;
 };
 
 // Invokes the given function for all Keyed Keyables in the entity, which can return a new Keyable to replace the old one.

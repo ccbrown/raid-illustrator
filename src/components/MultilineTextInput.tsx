@@ -1,8 +1,6 @@
 import { Field, Label } from '@headlessui/react';
 import { useEffect, useRef, useState } from 'react';
 
-import { disablePasswordManagers } from '@/components/TextField';
-
 interface Props {
     disabled?: boolean;
     label?: string;
@@ -12,8 +10,8 @@ interface Props {
 }
 
 // Like TextField, but commits changes on blur or Enter, and cancels on Escape.
-export const StandaloneTextInput = ({ className, disabled, label, value, onChange }: Props) => {
-    const inputRef = useRef<HTMLInputElement>(null);
+export const MultilineTextInput = ({ className, disabled, label, value, onChange }: Props) => {
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const ignoreBlurRef = useRef(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedValue, setEditedValue] = useState(value);
@@ -37,11 +35,9 @@ export const StandaloneTextInput = ({ className, disabled, label, value, onChang
     return (
         <Field className={`flex flex-row items-center gap-2 ${className}`}>
             {label && <Label className="text-white/60 text-xs whitespace-nowrap">{label}</Label>}
-            <input
+            <textarea
                 className={`block w-full bg-black/20 rounded-sm border-0 outline-none shadow-none px-2 py-0.5 ring-inset focus:ring-1 focus:ring-inset focus:ring-cyan-500 text-xs`}
                 disabled={disabled}
-                type="text"
-                autoComplete="off"
                 onFocus={() => {
                     setEditedValue(value);
                     setIsEditing(true);
@@ -55,7 +51,7 @@ export const StandaloneTextInput = ({ className, disabled, label, value, onChang
                     }
                 }}
                 onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
                         e.preventDefault();
                         e.currentTarget.blur();
                     } else if (e.key === 'Escape') {
@@ -67,8 +63,8 @@ export const StandaloneTextInput = ({ className, disabled, label, value, onChang
                     }
                 }}
                 ref={inputRef}
+                rows={3}
                 value={isEditing ? editedValue : value}
-                {...disablePasswordManagers}
             />
         </Field>
     );

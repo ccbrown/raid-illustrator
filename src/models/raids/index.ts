@@ -908,6 +908,8 @@ export const raids = createModel<RootModel>()({
                 // The typechecker isn't smart enough to handle this narrowing here for each case.
                 if (existing.properties.type === 'shape' && payload.properties.type === 'shape') {
                     newEntity.properties = { ...existing.properties, ...payload.properties };
+                } else if (existing.properties.type === 'text' && payload.properties.type === 'text') {
+                    newEntity.properties = { ...existing.properties, ...payload.properties };
                 } else {
                     throw new Error('Unsupported entity properties update');
                 }
@@ -1133,6 +1135,7 @@ export const raids = createModel<RootModel>()({
 
                 switch (entity.properties.type) {
                     case 'shape':
+                    case 'text':
                         entitiesToUpdate.push(entity);
                         break;
                     case 'group':
@@ -1145,7 +1148,7 @@ export const raids = createModel<RootModel>()({
 
             for (const entity of entitiesToUpdate) {
                 const ep = entity.properties;
-                if (ep.type !== 'shape') {
+                if (ep.type !== 'shape' && ep.type !== 'text') {
                     continue;
                 }
 
@@ -1202,7 +1205,7 @@ export const raids = createModel<RootModel>()({
                 }
 
                 const ep = entity.properties;
-                if (ep.type !== 'shape') {
+                if (ep.type !== 'shape' && ep.type !== 'text') {
                     continue;
                 }
 

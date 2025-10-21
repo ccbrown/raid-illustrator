@@ -1,5 +1,5 @@
-import { CaretRightIcon, CircleIcon, RectangleIcon, SquareIcon } from '@phosphor-icons/react';
-import { useCallback, useState } from 'react';
+import { CaretRightIcon, CircleIcon, RectangleIcon, SquareIcon, TextAaIcon } from '@phosphor-icons/react';
+import { useCallback } from 'react';
 
 import { EditableText, ScrollList, ScrollListItem } from '@/components';
 import { useEntity, useRaidWorkspace, useScene, useSelection } from '@/hooks';
@@ -9,7 +9,6 @@ import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch, useSelector } from '@/store';
 
 import { useRaidId } from '../../hooks';
-import { EntitySettingsDialog } from '../EntitySettingsDialog';
 
 interface ListItemProps {
     entity: RaidEntity;
@@ -94,6 +93,7 @@ const ListItem = ({ entity, isGroupExpanded, selectedEntityIds, level }: ListIte
                         <RectangleIcon size={iconSize} />
                     ))}
                 {ep.type === 'shape' && ep.shape.type === 'circle' && <CircleIcon size={iconSize} />}
+                {ep.type === 'text' && <TextAaIcon size={iconSize} />}
                 {ep.type === 'group' && (
                     <CaretRightIcon
                         size={iconSize}
@@ -165,8 +165,6 @@ export const EntitiesTab = () => {
     const selection = useSelection(raidId || '');
     const selectedEntityIds = selection?.entityIds;
 
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-
     const onMove = useCallback(
         (movedId: string, targetId: string, position: 'above' | 'below') => {
             // if the moved item is part of the selection, move all selected items. otherwise just move the one
@@ -182,14 +180,6 @@ export const EntitiesTab = () => {
 
     return (
         <div className="flex max-h-[400px]">
-            {raidId && scene && (
-                <EntitySettingsDialog
-                    isOpen={settingsDialogOpen}
-                    onClose={() => setSettingsDialogOpen(false)}
-                    raidId={raidId}
-                    sceneId={scene.id}
-                />
-            )}
             <ScrollList onMove={onMove}>
                 {scene?.entityIds.map((id) => (
                     <ListItems key={id} id={id} selectedEntityIds={selectedEntityIds || []} level={0} />

@@ -1,8 +1,18 @@
 import { useRef } from 'react';
 
 import { useScene, useSelection } from '@/hooks';
-import { AnyProperties, Material, RaidEntity, RaidScene, Shape } from '@/models/raids/types';
-import { keyableValueAtStep, shapeDimensions } from '@/models/raids/utils';
+import {
+    AnyProperties,
+    Material,
+    RaidEntity,
+    RaidEntityPropertiesShape,
+    RaidEntityPropertiesText,
+    RaidScene,
+    ResolvedKeyables,
+    Shape,
+    ShapeRectangle,
+} from '@/models/raids/types';
+import { keyableValueAtStep, resolveKeyedValues, shapeDimensions } from '@/models/raids/utils';
 import { Selection } from '@/models/workspaces/types';
 import { resolveProperties } from '@/property-spec';
 import { useSelector } from '@/store';
@@ -16,8 +26,7 @@ interface RendererEntityVisualEffect {
 
 interface RenderEntityStep {
     id: string;
-    position: { x: number; y: number };
-    rotation: number;
+    properties: ResolvedKeyables<RaidEntityPropertiesText> | ResolvedKeyables<RaidEntityPropertiesShape>;
     bounds: { x: number; y: number; width: number; height: number };
     effectProperties: Record<string, AnyProperties>;
 }
@@ -65,13 +74,14 @@ class RendererEntity {
 
     private step(entity: RaidEntity, sceneStepIds: string[], currentStepId: string): RenderEntityStep {
         const ep = entity.properties;
-        if (ep.type !== 'shape') {
-            throw new Error('RendererEntity can only handle shape entities');
+        if (ep.type !== 'shape' && ep.type !== 'text') {
+            throw new Error('RendererEntity can only handle shape and text entities');
         }
 
+        const resolved = resolveKeyedValues(ep, sceneStepIds, currentStepId);
+
         const dimensions = shapeDimensions(ep.shape);
-        const position = keyableValueAtStep(ep.position, sceneStepIds, currentStepId);
-        const rotation = ep.rotation ? keyableValueAtStep(ep.rotation, sceneStepIds, currentStepId) : 0;
+        const position = resolved.position;
         const bounds = {
             x: position.x - dimensions.width / 2,
             y: position.y - dimensions.height / 2,
@@ -80,19 +90,21 @@ class RendererEntity {
         };
 
         const effectProperties: Record<string, AnyProperties> = {};
-        for (const effect of ep.effects || []) {
-            const factory = visualEffectFactories[effect.factoryId];
-            if (factory) {
-                effectProperties[effect.id] = resolveProperties(
-                    effect.properties,
-                    factory.properties || [],
-                    sceneStepIds,
-                    currentStepId,
-                );
+        if (ep.type === 'shape') {
+            for (const effect of ep.effects || []) {
+                const factory = visualEffectFactories[effect.factoryId];
+                if (factory) {
+                    effectProperties[effect.id] = resolveProperties(
+                        effect.properties,
+                        factory.properties || [],
+                        sceneStepIds,
+                        currentStepId,
+                    );
+                }
             }
         }
 
-        return { id: currentStepId, position, rotation, bounds, effectProperties };
+        return { id: currentStepId, properties: resolved, bounds, effectProperties };
     }
 
     private createVisualEffects() {
@@ -135,38 +147,45 @@ class RendererEntity {
     renderPosition(now: number): { x: number; y: number } {
         if (!this.previousStep || !this.stepChangeTime) {
             return {
-                x: this.currentStep.position.x + this.dragMovement.x,
-                y: this.currentStep.position.y + this.dragMovement.y,
+                x: this.currentStep.properties.position.x + this.dragMovement.x,
+                y: this.currentStep.properties.position.y + this.dragMovement.y,
             };
         }
 
         const transitionProgress = this.stepTransitionProgress(now);
         return {
             x:
-                this.previousStep.position.x +
-                (this.currentStep.position.x - this.previousStep.position.x) * transitionProgress +
+                this.previousStep.properties.position.x +
+                (this.currentStep.properties.position.x - this.previousStep.properties.position.x) *
+                    transitionProgress +
                 this.dragMovement.x,
             y:
-                this.previousStep.position.y +
-                (this.currentStep.position.y - this.previousStep.position.y) * transitionProgress +
+                this.previousStep.properties.position.y +
+                (this.currentStep.properties.position.y - this.previousStep.properties.position.y) *
+                    transitionProgress +
                 this.dragMovement.y,
         };
     }
 
+    properties(): ResolvedKeyables<RaidEntityPropertiesText> | ResolvedKeyables<RaidEntityPropertiesShape> {
+        return this.currentStep.properties;
+    }
+
     renderRotation(now: number): number {
         const ep = this.entity.properties;
-        if (ep.type !== 'shape' || !ep.rotation) {
+        if ((ep.type !== 'shape' && ep.type !== 'text') || !ep.rotation) {
             return this.dragRotation;
         }
 
         if (!this.previousStep || !this.stepChangeTime) {
-            return this.currentStep.rotation + this.dragRotation;
+            return (this.currentStep.properties.rotation ?? 0) + this.dragRotation;
         }
 
         const transitionProgress = this.stepTransitionProgress(now);
         return (
-            this.previousStep.rotation +
-            (this.currentStep.rotation - this.previousStep.rotation) * transitionProgress +
+            (this.previousStep.properties.rotation ?? 0) +
+            ((this.currentStep.properties.rotation ?? 0) - (this.previousStep.properties.rotation ?? 0)) *
+                transitionProgress +
             this.dragRotation
         );
     }
@@ -330,7 +349,7 @@ class Renderer {
         );
 
         if (this.scene) {
-            this.drawShape(this.scene.shape, ctx, scale, { x: 0, y: 0 }, 0, this.scene.fill);
+            this.drawShape(ctx, scale, { x: 0, y: 0 }, 0, { shape: this.scene.shape, fill: this.scene.fill });
         }
 
         for (const entityId of this.entityDrawOrder) {
@@ -399,22 +418,16 @@ class Renderer {
                 continue;
             }
 
-            const ep = entity.entity.properties;
+            const ep = entity.properties();
             const pos = entity.renderPosition(now);
             const rot = entity.renderRotation(now);
             switch (ep.type) {
+                case 'text': {
+                    this.drawText(ctx, scale, pos, rot, ep);
+                    break;
+                }
                 case 'shape': {
-                    this.drawShape(
-                        ep.shape,
-                        ctx,
-                        scale,
-                        {
-                            x: pos.x,
-                            y: pos.y,
-                        },
-                        rot,
-                        ep.fill,
-                    );
+                    this.drawShape(ctx, scale, pos, rot, ep);
                     break;
                 }
             }
@@ -460,6 +473,7 @@ class Renderer {
 
                 const ep = entity.entity.properties;
                 switch (ep.type) {
+                    case 'text':
                     case 'shape': {
                         const pos = entity.renderPosition(now);
                         const rot = entity.renderRotation(now);
@@ -546,13 +560,16 @@ class Renderer {
         }
 
         if (this.dropIndicator) {
-            this.drawShape(this.dropIndicator.shape, ctx, scale, this.dropIndicator.position, 0, {
-                type: 'color',
-                color: {
-                    r: 255,
-                    g: 255,
-                    b: 255,
-                    a: 0.5,
+            this.drawShape(ctx, scale, this.dropIndicator.position, 0, {
+                shape: this.dropIndicator.shape,
+                fill: {
+                    type: 'color',
+                    color: {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: 0.5,
+                    },
                 },
             });
         }
@@ -597,6 +614,7 @@ class Renderer {
     private entityHitTest(entity: RendererEntity, position: { x: number; y: number }): boolean {
         const ep = entity.entity.properties;
         switch (ep.type) {
+            case 'text':
             case 'shape': {
                 const shape = ep.shape;
                 const entityPosition = entity.renderPosition(this.now);
@@ -657,7 +675,7 @@ class Renderer {
                     continue;
                 }
                 const ep = entity.entity.properties;
-                if (ep.type !== 'shape') {
+                if (ep.type !== 'shape' && ep.type !== 'text') {
                     continue;
                 }
                 const topDistance = ep.shape.type === 'rectangle' ? ep.shape.height / 2 : ep.shape.radius;
@@ -695,14 +713,101 @@ class Renderer {
         return undefined;
     }
 
-    private drawShape(
-        shape: Shape,
+    private drawText(
         ctx: CanvasRenderingContext2D,
         scale: number,
         center: { x: number; y: number },
-        rotation?: number,
-        fill?: Material,
+        rotation: number | undefined,
+        params: {
+            shape: ShapeRectangle;
+            position: { x: number; y: number };
+            rotation?: number;
+            content: string;
+            color: { r: number; g: number; b: number; a: number };
+            outlineColor: { r: number; g: number; b: number; a: number };
+            outlineThickness: number;
+            fontSize: number;
+            horizontalAlignment: 'left' | 'center' | 'right';
+            verticalAlignment: 'top' | 'middle' | 'bottom';
+        },
     ) {
+        ctx.save();
+        ctx.scale(scale, scale);
+        ctx.translate(center.x, center.y);
+        if (rotation) {
+            ctx.rotate(rotation);
+        }
+
+        ctx.fillStyle = `rgba(${params.color.r}, ${params.color.g}, ${params.color.b}, ${params.color.a})`;
+        ctx.font = `${params.fontSize}px sans-serif`;
+        ctx.lineWidth = params.outlineThickness;
+        ctx.strokeStyle = `rgba(${params.outlineColor.r}, ${params.outlineColor.g}, ${params.outlineColor.b}, ${params.outlineColor.a})`;
+        ctx.lineJoin = 'round';
+
+        const lines = params.content.split('\n');
+        const wrappedLines = [];
+
+        const { horizontalAlignment, verticalAlignment, shape } = params;
+        const { width, height } = shape;
+
+        for (const line of lines) {
+            const words = line.split(' ');
+            let currentLine = '';
+            for (const word of words) {
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > width && currentLine) {
+                    wrappedLines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if (currentLine) {
+                wrappedLines.push(currentLine);
+            }
+        }
+
+        const textMetrics = ctx.measureText('A');
+        const lineHeight = textMetrics.actualBoundingBoxAscent;
+        const lineSpacing = lineHeight * 1.5;
+        const contentHeight = (wrappedLines.length - 1) * lineSpacing + lineHeight;
+
+        ctx.textAlign = horizontalAlignment;
+        const x = horizontalAlignment === 'left' ? -width / 2 : horizontalAlignment === 'center' ? 0 : width / 2;
+
+        let y =
+            (verticalAlignment === 'top'
+                ? -height / 2
+                : verticalAlignment === 'middle'
+                  ? -contentHeight / 2
+                  : height / 2 - contentHeight) + lineHeight;
+
+        for (const line of wrappedLines) {
+            if (line.trim()) {
+                if (params.outlineThickness > 0) {
+                    ctx.strokeText(line, x, y);
+                }
+                ctx.fillText(line, x, y);
+            }
+
+            y += lineSpacing;
+        }
+
+        ctx.restore();
+    }
+
+    private drawShape(
+        ctx: CanvasRenderingContext2D,
+        scale: number,
+        center: { x: number; y: number },
+        rotation: number | undefined,
+        params: {
+            shape: Shape;
+            fill?: Material;
+        },
+    ) {
+        const { shape, fill } = params;
         if (fill) {
             ctx.save();
             ctx.translate(center.x * scale, center.y * scale);
@@ -784,6 +889,7 @@ class Renderer {
 
             const ep = entity.properties;
             switch (ep.type) {
+                case 'text':
                 case 'shape': {
                     const existing = this.entities.get(id);
                     if (existing) {

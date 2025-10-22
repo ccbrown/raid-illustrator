@@ -95,7 +95,7 @@ export const MenuBar = () => {
     const menuItems: TopLevelMenuItem[] = [
         {
             label: 'File',
-            items: [menuItemForCommand(commands.close, XIcon)],
+            items: [menuItemForCommand(commands.deleteRaid, TrashIcon), menuItemForCommand(commands.close, XIcon)],
         },
         {
             label: 'Edit',

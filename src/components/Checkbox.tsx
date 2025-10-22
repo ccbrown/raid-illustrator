@@ -16,7 +16,7 @@ export const Checkbox = (props: Props) => {
 
     return (
         <div className={props.className}>
-            <div className="flex items-center my-2 gap-2 cursor-pointer">
+            <div className="flex items-center gap-2 cursor-pointer">
                 <div className="flex items-center relative">
                     <input
                         type="checkbox"

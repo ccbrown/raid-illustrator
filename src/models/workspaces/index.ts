@@ -16,6 +16,9 @@ export const workspaces = createModel<RootModel>()({
         scenes: {},
     } as WorkspacesState,
     reducers: {
+        removeRaid(state, id: string) {
+            delete state.raids[id];
+        },
         ensureRaid(state, id: string) {
             const existing = state.raids[id];
             if (!existing) {
@@ -83,6 +86,14 @@ export const workspaces = createModel<RootModel>()({
         },
     },
     effects: (dispatch) => ({
+        delete(
+            payload: {
+                raidId: string;
+            },
+            _state,
+        ) {
+            dispatch.workspaces.removeRaid(payload.raidId);
+        },
         // Ensures the workspace exists and updates its last open time.
         open(
             payload: {

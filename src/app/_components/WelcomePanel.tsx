@@ -44,9 +44,13 @@ export const WelcomePanel = () => {
                     </div>
                 </div>
                 {sortedRaids.length > 0 && (
-                    <div className="flex flex-col border-l border-white/10 pl-4 gap-4">
+                    <div className="flex flex-col border-l border-white/10 pl-4 overflow-y-auto max-h-48">
                         {sortedRaids.map((raid) => (
-                            <Link key={raid.id} href={`/raid#id=${raid.id}`}>
+                            <Link
+                                key={raid.id}
+                                href={`/raid#id=${raid.id}`}
+                                className="hover:bg-white/5 rounded-md p-2"
+                            >
                                 {raid.name}
                             </Link>
                         ))}

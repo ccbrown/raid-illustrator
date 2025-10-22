@@ -41,6 +41,7 @@ export interface Command {
 }
 
 interface Commands {
+    deleteRaid: Command;
     close: Command;
     undo: Command;
     redo: Command;
@@ -221,6 +222,16 @@ export const CommandsProvider = (props: CommandProviderProps) => {
           };
 
     const commands: Commands = {
+        deleteRaid: {
+            name: 'Delete',
+            execute: () => {
+                if (raidId && confirm('Are you sure you want to delete this raid? This action cannot be undone.')) {
+                    dispatch.raids.delete({ id: raidId });
+                    dispatch.workspaces.delete({ raidId });
+                    router.push('/');
+                }
+            },
+        },
         close: {
             name: 'Close',
             execute: () => {

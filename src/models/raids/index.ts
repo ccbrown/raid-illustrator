@@ -52,6 +52,26 @@ export const raids = createModel<RootModel>()({
         putMetadata(state, metadata: RaidMetadata) {
             state.metadata[metadata.id] = metadata;
         },
+        remove(state, raidId: string) {
+            const raid = state.metadata[raidId];
+            if (!raid) {
+                return;
+            }
+            delete state.metadata[raidId];
+            for (const sceneId of raid.sceneIds) {
+                const scene = state.scenes[sceneId];
+                if (!scene) {
+                    continue;
+                }
+                delete state.scenes[sceneId];
+                for (const stepId of scene.stepIds) {
+                    delete state.steps[stepId];
+                }
+                for (const entityId of scene.entityIds) {
+                    delete state.entities[entityId];
+                }
+            }
+        },
         putScene(state, scene: RaidScene) {
             state.scenes[scene.id] = scene;
         },
@@ -116,6 +136,14 @@ export const raids = createModel<RootModel>()({
         },
     },
     effects: (dispatch) => ({
+        delete(
+            payload: {
+                id: string;
+            },
+            _state,
+        ) {
+            dispatch.raids.remove(payload.id);
+        },
         create(
             payload: {
                 name: string;

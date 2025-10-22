@@ -1,8 +1,7 @@
 export { AngleInput } from './AngleInput';
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
-export { RGBInput } from './RGBInput';
-export { RGBAInput } from './RGBAInput';
+export { RGBInput, RGBAInput } from './ColorInput';
 export { CoordinateInput } from './CoordinateInput';
 export { Dialog } from './Dialog';
 export { Dropdown } from './Dropdown';

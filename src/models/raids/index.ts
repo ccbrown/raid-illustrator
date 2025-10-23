@@ -19,6 +19,7 @@ import {
     Exports,
     Keyable,
     Material,
+    PersistedRaid,
     RaidBatchOperation,
     RaidEntity,
     RaidEntityProperties,
@@ -379,7 +380,6 @@ export const raids = createModel<RootModel>()({
                 id: crypto.randomUUID(),
                 raidId: payload.raidId,
                 name: payload.name,
-                creationTime: Date.now(),
                 shape: payload.shape,
                 fill: payload.fill,
                 stepIds: [],
@@ -391,7 +391,6 @@ export const raids = createModel<RootModel>()({
                 raidId: payload.raidId,
                 sceneId: newScene.id,
                 name: 'Start',
-                creationTime: Date.now(),
             };
             newScene.stepIds.push(newStep.id);
 
@@ -761,7 +760,6 @@ export const raids = createModel<RootModel>()({
                 raidId: payload.raidId,
                 sceneId: payload.sceneId,
                 name: payload.name,
-                creationTime: Date.now(),
             };
 
             let newStepIds: string[];
@@ -860,7 +858,6 @@ export const raids = createModel<RootModel>()({
                 raidId: payload.raidId,
                 sceneId: payload.sceneId,
                 name: payload.name,
-                creationTime: Date.now(),
                 properties: payload.properties,
             };
 
@@ -1301,7 +1298,6 @@ export const raids = createModel<RootModel>()({
                         raidId: p.scene.raidId,
                         sceneId: p.scene.id,
                         name: 'Group',
-                        creationTime: Date.now(),
                         properties: {
                             type: 'group',
                             children: orderedIds,
@@ -1337,7 +1333,6 @@ export const raids = createModel<RootModel>()({
                         raidId: p.entity.raidId,
                         sceneId: p.entity.sceneId,
                         name: 'Group',
-                        creationTime: Date.now(),
                         properties: {
                             type: 'group',
                             children: orderedIds,
@@ -1366,6 +1361,16 @@ export const raids = createModel<RootModel>()({
                     break;
                 }
             }
+        },
+        restorePersistedRaid(raid: PersistedRaid, _state) {
+            dispatch.raids.remove(raid.metadata.id);
+            const op: RaidBatchOperation = {
+                putMetadata: raid.metadata,
+                putScenes: raid.scenes,
+                putSteps: raid.steps,
+                putEntities: raid.entities,
+            };
+            dispatch.raids.batchOperation(op);
         },
     }),
 });

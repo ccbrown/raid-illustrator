@@ -155,7 +155,6 @@ export const keyableWithUnkeyedSteps = <T>(k: Keyable<T>, stepIds: string[]): Ke
 const cloneEntity = (entity: RaidEntity): RaidEntity => {
     const newEntity = structuredClone(entity);
     newEntity.id = crypto.randomUUID();
-    newEntity.creationTime = Date.now();
     const ep = newEntity.properties;
 
     switch (ep.type) {
@@ -202,14 +201,12 @@ export const cloneEntityAndChildren = (
 export const cloneStep = (stepId: RaidStep): RaidStep => {
     const newStep = structuredClone(stepId);
     newStep.id = crypto.randomUUID();
-    newStep.creationTime = Date.now();
     return newStep;
 };
 
 const cloneScene = (scene: RaidScene): RaidScene => {
     const newScene = structuredClone(scene);
     newScene.id = crypto.randomUUID();
-    newScene.creationTime = Date.now();
     return newScene;
 };
 

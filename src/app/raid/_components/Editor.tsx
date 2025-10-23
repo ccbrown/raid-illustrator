@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { useHashParam } from '@/hooks';
-import { useDispatch, useSelector } from '@/store';
+import { useDispatch, usePersistence, useSelector } from '@/store';
 
 import { CommandsProvider } from '../commands';
 import { Canvas } from './Canvas';
@@ -17,7 +17,24 @@ import { StepsPanel } from './StepsPanel';
 export const Editor = () => {
     const router = useRouter();
     const raidId = useHashParam('id');
+    const persistence = usePersistence();
     const raidExists = useSelector((state) => (raidId ? !!state.raids.metadata[raidId] : false));
+
+    useEffect(() => {
+        const persist = async () => {
+            if (raidId) {
+                await persistence.persistRaid(raidId);
+            }
+        };
+
+        window.addEventListener('beforeunload', persist);
+        const timer = setInterval(persist, 2000);
+
+        return () => {
+            window.removeEventListener('beforeunload', persist);
+            clearInterval(timer);
+        };
+    }, [raidId, persistence]);
 
     useEffect(() => {
         if (!raidExists) {

@@ -33,7 +33,6 @@ export interface RaidScene {
     raidId: string;
 
     name: string;
-    creationTime: number;
     shape: RaidSceneShape;
     fill?: Material;
 
@@ -47,7 +46,6 @@ export interface RaidStep {
     sceneId: string;
 
     name: string;
-    creationTime: number;
     renderDuration?: number;
 }
 
@@ -112,7 +110,6 @@ export interface RaidEntity {
     sceneId: string;
 
     name: string;
-    creationTime: number;
 
     // Defaults to true if not set.
     visible?: Keyable<boolean>;
@@ -180,4 +177,11 @@ export interface Exports {
     scenes?: RaidSceneExport[];
     steps?: RaidStepExport[];
     entities?: RaidEntityExport[];
+}
+
+export interface PersistedRaid {
+    metadata: RaidMetadata;
+    scenes: RaidScene[];
+    steps: RaidStep[];
+    entities: RaidEntity[];
 }

@@ -99,7 +99,8 @@ interface CommandProviderProps {
     children: React.ReactNode;
 }
 
-const shouldUseMacLikeHotKeys = () => window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const shouldUseMacLikeHotKeys = () =>
+    typeof window !== 'undefined' && window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 export const CommandsProvider = (props: CommandProviderProps) => {
     const raidId = useRaidId();

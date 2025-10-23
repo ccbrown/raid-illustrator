@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useSelector } from '@/store';
 
 export const useHashParams = (): URLSearchParams => {
-    const [hashParams, setHashParams] = useState(new URLSearchParams(window.location.hash.slice(1)));
+    const initialHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    const [hashParams, setHashParams] = useState(new URLSearchParams(initialHash));
 
     useEffect(() => {
         const update = () => {

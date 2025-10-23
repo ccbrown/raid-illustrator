@@ -1,16 +1,12 @@
 'use client';
 
-import { getPersistor } from '@rematch/persist';
 import { useServerInsertedHTML } from 'next/navigation';
 import { PrimeReactProvider } from 'primereact/api';
 import { PropsWithChildren } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
 import { twMerge } from 'tailwind-merge';
 
-import { store } from '@/store';
-
-const persistor = getPersistor();
+import { PersistenceProvider, store } from '@/store';
 
 export const Providers = ({ children }: PropsWithChildren) => {
     useServerInsertedHTML(() => {
@@ -19,7 +15,7 @@ export const Providers = ({ children }: PropsWithChildren) => {
 
     return (
         <ReduxProvider store={store}>
-            <PersistGate loading={null} persistor={persistor}>
+            <PersistenceProvider>
                 <PrimeReactProvider
                     value={{
                         unstyled: true,
@@ -29,7 +25,7 @@ export const Providers = ({ children }: PropsWithChildren) => {
                 >
                     {children}
                 </PrimeReactProvider>
-            </PersistGate>
+            </PersistenceProvider>
         </ReduxProvider>
     );
 };

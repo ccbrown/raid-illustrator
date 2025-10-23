@@ -1,6 +1,7 @@
 import { createSelector } from 'reselect';
 
 import {
+    PersistedRaid,
     RaidEntity,
     RaidEntityExport,
     RaidMetadata,
@@ -258,3 +259,24 @@ export const selectEntityExport = (state: RaidsState, entityId: string): RaidEnt
         entities,
     };
 };
+
+export const selectPersistedRaid = createSelector(
+    [
+        (state: RaidsState, raidId: string) => state.metadata[raidId],
+        (state: RaidsState, raidId: string) => Object.values(state.scenes).filter((scene) => scene.raidId === raidId),
+        (state: RaidsState, raidId: string) => Object.values(state.steps).filter((step) => step.raidId === raidId),
+        (state: RaidsState, raidId: string) =>
+            Object.values(state.entities).filter((entity) => entity.raidId === raidId),
+    ],
+    (metadata, scenes, steps, entities): PersistedRaid | undefined => {
+        if (!metadata) {
+            return undefined;
+        }
+        return {
+            metadata,
+            scenes,
+            steps,
+            entities,
+        };
+    },
+);

@@ -7,6 +7,7 @@ import Redux from 'redux';
 import { Database } from '@/database';
 import { RootModel, models } from '@/models';
 import { selectPersistedRaid } from '@/models/raids/selectors';
+import { selectPersistedRaidWorkspace } from '@/models/workspaces/selectors';
 
 function wrapReducerWithImmer(reducer: Redux.Reducer) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,6 +45,10 @@ export class Persistence {
         this.database = database;
     }
 
+    async deleteRaid(raidId: string) {
+        await this.database.deleteRaid(raidId);
+    }
+
     async persistRaid(raidId: string) {
         const raid = selectPersistedRaid(this.store.getState().raids, raidId);
         if (raid) {
@@ -55,6 +60,20 @@ export class Persistence {
         const raids = await this.database.getRaids();
         for (const raid of raids) {
             this.store.dispatch.raids.restorePersistedRaid(raid);
+        }
+    }
+
+    async persistRaidWorkspace(raidId: string) {
+        const workspace = selectPersistedRaidWorkspace(this.store.getState().workspaces, raidId);
+        if (workspace) {
+            await this.database.putRaidWorkspace(workspace);
+        }
+    }
+
+    async restoreRaidWorkspaces() {
+        const workspaces = await this.database.getRaidWorkspaces();
+        for (const workspace of workspaces) {
+            this.store.dispatch.workspaces.restorePersistedRaidWorkspace(workspace);
         }
     }
 }
@@ -70,6 +89,7 @@ export const PersistenceProvider = ({ children }: { children: React.ReactNode })
             const database = await Database.open();
             const persistenceInstance = new Persistence(store, database);
             await persistenceInstance.restoreRaids();
+            await persistenceInstance.restoreRaidWorkspaces();
             setPersistence(persistenceInstance);
         };
         setupPersistence();

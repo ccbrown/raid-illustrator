@@ -18,19 +18,11 @@ export const workspaces = createModel<RootModel>()({
     reducers: {
         removeRaid(state, id: string) {
             delete state.raids[id];
-        },
-        ensureRaid(state, id: string) {
-            const existing = state.raids[id];
-            if (!existing) {
-                state.raids[id] = { id, lastActivityTime: Date.now() };
-            } else {
-                existing.lastActivityTime = Date.now();
-            }
-        },
-        ensureScene(state, id: string) {
-            const existing = state.scenes[id];
-            if (!existing) {
-                state.scenes[id] = { id, zoom: 0.35 };
+            for (const sceneId in state.scenes) {
+                const scene = state.scenes[sceneId];
+                if (scene.raidId === id) {
+                    delete state.scenes[sceneId];
+                }
             }
         },
         putRaid(state, workspace: RaidWorkspace) {
@@ -86,6 +78,22 @@ export const workspaces = createModel<RootModel>()({
         },
     },
     effects: (dispatch) => ({
+        ensureRaid(id: string, state) {
+            let raid: RaidWorkspace = state.workspaces.raids[id];
+            if (!raid) {
+                raid = { id, lastActivityTime: Date.now() };
+            }
+            dispatch.workspaces.putRaid({ ...raid, lastActivityTime: Date.now() });
+            return raid;
+        },
+        ensureScene({ id, raidId }: { id: string; raidId: string }, state) {
+            let scene: SceneWorkspace = state.workspaces.scenes[id];
+            if (!scene) {
+                scene = { id, raidId, zoom: 0.35 };
+                dispatch.workspaces.putScene(scene);
+            }
+            return scene;
+        },
         delete(
             payload: {
                 raidId: string;
@@ -99,27 +107,33 @@ export const workspaces = createModel<RootModel>()({
             payload: {
                 id: string;
             },
-            _state,
+            state,
         ) {
+            const raid = state.raids.metadata[payload.id];
+            if (!raid) {
+                return;
+            }
             dispatch.workspaces.ensureRaid(payload.id);
+            if (raid.sceneIds.length > 0) {
+                dispatch.workspaces.openScene({ id: raid.sceneIds[0] });
+            }
         },
         openScene(
             payload: {
                 id: string;
-                raidId: string;
             },
             state,
         ) {
-            dispatch.workspaces.ensureRaid(payload.raidId);
-            dispatch.workspaces.ensureScene(payload.id);
-            const existing = state.workspaces.raids[payload.raidId];
-            if (existing) {
-                dispatch.workspaces.putRaid({ ...existing, openSceneId: payload.id });
+            const scene = state.raids.scenes[payload.id];
+            if (!scene) {
+                return;
             }
-            const scene = state.workspaces.scenes[payload.id];
-            if (scene && !scene.openStepId) {
-                const raidState = state.raids;
-                const raidScene = raidState.scenes[payload.id];
+            const raidWorkspace = dispatch.workspaces.ensureRaid(scene.raidId);
+            const newRaidWorkspace = { ...raidWorkspace, openSceneId: payload.id };
+            dispatch.workspaces.putRaid(newRaidWorkspace);
+            const sceneWorkspace = dispatch.workspaces.ensureScene(scene);
+            if (!sceneWorkspace.openStepId) {
+                const raidScene = state.raids.scenes[payload.id];
                 if (raidScene && raidScene.stepIds.length > 0) {
                     dispatch.workspaces.openStep({ id: raidScene.stepIds[0], sceneId: payload.id });
                 }
@@ -151,11 +165,12 @@ export const workspaces = createModel<RootModel>()({
             },
             state,
         ) {
-            dispatch.workspaces.ensureScene(payload.id);
-            const existing = state.workspaces.scenes[payload.id];
-            if (existing) {
-                dispatch.workspaces.putScene({ ...existing, ...payload });
+            const scene = state.raids.scenes[payload.id];
+            if (!scene) {
+                return;
             }
+            const existing = dispatch.workspaces.ensureScene(scene);
+            dispatch.workspaces.putScene({ ...existing, ...payload });
         },
         toggleGroupExpansion(
             payload: {
@@ -164,8 +179,11 @@ export const workspaces = createModel<RootModel>()({
             },
             state,
         ) {
-            dispatch.workspaces.ensureScene(payload.sceneId);
-            const existing = state.workspaces.scenes[payload.sceneId];
+            const scene = state.raids.scenes[payload.id];
+            if (!scene) {
+                return;
+            }
+            const existing = dispatch.workspaces.ensureScene(scene);
             if (existing) {
                 const expandedGroupIds = [...(existing.expandedGroupIds || [])];
                 const index = expandedGroupIds.indexOf(payload.id);
@@ -184,8 +202,11 @@ export const workspaces = createModel<RootModel>()({
             },
             state,
         ) {
-            dispatch.workspaces.ensureScene(payload.sceneId);
-            const existing = state.workspaces.scenes[payload.sceneId];
+            const scene = state.raids.scenes[payload.sceneId];
+            if (!scene) {
+                return;
+            }
+            const existing = dispatch.workspaces.ensureScene(scene);
             if (existing) {
                 dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
             }
@@ -195,10 +216,9 @@ export const workspaces = createModel<RootModel>()({
                 raidId: string;
                 data?: EntityPresetDragData;
             },
-            state,
+            _state,
         ) {
-            dispatch.workspaces.ensureRaid(payload.raidId);
-            const existing = state.workspaces.raids[payload.raidId];
+            const existing = dispatch.workspaces.ensureRaid(payload.raidId);
             if (existing) {
                 dispatch.workspaces.putRaid({ ...existing, entityPresetDragData: payload.data });
             }
@@ -208,10 +228,9 @@ export const workspaces = createModel<RootModel>()({
                 raidId: string;
                 tab: 'entities' | 'presets';
             },
-            state,
+            _state,
         ) {
-            dispatch.workspaces.ensureRaid(payload.raidId);
-            const existing = state.workspaces.raids[payload.raidId];
+            const existing = dispatch.workspaces.ensureRaid(payload.raidId);
             if (existing) {
                 dispatch.workspaces.putRaid({ ...existing, entitiesPanelTab: payload.tab });
             }
@@ -221,10 +240,9 @@ export const workspaces = createModel<RootModel>()({
                 raidId: string;
                 selection: Selection | undefined;
             },
-            state,
+            _state,
         ) {
-            dispatch.workspaces.ensureRaid(payload.raidId);
-            const existing = state.workspaces.raids[payload.raidId];
+            const existing = dispatch.workspaces.ensureRaid(payload.raidId);
             if (existing) {
                 dispatch.workspaces.putRaid({ ...existing, selection: payload.selection });
             }
@@ -262,6 +280,19 @@ export const workspaces = createModel<RootModel>()({
                 action: { name: item.name, operation: undoOp },
                 preserveRedo: true,
             });
+        },
+        restorePersistedRaidWorkspace(
+            payload: {
+                raid: RaidWorkspace;
+                scenes: SceneWorkspace[];
+            },
+            _state,
+        ) {
+            dispatch.workspaces.removeRaid(payload.raid.id);
+            dispatch.workspaces.putRaid(payload.raid);
+            for (const scene of payload.scenes) {
+                dispatch.workspaces.putScene(scene);
+            }
         },
     }),
 });

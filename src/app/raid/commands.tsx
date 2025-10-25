@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 
 import {
     useCopyEvents,
@@ -16,7 +16,7 @@ import {
 import { selectParentByChildIds } from '@/models/raids/selectors';
 import { Exports } from '@/models/raids/types';
 import { Selection } from '@/models/workspaces/types';
-import { useDispatch, useSelector } from '@/store';
+import { useDispatch, usePersistence, useSelector } from '@/store';
 import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
@@ -40,6 +40,12 @@ export interface Command {
     execute: () => void;
 }
 
+interface ZoomToFitCommand extends Command {
+    // This determines the zoom level that would be set when executing the command. It's invoked by
+    // the Canvas component.
+    setZoom: (zoom: number) => void;
+}
+
 interface Commands {
     deleteRaid: Command;
     close: Command;
@@ -53,6 +59,7 @@ interface Commands {
     render: Command;
     zoomIn: Command;
     zoomOut: Command;
+    zoomToFit: ZoomToFitCommand;
     newScene: Command;
     newStep: Command;
     openNextStep: Command;
@@ -103,11 +110,13 @@ const shouldUseMacLikeHotKeys = () =>
     typeof window !== 'undefined' && window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 export const CommandsProvider = (props: CommandProviderProps) => {
+    const bestFitZoomRef = useRef<number>(1);
     const raidId = useRaidId();
     const router = useRouter();
     const dispatch = useDispatch();
     const useMacLikeHotKeys = shouldUseMacLikeHotKeys();
     const raidWorkspace = useRaidWorkspace(raidId || '');
+    const persistence = usePersistence();
 
     const sceneId = raidWorkspace?.openSceneId;
     const scene = useScene(sceneId || '');
@@ -190,7 +199,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                                 });
                                 if (pastedIds.sceneIds.length > 0) {
                                     // switch to one of the new scenes
-                                    dispatch.workspaces.openScene({ id: pastedIds.sceneIds[0], raidId });
+                                    dispatch.workspaces.openScene({ id: pastedIds.sceneIds[0] });
                                 } else if (sceneId && pastedIds.stepIds.length > 0) {
                                     // switch to one of the new steps
                                     dispatch.workspaces.openStep({ id: pastedIds.stepIds[0], sceneId });
@@ -229,6 +238,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 if (raidId && confirm('Are you sure you want to delete this raid? This action cannot be undone.')) {
                     dispatch.raids.delete({ id: raidId });
                     dispatch.workspaces.delete({ raidId });
+                    persistence.deleteRaid(raidId);
                     router.push('/');
                 }
             },
@@ -365,7 +375,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                               },
                         afterSceneId: raidWorkspace?.openSceneId,
                     });
-                    dispatch.workspaces.openScene({ id: newScene.id, raidId });
+                    dispatch.workspaces.openScene({ id: newScene.id });
                     if (newScene.stepIds[0]) {
                         dispatch.workspaces.openStep({ sceneId: newScene.id, id: newScene.stepIds[0] });
                     }
@@ -541,7 +551,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         zoomOut: {
             name: 'Zoom Out',
-            disabled: !sceneWorkspace || (sceneWorkspace.zoom || 1) <= 0.1,
+            disabled: !sceneWorkspace || (sceneWorkspace.zoom || 1) <= 0.01,
             hotKey: {
                 ...hotKeyBase,
                 key: '-',
@@ -555,8 +565,31 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             ],
             execute: () => {
                 if (sceneWorkspace) {
-                    const newZoom = Math.max((sceneWorkspace.zoom || 1) / 1.2, 0.1);
+                    const newZoom = Math.max((sceneWorkspace.zoom || 1) / 1.2, 0.01);
                     dispatch.workspaces.updateScene({ id: sceneWorkspace.id, zoom: newZoom });
+                }
+            },
+        },
+        zoomToFit: {
+            name: 'Zoom to Fit',
+            disabled: !sceneWorkspace,
+            hotKey: {
+                ...hotKeyBase,
+                key: '0',
+            },
+            setZoom: (zoom: number) => {
+                bestFitZoomRef.current = zoom;
+            },
+            execute: () => {
+                if (sceneWorkspace) {
+                    const newZoom = bestFitZoomRef.current;
+                    if (newZoom) {
+                        dispatch.workspaces.updateScene({
+                            id: sceneWorkspace.id,
+                            zoom: newZoom,
+                            center: { x: 0, y: 0 },
+                        });
+                    }
                 }
             },
         },

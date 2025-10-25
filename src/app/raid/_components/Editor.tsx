@@ -24,6 +24,7 @@ export const Editor = () => {
         const persist = async () => {
             if (raidId) {
                 await persistence.persistRaid(raidId);
+                await persistence.persistRaidWorkspace(raidId);
             }
         };
 

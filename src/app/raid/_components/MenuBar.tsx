@@ -8,7 +8,10 @@ import {
     ClipboardIcon,
     CopyIcon,
     DownloadIcon,
+    FrameCornersIcon,
     Icon,
+    MagnifyingGlassMinusIcon,
+    MagnifyingGlassPlusIcon,
     PlusIcon,
     ScissorsIcon,
     ShapesIcon,
@@ -135,8 +138,9 @@ export const MenuBar = () => {
         {
             label: 'View',
             items: [
-                menuItemForCommand(commands.zoomIn, ArrowUUpLeftIcon),
-                menuItemForCommand(commands.zoomOut, ArrowUUpRightIcon),
+                menuItemForCommand(commands.zoomIn, MagnifyingGlassPlusIcon),
+                menuItemForCommand(commands.zoomOut, MagnifyingGlassMinusIcon),
+                menuItemForCommand(commands.zoomToFit, FrameCornersIcon),
             ],
         },
     ];

@@ -7,6 +7,7 @@ export interface WorkspacesState {
 
 export interface SceneWorkspace {
     id: string;
+    raidId: string;
 
     openStepId?: string;
 
@@ -46,4 +47,9 @@ export interface RaidWorkspace {
 
     undoStack?: UndoRedoStackAction[];
     redoStack?: UndoRedoStackAction[];
+}
+
+export interface PersistedRaidWorkspace {
+    raid: RaidWorkspace;
+    scenes: SceneWorkspace[];
 }

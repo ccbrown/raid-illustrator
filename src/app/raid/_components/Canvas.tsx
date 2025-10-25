@@ -3,10 +3,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { snapAngle } from '@/components/AngleInput';
 import { useRaidWorkspace, useScene, useSceneWorkspace, useSelection } from '@/hooks';
+import { shapeDimensions } from '@/models/raids/utils';
 import { EntityPresetDragData } from '@/models/workspaces/types';
 import { Hit, useSceneRenderer } from '@/renderer';
 import { useDispatch } from '@/store';
 
+import { useCommands } from '../commands';
 import { useRaidId } from '../hooks';
 
 const PIXELS_PER_METER = 100;
@@ -42,6 +44,21 @@ export const Canvas = () => {
     const center = useMemo(() => sceneWorkspace?.center || { x: 0, y: 0 }, [sceneWorkspace]);
     const pixelsPerMeterZoomed = zoom * PIXELS_PER_METER;
     const entityPresetDragData = raidWorkspace?.entityPresetDragData;
+
+    const commands = useCommands();
+    const setBestFitZoom = commands.zoomToFit.setZoom;
+
+    useEffect(() => {
+        if (scene) {
+            const dims = shapeDimensions(scene.shape);
+            if (dims.height && dims.width && canvasWidth && canvasHeight) {
+                const bestVerticalZoom = canvasHeight / (dims.height * PIXELS_PER_METER);
+                const bestHorizontalZoom = canvasWidth / (dims.width * PIXELS_PER_METER);
+                const bestFitZoom = Math.min(bestVerticalZoom, bestHorizontalZoom);
+                setBestFitZoom(bestFitZoom);
+            }
+        }
+    }, [scene, setBestFitZoom, canvasWidth, canvasHeight]);
 
     const mouseDown = useRef<{
         brokeDragThreshold: boolean;

@@ -151,14 +151,45 @@ export const raids = createModel<RootModel>()({
             },
             _state,
         ) {
-            const newRaid = {
+            const newRaid: RaidMetadata = {
                 id: crypto.randomUUID(),
                 name: payload.name,
                 creationTime: Date.now(),
                 sceneIds: [],
             };
 
+            const newScene: RaidScene = {
+                id: crypto.randomUUID(),
+                raidId: newRaid.id,
+                name: 'Scene 1',
+                shape: { type: 'rectangle' as const, width: 40, height: 40 },
+                fill: {
+                    type: 'color' as const,
+                    color: {
+                        r: 40,
+                        g: 42,
+                        b: 54,
+                        a: 1,
+                    },
+                },
+                stepIds: [],
+                entityIds: [],
+            };
+
+            const newStep = {
+                id: crypto.randomUUID(),
+                raidId: newRaid.id,
+                sceneId: newScene.id,
+                name: 'Start',
+            };
+
+            newScene.stepIds.push(newStep.id);
+            newRaid.sceneIds.push(newScene.id);
+
             dispatch.raids.putMetadata(newRaid);
+            dispatch.raids.putScene(newScene);
+            dispatch.raids.putStep(newStep);
+
             return newRaid.id;
         },
         update(

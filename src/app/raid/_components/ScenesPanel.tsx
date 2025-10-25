@@ -28,7 +28,7 @@ const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) =>
 
     const openScene = () => {
         if (scene) {
-            dispatch.workspaces.openScene({ id, raidId: scene.raidId });
+            dispatch.workspaces.openScene({ id });
             dispatch.workspaces.select({ raidId: scene.raidId, selection: { sceneIds: [scene.id] } });
         }
     };

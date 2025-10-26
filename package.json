@@ -5,13 +5,15 @@
     "scripts": {
         "dev": "next dev --turbopack",
         "check": "tsc --noEmit",
-        "build": "next build --turbopack",
+        "build": "next build",
         "start": "next start",
-        "lint": "eslint"
+        "lint": "eslint",
+        "cf-preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
     },
     "dependencies": {
         "@diffusionstudio/core": "^3.8.3",
         "@headlessui/react": "^2.2.9",
+        "@opennextjs/cloudflare": "^1.11.0",
         "@phosphor-icons/react": "^2.1.10",
         "@rematch/core": "^2.2.0",
         "clsx": "^2.1.1",
@@ -42,6 +44,7 @@
         "eslint-plugin-unused-imports": "^4.2.0",
         "prettier": "^3.6.2",
         "tailwindcss": "^4",
-        "typescript": "^5"
+        "typescript": "^5",
+        "wrangler": "^4.45.0"
     }
 }

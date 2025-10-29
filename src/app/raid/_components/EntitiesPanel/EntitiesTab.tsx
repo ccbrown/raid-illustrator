@@ -41,7 +41,7 @@ const ListItem = ({ entity, isGroupExpanded, selectedEntityIds, level }: ListIte
 
     const toggleGroupExpansion = () => {
         if (entity.properties.type === 'group') {
-            dispatch.workspaces.toggleGroupExpansion({ id: entity.id, sceneId: entity.raidId });
+            dispatch.workspaces.toggleGroupExpansion({ id: entity.id, sceneId: entity.sceneId });
         }
     };
 
@@ -125,8 +125,8 @@ interface ListItemsProps {
 
 const ListItems = ({ id, selectedEntityIds, level }: ListItemsProps) => {
     const entity = useEntity(id);
-    const isGroupExpanded = useSelector((state) =>
-        state.workspaces.scenes[entity.raidId]?.expandedGroupIds?.includes(entity.id),
+    const isGroupExpanded = useSelector(
+        (state) => entity && state.workspaces.scenes[entity.sceneId]?.expandedGroupIds?.includes(entity.id),
     );
 
     if (!entity) {

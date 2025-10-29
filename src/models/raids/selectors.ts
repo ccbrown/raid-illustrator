@@ -34,7 +34,7 @@ export const selectRelativeOrderOfEntityIds = (state: RaidsState, entityIds: str
             continue;
         }
         if (currentEntity.properties.type === 'group') {
-            searchStack.push(...currentEntity.properties.children);
+            searchStack.push(...[...currentEntity.properties.children].reverse());
         }
     }
     return ret;
@@ -260,13 +260,36 @@ export const selectEntityExport = (state: RaidsState, entityId: string): RaidEnt
     };
 };
 
+const selectScenesInRaid = createSelector(
+    [
+        (state: RaidsState) => state.scenes,
+        (_state: RaidsState, raidId: string) => raidId,
+    ],
+    (scenes, raidId) => Object.values(scenes).filter((scene) => scene.raidId === raidId),
+);
+
+const selectStepsInRaid = createSelector(
+    [
+        (state: RaidsState) => state.steps,
+        (_state: RaidsState, raidId: string) => raidId,
+    ],
+    (steps, raidId) => Object.values(steps).filter((step) => step.raidId === raidId),
+);
+
+const selectEntitiesInRaid = createSelector(
+    [
+        (state: RaidsState) => state.entities,
+        (_state: RaidsState, raidId: string) => raidId,
+    ],
+    (entities, raidId) => Object.values(entities).filter((entity) => entity.raidId === raidId),
+);
+
 export const selectPersistedRaid = createSelector(
     [
         (state: RaidsState, raidId: string) => state.metadata[raidId],
-        (state: RaidsState, raidId: string) => Object.values(state.scenes).filter((scene) => scene.raidId === raidId),
-        (state: RaidsState, raidId: string) => Object.values(state.steps).filter((step) => step.raidId === raidId),
-        (state: RaidsState, raidId: string) =>
-            Object.values(state.entities).filter((entity) => entity.raidId === raidId),
+        selectScenesInRaid,
+        selectStepsInRaid,
+        selectEntitiesInRaid,
     ],
     (metadata, scenes, steps, entities): PersistedRaid | undefined => {
         if (!metadata) {

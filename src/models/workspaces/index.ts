@@ -179,21 +179,19 @@ export const workspaces = createModel<RootModel>()({
             },
             state,
         ) {
-            const scene = state.raids.scenes[payload.id];
+            const scene = state.raids.scenes[payload.sceneId];
             if (!scene) {
                 return;
             }
-            const existing = dispatch.workspaces.ensureScene(scene);
-            if (existing) {
-                const expandedGroupIds = [...(existing.expandedGroupIds || [])];
-                const index = expandedGroupIds.indexOf(payload.id);
-                if (index === -1) {
-                    expandedGroupIds.push(payload.id);
-                } else {
-                    expandedGroupIds.splice(index, 1);
-                }
-                dispatch.workspaces.putScene({ ...existing, expandedGroupIds });
+            const workspace = dispatch.workspaces.ensureScene(scene);
+            const expandedGroupIds = [...(workspace.expandedGroupIds || [])];
+            const index = expandedGroupIds.indexOf(payload.id);
+            if (index === -1) {
+                expandedGroupIds.push(payload.id);
+            } else {
+                expandedGroupIds.splice(index, 1);
             }
+            dispatch.workspaces.putScene({ ...workspace, expandedGroupIds });
         },
         openStep(
             payload: {
@@ -206,10 +204,8 @@ export const workspaces = createModel<RootModel>()({
             if (!scene) {
                 return;
             }
-            const existing = dispatch.workspaces.ensureScene(scene);
-            if (existing) {
-                dispatch.workspaces.putScene({ ...existing, openStepId: payload.id });
-            }
+            const workspace = dispatch.workspaces.ensureScene(scene);
+            dispatch.workspaces.putScene({ ...workspace, openStepId: payload.id });
         },
         putEntityPresetDragData(
             payload: {

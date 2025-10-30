@@ -2,6 +2,7 @@ import {
     Exports,
     Keyable,
     Keyed,
+    PersistedRaid,
     RaidBatchOperation,
     RaidEntity,
     RaidMetadata,
@@ -514,5 +515,54 @@ export const importOperation = (
             putEntities: newEntities,
             putMetadata: updatedRaid,
         },
+    };
+};
+
+export const clonePersistedRaid = (raid: PersistedRaid): PersistedRaid => {
+    const steps: Record<string, RaidStep> = {};
+    for (const step of raid.steps) {
+        steps[step.id] = step;
+    }
+    const entities: Record<string, RaidEntity> = {};
+    for (const entity of raid.entities) {
+        entities[entity.id] = entity;
+    }
+
+    const newScenes: RaidScene[] = [];
+    const newSteps: RaidStep[] = [];
+    const newEntities: RaidEntity[] = [];
+
+    const sceneIdMap = new Map<string, string>();
+
+    for (const scene of raid.scenes) {
+        const [newScene, sceneSteps, sceneEntities] = cloneSceneStepsAndEntities(scene, steps, entities);
+        sceneIdMap.set(scene.id, newScene.id);
+        newScenes.push(newScene);
+        newSteps.push(...sceneSteps);
+        newEntities.push(...sceneEntities);
+    }
+
+    const newMetadata: RaidMetadata = {
+        ...raid.metadata,
+        id: crypto.randomUUID(),
+        creationTime: Date.now(),
+        sceneIds: raid.metadata.sceneIds.map((sceneId) => sceneIdMap.get(sceneId) || sceneId),
+    };
+
+    for (const step of newSteps) {
+        step.raidId = newMetadata.id;
+    }
+    for (const entity of newEntities) {
+        entity.raidId = newMetadata.id;
+    }
+    for (const scene of newScenes) {
+        scene.raidId = newMetadata.id;
+    }
+
+    return {
+        metadata: newMetadata,
+        scenes: newScenes,
+        steps: newSteps,
+        entities: newEntities,
     };
 };

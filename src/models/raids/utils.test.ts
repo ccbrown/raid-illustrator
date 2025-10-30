@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { Keyed, RaidEntity, RaidStep } from './types';
 import {
     cloneEntityAndChildren,
-    cloneSceneStepsAndEntities,
     cloneStep,
     keyableIsKeyed,
     keyableIsKeyedAtStep,
@@ -17,7 +17,6 @@ import {
     updateKeyedEntitiesValues,
     updateKeyedEntityValues,
 } from './utils';
-import { Keyable, Keyed, RaidEntity, RaidScene, RaidStep } from './types';
 
 describe('shapeDimensions', () => {
     it('should return width and height for rectangle', () => {

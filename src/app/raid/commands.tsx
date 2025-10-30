@@ -13,10 +13,10 @@ import {
     useSceneWorkspace,
     useSelection,
 } from '@/hooks';
-import { selectParentByChildIds } from '@/models/raids/selectors';
+import { selectParentByChildIds, selectPersistedRaid } from '@/models/raids/selectors';
 import { Exports } from '@/models/raids/types';
 import { Selection } from '@/models/workspaces/types';
-import { useDispatch, usePersistence, useSelector } from '@/store';
+import { store, useDispatch, usePersistence, useSelector } from '@/store';
 import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
@@ -48,6 +48,8 @@ interface ZoomToFitCommand extends Command {
 
 interface Commands {
     deleteRaid: Command;
+    duplicateRaid: Command;
+    exportRaid: Command;
     close: Command;
     undo: Command;
     redo: Command;
@@ -240,6 +242,36 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                     dispatch.workspaces.delete({ raidId });
                     persistence.deleteRaid(raidId);
                     router.push('/');
+                }
+            },
+        },
+        duplicateRaid: {
+            name: 'Duplicate',
+            execute: async () => {
+                if (raidId) {
+                    const newRaid = dispatch.raids.duplicate(raidId);
+                    if (newRaid) {
+                        await persistence.persistRaid(newRaid.id);
+                        window.open(`/raid#id=${newRaid.id}`, '_blank');
+                    }
+                }
+            },
+        },
+        exportRaid: {
+            name: 'Export',
+            execute: () => {
+                if (raidId) {
+                    const persisted = selectPersistedRaid(store.getState().raids, raidId);
+                    if (persisted) {
+                        const dataStr = JSON.stringify(persisted, null, 2);
+                        const blob = new Blob([dataStr], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${persisted.metadata.name.replace(/[\/\?<>\\:\*\|":]/g, '')}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
                 }
             },
         },

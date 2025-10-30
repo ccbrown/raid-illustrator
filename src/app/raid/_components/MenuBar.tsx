@@ -8,6 +8,7 @@ import {
     ClipboardIcon,
     CopyIcon,
     DownloadIcon,
+    ExportIcon,
     FrameCornersIcon,
     Icon,
     MagnifyingGlassMinusIcon,
@@ -98,7 +99,12 @@ export const MenuBar = () => {
     const menuItems: TopLevelMenuItem[] = [
         {
             label: 'File',
-            items: [menuItemForCommand(commands.deleteRaid, TrashIcon), menuItemForCommand(commands.close, XIcon)],
+            items: [
+                menuItemForCommand(commands.duplicateRaid, StackSimpleIcon),
+                menuItemForCommand(commands.exportRaid, ExportIcon),
+                menuItemForCommand(commands.deleteRaid, TrashIcon),
+                menuItemForCommand(commands.close, XIcon),
+            ],
         },
         {
             label: 'Edit',

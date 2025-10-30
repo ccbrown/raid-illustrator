@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 
 import { Button } from '@/components';
+import { PersistedRaid } from '@/models/raids/types';
 import { useDispatch, useSelector } from '@/store';
 
 export const WelcomePanel = () => {
@@ -28,6 +29,31 @@ export const WelcomePanel = () => {
         const bTime = bWorkspace?.lastActivityTime || 0;
         return bTime - aTime;
     });
+
+    const importRaid = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) {
+                return;
+            }
+            const text = await file.text();
+            try {
+                const data = JSON.parse(text) as PersistedRaid;
+                if (!data.metadata.id) {
+                    alert('Invalid raid file.');
+                } else {
+                    const raid = dispatch.raids.importPersistedRaid(data);
+                    router.push(`/raid#id=${raid.id}`);
+                }
+            } catch (err) {
+                alert('Failed to import raid: ' + (err as Error).message);
+            }
+        };
+        input.click();
+    };
 
     return (
         <div className="flex flex-col items-center justify-center p-4 w-full max-w-3xl">
@@ -80,6 +106,11 @@ export const WelcomePanel = () => {
                 </div>
                 <div className="flex flex-row justify-end">
                     <Button disabled={isBusy} text="New Raid" icon={SwordIcon} onClick={createProject} />
+                </div>
+            </div>
+            <div className="flex flex-row justify-center mt-4">
+                <div className="text-xs text-white/50 underline cursor-pointer" onClick={importRaid}>
+                    Import Raid
                 </div>
             </div>
         </div>

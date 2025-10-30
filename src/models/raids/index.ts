@@ -7,6 +7,7 @@ import {
     selectEntityExport,
     selectGroupByChildId,
     selectParentByChildIds,
+    selectPersistedRaid,
     selectRaidSharedBySceneIds,
     selectRelativeOrderOfEntityIds,
     selectSceneExport,
@@ -32,6 +33,7 @@ import {
 } from './types';
 import {
     cloneEntityAndChildren,
+    clonePersistedRaid,
     cloneSceneStepsAndEntities,
     cloneStep,
     importOperation,
@@ -1402,6 +1404,33 @@ export const raids = createModel<RootModel>()({
                 putEntities: raid.entities,
             };
             dispatch.raids.batchOperation(op);
+        },
+        importPersistedRaid(persisted: PersistedRaid, _state): RaidMetadata {
+            const cloned = clonePersistedRaid(persisted);
+            const op: RaidBatchOperation = {
+                putMetadata: cloned.metadata,
+                putScenes: cloned.scenes,
+                putSteps: cloned.steps,
+                putEntities: cloned.entities,
+            };
+            dispatch.raids.batchOperation(op);
+            return cloned.metadata;
+        },
+        duplicate(raidId: string, state): RaidMetadata | undefined {
+            const persisted = selectPersistedRaid(state.raids, raidId);
+            if (!persisted) {
+                return undefined;
+            }
+            const cloned = clonePersistedRaid(persisted);
+            cloned.metadata.name += ' Copy';
+            const op: RaidBatchOperation = {
+                putMetadata: cloned.metadata,
+                putScenes: cloned.scenes,
+                putSteps: cloned.steps,
+                putEntities: cloned.entities,
+            };
+            dispatch.raids.batchOperation(op);
+            return cloned.metadata;
         },
     }),
 });

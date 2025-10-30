@@ -261,26 +261,17 @@ export const selectEntityExport = (state: RaidsState, entityId: string): RaidEnt
 };
 
 const selectScenesInRaid = createSelector(
-    [
-        (state: RaidsState) => state.scenes,
-        (_state: RaidsState, raidId: string) => raidId,
-    ],
+    [(state: RaidsState) => state.scenes, (_state: RaidsState, raidId: string) => raidId],
     (scenes, raidId) => Object.values(scenes).filter((scene) => scene.raidId === raidId),
 );
 
 const selectStepsInRaid = createSelector(
-    [
-        (state: RaidsState) => state.steps,
-        (_state: RaidsState, raidId: string) => raidId,
-    ],
+    [(state: RaidsState) => state.steps, (_state: RaidsState, raidId: string) => raidId],
     (steps, raidId) => Object.values(steps).filter((step) => step.raidId === raidId),
 );
 
 const selectEntitiesInRaid = createSelector(
-    [
-        (state: RaidsState) => state.entities,
-        (_state: RaidsState, raidId: string) => raidId,
-    ],
+    [(state: RaidsState) => state.entities, (_state: RaidsState, raidId: string) => raidId],
     (entities, raidId) => Object.values(entities).filter((entity) => entity.raidId === raidId),
 );
 

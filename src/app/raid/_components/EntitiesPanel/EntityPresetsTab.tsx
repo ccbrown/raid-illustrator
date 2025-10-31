@@ -281,6 +281,7 @@ const PresetButton = ({ preset }: { preset: Preset }) => {
             onDragStart={(e) => {
                 const data = preset.generate();
                 dispatch.workspaces.putEntityPresetDragData({ raidId, data });
+                e.dataTransfer.clearData();
                 e.dataTransfer.setData(ENTITY_PRESET_DRAG_MIME_TYPE, JSON.stringify(data));
                 e.dataTransfer.effectAllowed = 'copy';
             }}

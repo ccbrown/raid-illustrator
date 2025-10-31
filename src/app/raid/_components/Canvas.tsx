@@ -324,8 +324,6 @@ export const Canvas = () => {
                         position: pos,
                     },
                 });
-
-                e.dataTransfer.clearData(ENTITY_PRESET_DRAG_MIME_TYPE);
             }
 
             renderer.hideDropIndicator();

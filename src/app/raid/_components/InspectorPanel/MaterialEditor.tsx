@@ -1,4 +1,4 @@
-import { Dropdown, RGBAInput, StandaloneTextInput } from '@/components';
+import { Dropdown, ImageInput, RGBAInput } from '@/components';
 import { Material } from '@/models/raids/types';
 
 interface Props {
@@ -44,7 +44,7 @@ export const MaterialEditor = ({ label, value, onChange, defaultColor }: Props) 
             )}
 
             {value?.type === 'image' && (
-                <StandaloneTextInput
+                <ImageInput
                     className="flex-grow"
                     value={value.url}
                     onChange={(url) => {

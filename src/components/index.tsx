@@ -6,6 +6,7 @@ export { CoordinateInput } from './CoordinateInput';
 export { Dialog } from './Dialog';
 export { Dropdown } from './Dropdown';
 export { EditableText } from './EditableText';
+export { ImageInput } from './ImageInput';
 export { OptionalNumberInput } from './NumberInput';
 export { MultilineTextInput } from './MultilineTextInput';
 export { NumberInput } from './NumberInput';

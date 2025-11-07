@@ -6,7 +6,6 @@ import {
     useCutEvents,
     useEntity,
     useKeyDownEvents,
-    useKeyPressEvents,
     usePasteEvents,
     useRaidWorkspace,
     useScene,
@@ -148,8 +147,20 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         e?.preventDefault();
     }, []);
 
+    const isInputTarget = (target: HTMLElement | null | undefined) => {
+        if (!target) {
+            return false;
+        }
+        const targetTagName = target.tagName?.toLowerCase();
+        return targetTagName === 'input' || targetTagName === 'textarea' || target.isContentEditable;
+    };
+
     const copy = useCallback(
         (e?: ClipboardEvent) => {
+            if (isInputTarget(e?.target as HTMLElement)) {
+                return;
+            }
+
             if (selection) {
                 const data = dispatch.raids.copy(selection);
                 writeClipboard(e, data);
@@ -160,6 +171,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     const cut = useCallback(
         (e?: ClipboardEvent) => {
+            if (isInputTarget(e?.target as HTMLElement)) {
+                return;
+            }
+
             if (selection) {
                 const data = dispatch.raids.cut(selection);
                 writeClipboard(e, data);
@@ -170,6 +185,10 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     const paste = useCallback(
         async (e?: ClipboardEvent) => {
+            if (isInputTarget(e?.target as HTMLElement)) {
+                return;
+            }
+
             const clipboardItems = await navigator.clipboard.read();
             for (const item of clipboardItems) {
                 if (item.types.includes('text/html')) {
@@ -640,9 +659,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         }
 
         // don't steal the key press if we're focused on an input
-        const target = e.target as HTMLElement;
-        const targetTagName = target.tagName?.toLowerCase();
-        if (targetTagName === 'input' || targetTagName === 'textarea' || target.isContentEditable) {
+        if (isInputTarget(e.target as HTMLElement)) {
             return;
         }
 
@@ -653,18 +670,8 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         }
     };
 
-    const KEY_DOWN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-
-    useKeyPressEvents((e) => {
-        if (!KEY_DOWN_KEYS.includes(e.key)) {
-            handleKeyEvent(e);
-        }
-    });
-
     useKeyDownEvents((e) => {
-        if (KEY_DOWN_KEYS.includes(e.key)) {
-            handleKeyEvent(e);
-        }
+        handleKeyEvent(e);
     });
 
     useCutEvents(cut);

@@ -1,3 +1,4 @@
+import useResizeObserver from '@react-hook/resize-observer';
 import { useAnimationFrame } from 'motion/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -96,19 +97,13 @@ export const Canvas = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const updateSize = () => {
-            if (containerRef.current) {
-                setCanvasWidth(containerRef.current.clientWidth);
-                setCanvasHeight(containerRef.current.clientHeight);
-            }
-        };
-        setTimeout(updateSize, 0);
-        window.addEventListener('resize', updateSize);
-        return () => {
-            window.removeEventListener('resize', updateSize);
-        };
-    }, []);
+    useResizeObserver(containerRef, (entry) => {
+        const rect = entry.contentBoxSize[0];
+        if (rect) {
+            setCanvasWidth(rect.inlineSize);
+            setCanvasHeight(rect.blockSize);
+        }
+    });
 
     const mouseDownHandler = useCallback(
         (e: React.MouseEvent) => {

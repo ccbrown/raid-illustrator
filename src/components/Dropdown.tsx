@@ -19,7 +19,7 @@ export const Dropdown = (props: Props) => {
     return (
         <Field className="flex flex-row items-center gap-2">
             {props.label && <Label className="text-white/60 text-xs whitespace-nowrap">{props.label}</Label>}
-            <Popover>
+            <Popover className="flex">
                 <PopoverButton
                     disabled={props.disabled}
                     className={`inline-flex items-center gap-2 bg-black/20 rounded-xs py-0.5 px-2 focus:outline-none data-[focus]:outline-1 data-[focus]:outline-cyan-500 ${props.disabled ? 'cursor-default text-white/50' : 'cursor-pointer'}`}

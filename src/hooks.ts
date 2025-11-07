@@ -26,22 +26,6 @@ export const useHashParam = (key: string): string | null => {
     return hashParams.get(key);
 };
 
-export const useKeyPressEvents = (callback: (e: KeyboardEvent) => void) => {
-    const callbackRef = useRef(callback);
-    callbackRef.current = callback;
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            callbackRef.current(e);
-        };
-
-        window.addEventListener('keypress', handleKeyDown);
-        return () => {
-            window.removeEventListener('keypress', handleKeyDown);
-        };
-    }, []);
-};
-
 export const useKeyDownEvents = (callback: (e: KeyboardEvent) => void) => {
     const callbackRef = useRef(callback);
     callbackRef.current = callback;

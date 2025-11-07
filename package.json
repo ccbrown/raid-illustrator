@@ -20,6 +20,7 @@
         "@headlessui/react": "^2.2.9",
         "@opennextjs/cloudflare": "^1.11.0",
         "@phosphor-icons/react": "^2.1.10",
+        "@react-hook/resize-observer": "^2.0.2",
         "@rematch/core": "^2.2.0",
         "clsx": "^2.1.1",
         "idb": "^8.0.3",

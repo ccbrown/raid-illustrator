@@ -5,9 +5,14 @@
     "compatibility_flags": ["nodejs_compat"],
     "assets": {
         "directory": ".open-next/assets",
-        "binding": "ASSETS",
+        "binding": "ASSETS"
     },
     "env": {
-        "dev": {},
-    },
+        "dev": {
+            "route": {
+                "pattern": "dev.raidillustrator.gg",
+                "custom_domain": true
+            }
+        }
+    }
 }

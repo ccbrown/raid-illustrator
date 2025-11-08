@@ -393,6 +393,7 @@ export const importOperation = (
     const pastedStepIds = [];
     const newSteps: RaidStep[] = [];
     const pastedEntityIds = [];
+    const newRootEntities: RaidEntity[] = [];
     let newEntities: RaidEntity[] = [];
     const newScenes = [];
     let updatedScene: RaidScene | undefined = undefined;
@@ -431,12 +432,15 @@ export const importOperation = (
                     const [clone, descendants] = cloneEntityAndChildren(original, allEntities);
                     pastedEntityIds.push(clone.id);
                     newEntities.push(clone, ...descendants);
+                    newRootEntities.push(clone);
                 }
             }
             for (const e of newEntities) {
                 e.raidId = raidId;
                 e.sceneId = sceneId;
-                // add the new entities to the beginning of the scene's entity list
+            }
+            for (const e of newRootEntities) {
+                // add the new root entities to the beginning of the scene's entity list
                 updatedScene = {
                     ...(updatedScene || scene),
                     entityIds: [e.id, ...(updatedScene || scene).entityIds],

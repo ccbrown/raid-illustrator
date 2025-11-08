@@ -20,6 +20,7 @@ interface ScrollListItemProps {
 export const ScrollListItem = ({ id, draggable, children }: ScrollListItemProps) => {
     const [showDragIndicatorAbove, setShowDragIndicatorAbove] = useState(false);
     const [showDragIndicatorBelow, setShowDragIndicatorBelow] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
     const sharedData = useContext(SharedDataContext);
     if (!sharedData) {
@@ -29,7 +30,13 @@ export const ScrollListItem = ({ id, draggable, children }: ScrollListItemProps)
     return (
         <div
             className="relative"
-            draggable={draggable ? 'true' : undefined}
+            onFocus={() => {
+                setIsFocused(true);
+            }}
+            onBlur={() => {
+                setIsFocused(false);
+            }}
+            draggable={draggable && !isFocused ? 'true' : undefined}
             onDragStart={(e) => {
                 if (draggable) {
                     sharedData.dragItemId = id;

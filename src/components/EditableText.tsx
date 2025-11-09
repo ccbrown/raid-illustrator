@@ -51,6 +51,13 @@ export const EditableText = ({ className, disabled, value, onChange }: Props) =>
                     if (!disabled && inputRef.current && !isEditing) {
                         inputRef.current.contentEditable = 'plaintext-only';
                         inputRef.current.focus();
+                        // move cursor to end
+                        const range = document.createRange();
+                        range.selectNodeContents(inputRef.current);
+                        range.collapse(false);
+                        const sel = window.getSelection();
+                        sel?.removeAllRanges();
+                        sel?.addRange(range);
                     }
                 }}
                 onFocus={() => {

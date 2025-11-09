@@ -399,19 +399,19 @@ export const importOperation = (
     let updatedScene: RaidScene | undefined = undefined;
     let updatedRaid: RaidMetadata | undefined = undefined;
     const pastedSceneIds = [];
+    const newStepIdMap = new Map<string, string>();
 
     if (sceneId) {
         const scene = state.scenes[sceneId];
         if (scene) {
             // steps are the easiest, start with them
-            const stepIdMap = new Map<string, string>();
             for (const stepExport of data.steps || []) {
                 const newStep = cloneStep(stepExport.step);
                 pastedStepIds.push(newStep.id);
                 newStep.raidId = raidId;
                 newStep.sceneId = sceneId;
                 newSteps.push(newStep);
-                stepIdMap.set(stepExport.step.id, newStep.id);
+                newStepIdMap.set(stepExport.step.id, newStep.id);
             }
             if (pastedStepIds.length > 0) {
                 // update the scene to include the new steps
@@ -446,19 +446,19 @@ export const importOperation = (
                     entityIds: [e.id, ...(updatedScene || scene).entityIds],
                 };
             }
-            // now update any keyed values to point to the new step ids or remove them if
-            // the step doesn't exist in this scene
+            // now update any keyed values to point to the new step ids
             newEntities = newEntities.map((entity) =>
                 updateKeyedEntityValues(entity, (k) => {
                     const newSteps: Record<string, unknown> = {};
                     for (const [stepId, value] of Object.entries(k.steps)) {
                         if (state.steps[stepId]?.sceneId === sceneId) {
+                            // this step already exists in this scene, so keep it as-is
                             newSteps[stepId] = value;
-                        } else {
-                            const newStepId = stepIdMap.get(stepId);
-                            if (newStepId) {
-                                newSteps[newStepId] = value;
-                            }
+                        }
+                        const newStepId = newStepIdMap.get(stepId);
+                        if (newStepId) {
+                            // this step is being imported, so map it to the new step id, possibly in addition to keeping the existing key
+                            newSteps[newStepId] = value;
                         }
                     }
                     return Object.keys(newSteps).length > 0
@@ -509,6 +509,35 @@ export const importOperation = (
         newScenes.push(updatedScene);
     }
 
+    // add keys for the new steps to pre-existing entities
+    const updatedEntities = [];
+    for (const entity of Object.values(state.entities)) {
+        if (entity.sceneId !== sceneId || entity.raidId !== raidId) {
+            continue;
+        }
+        const updated = updateKeyedEntityValues(entity, (k) => {
+            const newSteps: Record<string, unknown> = {};
+            for (const [stepId, value] of Object.entries(k.steps)) {
+                newSteps[stepId] = value;
+                const newStepId = newStepIdMap.get(stepId);
+                if (newStepId) {
+                    // this step is being imported, so add a key for the new id
+                    newSteps[newStepId] = value;
+                }
+            }
+            if (Object.keys(newSteps).length === Object.keys(k.steps).length) {
+                return k;
+            }
+            return {
+                initial: k.initial,
+                steps: newSteps,
+            };
+        });
+        if (updated !== entity) {
+            updatedEntities.push(updated);
+        }
+    }
+
     return {
         sceneIds: pastedSceneIds,
         stepIds: pastedStepIds,
@@ -516,7 +545,7 @@ export const importOperation = (
         operation: {
             putScenes: newScenes,
             putSteps: newSteps,
-            putEntities: newEntities,
+            putEntities: [...newEntities, ...updatedEntities],
             putMetadata: updatedRaid,
         },
     };

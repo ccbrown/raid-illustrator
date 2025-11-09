@@ -67,7 +67,7 @@ export const Editor = () => {
                             <Canvas />
                         </div>
                         <div className="absolute inset-0 flex flex-row gap-4 p-4 pointer-events-none">
-                            <div className="flex flex-col gap-4 w-64 [&>*]:pointer-events-auto">
+                            <div className="flex flex-col gap-4 w-80 [&>*]:pointer-events-auto">
                                 <ScenesPanel />
                                 <StepsPanel />
                             </div>
@@ -75,7 +75,7 @@ export const Editor = () => {
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-row">
                                     <div className="flex-grow" />
-                                    <div className="pointer-events-auto w-64">
+                                    <div className="pointer-events-auto w-80">
                                         <EntitiesPanel />
                                     </div>
                                 </div>

@@ -594,6 +594,7 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                                         writeVisualEffectToClipboard(data);
                                     }
                                 }}
+                                title="Copy Effects to Clipboard"
                             />
                             <Button
                                 icon={ClipboardIcon}
@@ -612,6 +613,7 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                                     };
                                     pasteEffects();
                                 }}
+                                title="Paste Effects from Clipboard"
                             />
                             <Button
                                 icon={PlusIcon}
@@ -619,6 +621,7 @@ export const EntityInspectorPanel = ({ id }: Props) => {
                                 onClick={() => {
                                     commands.addEntityEffect.execute();
                                 }}
+                                title="Add Effect"
                             />
                         </div>
                         {ep.effects &&

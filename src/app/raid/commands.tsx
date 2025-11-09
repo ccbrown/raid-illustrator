@@ -438,8 +438,8 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             name: 'New Step',
             disabled: !sceneId,
             hotKey: {
-                key: 'n',
-                shift: true,
+                ...hotKeyBase,
+                key: 'ArrowRight',
             },
             execute: () => {
                 if (raidId && sceneId) {

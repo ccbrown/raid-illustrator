@@ -58,6 +58,7 @@ interface UpdateParams {
 export class Animated<T extends AnimatableType> {
     private previousValue?: T;
     private latestValue?: T;
+    private latestUpdateTime?: number;
     private transitionStartTime?: number;
     private transitionDuration?: number;
     private easingFunction?: EasingFunction;
@@ -69,10 +70,13 @@ export class Animated<T extends AnimatableType> {
         } else if (!equals(this.latestValue, currentValue)) {
             this.previousValue = this.get(now);
             this.latestValue = currentValue;
-            this.transitionStartTime = now;
+            // for more reasonable behavior when the animation is suspended and later resumed, use
+            // the last update time as the transition start time
+            this.transitionStartTime = this.latestUpdateTime ?? now;
             this.transitionDuration = params?.transitionDuration;
             this.easingFunction = params?.easingFunction;
         }
+        this.latestUpdateTime = now;
         return this.get(now)!;
     }
 

@@ -121,25 +121,11 @@ export const Canvas = () => {
                 pixelPosition: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
             };
 
-            // select the clicked entity
-            if (hit && hit.type === 'entity') {
+            // select the clicked entity immediately, if this is a normal click and it's not already selected
+            if (hit && hit.type === 'entity' && !e.shiftKey && !e.ctrlKey) {
                 const entity = hit.entity;
                 const isSelected = selection?.entityIds?.includes(entity.id);
-                if (e.shiftKey || e.ctrlKey) {
-                    // toggle this entity, leave others as they are
-                    if (isSelected) {
-                        const others = selection?.entityIds?.filter((id) => id !== entity.id) || [];
-                        dispatch.workspaces.select({
-                            raidId: raidId || '',
-                            selection: { ...selection, entityIds: others.length > 0 ? others : undefined },
-                        });
-                    } else {
-                        dispatch.workspaces.select({
-                            raidId: raidId || '',
-                            selection: { ...selection, entityIds: [...(selection?.entityIds || []), entity.id] },
-                        });
-                    }
-                } else if (!isSelected) {
+                if (!isSelected) {
                     dispatch.workspaces.select({ raidId: raidId || '', selection: { entityIds: [entity.id] } });
                 }
             }
@@ -215,6 +201,8 @@ export const Canvas = () => {
                 return;
             }
 
+            const hit = mouseDown.current.hit;
+
             if (mouseDown.current.brokeDragThreshold) {
                 const pos = pixelToSceneCoordinate({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
                 const movement = {
@@ -230,7 +218,7 @@ export const Canvas = () => {
                 }
 
                 // apply the drag movement to the entities' positions
-                if (mouseDown.current.hit?.type === 'entity') {
+                if (hit?.type === 'entity') {
                     if (
                         selection?.entityIds &&
                         selection.entityIds.length > 0 &&
@@ -245,13 +233,9 @@ export const Canvas = () => {
                 }
 
                 // apply the drag rotation to the entities' rotations
-                if (
-                    mouseDown.current.hit?.type === 'rotation-handle' &&
-                    selection?.entityIds &&
-                    selection.entityIds.length > 0
-                ) {
-                    const startAngle = angle(mouseDown.current.scenePosition, mouseDown.current.hit.pivot);
-                    const currentAngle = angle(pos, mouseDown.current.hit.pivot);
+                if (hit?.type === 'rotation-handle' && selection?.entityIds && selection.entityIds.length > 0) {
+                    const startAngle = angle(mouseDown.current.scenePosition, hit.pivot);
+                    const currentAngle = angle(pos, hit.pivot);
                     const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
                     if (rotation) {
                         dispatch.raids.rotateEntities({
@@ -263,7 +247,7 @@ export const Canvas = () => {
                 }
 
                 // apply the drag movement to the scene's center
-                if (!mouseDown.current.hit) {
+                if (!hit) {
                     if (movement.x !== 0 || movement.y !== 0) {
                         const newCenter = {
                             x: center.x - movement.x,
@@ -272,7 +256,30 @@ export const Canvas = () => {
                         dispatch.workspaces.updateScene({ id: sceneId || '', center: newCenter });
                     }
                 }
-            } else if (!mouseDown.current.hit) {
+            } else if (hit) {
+                // select the clicked entity
+                if (hit.type === 'entity') {
+                    const entity = hit.entity;
+                    const isSelected = selection?.entityIds?.includes(entity.id);
+                    if (e.shiftKey || e.ctrlKey) {
+                        // toggle this entity, leave others as they are
+                        if (isSelected) {
+                            const others = selection?.entityIds?.filter((id) => id !== entity.id) || [];
+                            dispatch.workspaces.select({
+                                raidId: raidId || '',
+                                selection: { ...selection, entityIds: others.length > 0 ? others : undefined },
+                            });
+                        } else {
+                            dispatch.workspaces.select({
+                                raidId: raidId || '',
+                                selection: { ...selection, entityIds: [...(selection?.entityIds || []), entity.id] },
+                            });
+                        }
+                    } else if (!isSelected) {
+                        dispatch.workspaces.select({ raidId: raidId || '', selection: { entityIds: [entity.id] } });
+                    }
+                }
+            } else {
                 // click on empty space clears selection
                 dispatch.workspaces.select({ raidId: raidId || '', selection: undefined });
             }

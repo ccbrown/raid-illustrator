@@ -8,6 +8,7 @@ interface Props {
     onClick?: () => void;
     disabled?: boolean;
     size?: 'small' | 'medium';
+    title?: string;
     type?: 'submit';
 }
 
@@ -25,6 +26,7 @@ export const Button = (props: Props) => {
             )}
             onClick={props.onClick}
             disabled={props.disabled}
+            title={props.title}
             type={props.type}
         >
             {props.icon && <props.icon size={props.size === 'small' ? 14 : 22} />}

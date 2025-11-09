@@ -54,7 +54,7 @@ const ListItem = ({ entity, isGroupExpanded, selectedEntityIds, level }: ListIte
     const isSelected = selectedEntityIds.includes(entity.id);
 
     return (
-        <ScrollListItem id={entity.id} draggable>
+        <ScrollListItem id={entity.id} draggable scrollIntoView={isSelected}>
             <div
                 className={`flex flex-row items-center gap-1 px-2 py-1 transition ${isSelected ? 'bg-indigo-500' : 'hover:bg-white/10 cursor-pointer'}`}
                 style={{ paddingLeft: `${level * 16 + 12}px` }}

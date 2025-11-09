@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import React, { createContext, useContext, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 type OnMoveCallback = (movedItemId: string, targetItemId: string, position: 'above' | 'below') => void;
 
@@ -14,13 +14,24 @@ const SharedDataContext = createContext<SharedData | null>(null);
 interface ScrollListItemProps {
     draggable?: boolean;
     id: string;
+
+    // The item will be scrolled into view when it is mounted or this becomes true.
+    scrollIntoView?: boolean;
+
     children: React.ReactNode;
 }
 
-export const ScrollListItem = ({ id, draggable, children }: ScrollListItemProps) => {
+export const ScrollListItem = ({ id, draggable, children, scrollIntoView }: ScrollListItemProps) => {
     const [showDragIndicatorAbove, setShowDragIndicatorAbove] = useState(false);
     const [showDragIndicatorBelow, setShowDragIndicatorBelow] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const itemRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollIntoView && itemRef.current) {
+            itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [scrollIntoView]);
 
     const sharedData = useContext(SharedDataContext);
     if (!sharedData) {
@@ -29,6 +40,7 @@ export const ScrollListItem = ({ id, draggable, children }: ScrollListItemProps)
 
     return (
         <div
+            ref={itemRef}
             className="relative"
             onFocus={() => {
                 setIsFocused(true);

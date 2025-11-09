@@ -1,5 +1,6 @@
 import Image from 'next/image';
 
+import { Tooltip } from '@/components';
 import { AnyProperties, Shape } from '@/models/raids/types';
 import { EntityPresetDragData } from '@/models/workspaces/types';
 import { defaultProperties } from '@/property-spec';
@@ -275,28 +276,30 @@ const PresetButton = ({ preset }: { preset: Preset }) => {
     const dispatch = useDispatch();
 
     return (
-        <div
-            className="bg-elevation-2 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-elevation-3 hover:border-1 hover:border-white/70 hover:shadow-md"
-            draggable="true"
-            onDragStart={(e) => {
-                const data = preset.generate();
-                dispatch.workspaces.putEntityPresetDragData({ raidId, data });
-                e.dataTransfer.clearData();
-                e.dataTransfer.setData(ENTITY_PRESET_DRAG_MIME_TYPE, JSON.stringify(data));
-                e.dataTransfer.effectAllowed = 'copy';
-            }}
-            onDragEnd={() => {
-                dispatch.workspaces.putEntityPresetDragData({ raidId, data: undefined });
-            }}
-        >
-            <Image src={preset.iconUrl} alt={preset.name} width={48} height={48} />
-        </div>
+        <Tooltip content={preset.name}>
+            <div
+                className="bg-elevation-2 rounded-lg flex flex-col items-center justify-center cursor-pointer p-1 hover:bg-elevation-3 hover:outline-1 hover:outline-white/70 hover:shadow-md"
+                draggable="true"
+                onDragStart={(e) => {
+                    const data = preset.generate();
+                    dispatch.workspaces.putEntityPresetDragData({ raidId, data });
+                    e.dataTransfer.clearData();
+                    e.dataTransfer.setData(ENTITY_PRESET_DRAG_MIME_TYPE, JSON.stringify(data));
+                    e.dataTransfer.effectAllowed = 'copy';
+                }}
+                onDragEnd={() => {
+                    dispatch.workspaces.putEntityPresetDragData({ raidId, data: undefined });
+                }}
+            >
+                <Image src={preset.iconUrl} alt={preset.name} width={48} height={48} />
+            </div>
+        </Tooltip>
     );
 };
 
 export const EntityPresetsTab = () => {
     return (
-        <div className="p-2 grid grid-cols-5 gap-1 max-h-[400px] overflow-y-auto">
+        <div className="p-2 grid grid-cols-6 gap-1 max-h-[400px] overflow-y-auto">
             {presets.map((preset, idx) => (
                 <PresetButton key={idx} preset={preset} />
             ))}

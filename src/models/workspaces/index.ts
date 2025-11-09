@@ -113,8 +113,8 @@ export const workspaces = createModel<RootModel>()({
             if (!raid) {
                 return;
             }
-            dispatch.workspaces.ensureRaid(payload.id);
-            if (raid.sceneIds.length > 0) {
+            const workspace = dispatch.workspaces.ensureRaid(payload.id);
+            if (!workspace.openSceneId && raid.sceneIds.length > 0) {
                 dispatch.workspaces.openScene({ id: raid.sceneIds[0] });
             }
         },

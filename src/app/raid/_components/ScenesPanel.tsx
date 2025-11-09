@@ -123,20 +123,24 @@ export const ScenesPanel = () => {
                         onClick={() => {
                             commands.newScene.execute();
                         }}
+                        title="Add Scene"
                     />
                 </div>
             </div>
             <ScrollList onMove={onMove}>
-                {raid?.sceneIds.map((id) => (
-                    <ScrollListItem key={id} id={id} draggable>
-                        <ListItem
-                            id={id}
-                            openSceneId={raidWorkspace?.openSceneId}
-                            selectedSceneIds={selectedSceneIds || []}
-                            raid={raid}
-                        />
-                    </ScrollListItem>
-                ))}
+                {raid?.sceneIds.map((id) => {
+                    const isOpenOrSelected = id === raidWorkspace?.openSceneId || selectedSceneIds?.includes(id);
+                    return (
+                        <ScrollListItem key={id} id={id} draggable scrollIntoView={isOpenOrSelected}>
+                            <ListItem
+                                id={id}
+                                openSceneId={raidWorkspace?.openSceneId}
+                                selectedSceneIds={selectedSceneIds || []}
+                                raid={raid}
+                            />
+                        </ScrollListItem>
+                    );
+                })}
             </ScrollList>
         </div>
     );

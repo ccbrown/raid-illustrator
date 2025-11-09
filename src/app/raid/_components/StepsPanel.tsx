@@ -124,20 +124,24 @@ export const StepsPanel = () => {
                         onClick={() => {
                             commands.newStep.execute();
                         }}
+                        title="Add Step"
                     />
                 </div>
             </div>
             <ScrollList onMove={onMove}>
-                {scene?.stepIds.map((id) => (
-                    <ScrollListItem key={id} id={id} draggable>
-                        <ListItem
-                            id={id}
-                            openStepId={sceneWorkspace?.openStepId}
-                            selectedStepIds={selectedStepIds || []}
-                            scene={scene}
-                        />
-                    </ScrollListItem>
-                ))}
+                {scene?.stepIds.map((id) => {
+                    const isOpenOrSelected = id === sceneWorkspace?.openStepId || selectedStepIds?.includes(id);
+                    return (
+                        <ScrollListItem key={id} id={id} draggable scrollIntoView={isOpenOrSelected}>
+                            <ListItem
+                                id={id}
+                                openStepId={sceneWorkspace?.openStepId}
+                                selectedStepIds={selectedStepIds || []}
+                                scene={scene}
+                            />
+                        </ScrollListItem>
+                    );
+                })}
             </ScrollList>
         </div>
     );

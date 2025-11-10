@@ -1184,4 +1184,614 @@ describe('importOperation', () => {
             expect(result!.operation.putEntities).toHaveLength(1);
         });
     });
+
+    describe('placement options', () => {
+        describe('insertAfterStepId', () => {
+            it('should insert step after specified step', () => {
+                const state = createBasicState();
+                // Add more steps to the scene
+                state.scenes.scene1.stepIds = ['step1', 'step2', 'step3'];
+                state.steps.step2 = {
+                    id: 'step2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Step 2',
+                };
+                state.steps.step3 = {
+                    id: 'step3',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Step 3',
+                };
+
+                const stepToImport: RaidStep = {
+                    id: 'new-step',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Step',
+                };
+
+                const data: Exports = {
+                    steps: [{ step: stepToImport }],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertAfterStepId: 'step2',
+                });
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.stepIds).toEqual(['step1', 'step2', result!.stepIds[0], 'step3']);
+            });
+
+            it('should append step to end when insertAfterStepId is not found', () => {
+                const state = createBasicState();
+                state.scenes.scene1.stepIds = ['step1', 'step2'];
+                state.steps.step2 = {
+                    id: 'step2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Step 2',
+                };
+
+                const stepToImport: RaidStep = {
+                    id: 'new-step',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Step',
+                };
+
+                const data: Exports = {
+                    steps: [{ step: stepToImport }],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertAfterStepId: 'nonexistent-step',
+                });
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.stepIds).toEqual(['step1', 'step2', result!.stepIds[0]]);
+            });
+
+            it('should append step to end when no option provided', () => {
+                const state = createBasicState();
+                state.scenes.scene1.stepIds = ['step1', 'step2'];
+                state.steps.step2 = {
+                    id: 'step2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Step 2',
+                };
+
+                const stepToImport: RaidStep = {
+                    id: 'new-step',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Step',
+                };
+
+                const data: Exports = {
+                    steps: [{ step: stepToImport }],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data);
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.stepIds).toEqual(['step1', 'step2', result!.stepIds[0]]);
+            });
+        });
+
+        describe('insertBeforeEntityId', () => {
+            it('should insert entity before specified entity in scene', () => {
+                const state = createBasicState();
+                state.scenes.scene1.entityIds = ['entity1', 'entity2', 'entity3'];
+                state.entities.entity1 = {
+                    id: 'entity1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+                state.entities.entity2 = {
+                    id: 'entity2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 2',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+                state.entities.entity3 = {
+                    id: 'entity3',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 3',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 5, height: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertBeforeEntityId: 'entity2',
+                });
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.entityIds).toEqual(['entity1', result!.entityIds[0], 'entity2', 'entity3']);
+            });
+
+            it('should insert entity at beginning when insertBeforeEntityId is not found', () => {
+                const state = createBasicState();
+                state.scenes.scene1.entityIds = ['entity1', 'entity2'];
+                state.entities.entity1 = {
+                    id: 'entity1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+                state.entities.entity2 = {
+                    id: 'entity2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 2',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 5, height: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertBeforeEntityId: 'nonexistent-entity',
+                });
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.entityIds).toEqual([result!.entityIds[0], 'entity1', 'entity2']);
+            });
+
+            it('should insert entity at beginning when no option provided', () => {
+                const state = createBasicState();
+                state.scenes.scene1.entityIds = ['entity1', 'entity2'];
+                state.entities.entity1 = {
+                    id: 'entity1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+                state.entities.entity2 = {
+                    id: 'entity2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Entity 2',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 10 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 5, height: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data);
+
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.entityIds).toEqual([result!.entityIds[0], 'entity1', 'entity2']);
+            });
+
+            it('should insert entity into group before specified child', () => {
+                const state = createBasicState();
+
+                const child1: RaidEntity = {
+                    id: 'child1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Child 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const child2: RaidEntity = {
+                    id: 'child2',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Child 2',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 5 },
+                        position: { x: 10, y: 0 },
+                    },
+                };
+
+                const group: RaidEntity = {
+                    id: 'group1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Group',
+                    properties: {
+                        type: 'group',
+                        children: ['child1', 'child2'],
+                    },
+                };
+
+                state.scenes.scene1.entityIds = ['group1'];
+                state.entities.group1 = group;
+                state.entities.child1 = child1;
+                state.entities.child2 = child2;
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 3, height: 3 },
+                        position: { x: 5, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertBeforeEntityId: 'child2',
+                });
+
+                const updatedGroup = result!.operation.putEntities!.find((e) => e.id === 'group1');
+                expect(updatedGroup).toBeDefined();
+                expect(updatedGroup!.properties.type).toBe('group');
+
+                if (updatedGroup!.properties.type === 'group') {
+                    expect(updatedGroup!.properties.children).toEqual(['child1', result!.entityIds[0], 'child2']);
+                }
+
+                // Scene entityIds should not be modified
+                const updatedScene = result!.operation.putScenes?.find((s) => s.id === 'scene1');
+                if (updatedScene) {
+                    expect(updatedScene.entityIds).toEqual(['group1']);
+                }
+            });
+
+            it('should insert entity at beginning of group children when insertBeforeEntityId is first child', () => {
+                const state = createBasicState();
+
+                const child1: RaidEntity = {
+                    id: 'child1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Child 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const group: RaidEntity = {
+                    id: 'group1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Group',
+                    properties: {
+                        type: 'group',
+                        children: ['child1'],
+                    },
+                };
+
+                state.scenes.scene1.entityIds = ['group1'];
+                state.entities.group1 = group;
+                state.entities.child1 = child1;
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 3, height: 3 },
+                        position: { x: 5, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertBeforeEntityId: 'child1',
+                });
+
+                const updatedGroup = result!.operation.putEntities!.find((e) => e.id === 'group1');
+                expect(updatedGroup).toBeDefined();
+                expect(updatedGroup!.properties.type).toBe('group');
+
+                if (updatedGroup!.properties.type === 'group') {
+                    expect(updatedGroup!.properties.children).toEqual([result!.entityIds[0], 'child1']);
+                }
+            });
+
+            it('should fallback to scene insertion when insertBeforeEntityId does not exist', () => {
+                const state = createBasicState();
+
+                const child1: RaidEntity = {
+                    id: 'child1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Child 1',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'circle', radius: 5 },
+                        position: { x: 0, y: 0 },
+                    },
+                };
+
+                const group: RaidEntity = {
+                    id: 'group1',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'Group',
+                    properties: {
+                        type: 'group',
+                        children: ['child1'],
+                    },
+                };
+
+                state.scenes.scene1.entityIds = ['group1'];
+                state.entities.group1 = group;
+                state.entities.child1 = child1;
+
+                const entityToImport: RaidEntity = {
+                    id: 'new-entity',
+                    raidId: 'raid1',
+                    sceneId: 'scene1',
+                    name: 'New Entity',
+                    properties: {
+                        type: 'shape',
+                        shape: { type: 'rectangle', width: 3, height: 3 },
+                        position: { x: 5, y: 0 },
+                    },
+                };
+
+                const data: Exports = {
+                    entities: [
+                        {
+                            id: 'new-entity',
+                            entities: [entityToImport],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', 'scene1', data, {
+                    insertBeforeEntityId: 'nonexistent-child',
+                });
+
+                // Since the insertBeforeEntityId doesn't exist, it should fall back to scene level
+                const updatedScene = result!.operation.putScenes![0];
+                expect(updatedScene.entityIds).toEqual([result!.entityIds[0], 'group1']);
+
+                // Group should not be modified
+                const updatedGroup = result!.operation.putEntities!.find((e) => e.id === 'group1');
+                expect(updatedGroup).toBeUndefined();
+            });
+        });
+
+        describe('insertAfterSceneId', () => {
+            it('should insert scene after specified scene', () => {
+                const state = createBasicState();
+                state.metadata.raid1.sceneIds = ['scene1', 'scene2', 'scene3'];
+                state.scenes.scene2 = {
+                    id: 'scene2',
+                    raidId: 'raid1',
+                    name: 'Scene 2',
+                    shape: { type: 'rectangle', width: 40, height: 40 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+                state.scenes.scene3 = {
+                    id: 'scene3',
+                    raidId: 'raid1',
+                    name: 'Scene 3',
+                    shape: { type: 'rectangle', width: 40, height: 40 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const sceneToImport: RaidScene = {
+                    id: 'new-scene',
+                    raidId: 'raid1',
+                    name: 'New Scene',
+                    shape: { type: 'circle', radius: 20 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const data: Exports = {
+                    scenes: [
+                        {
+                            scene: sceneToImport,
+                            steps: [],
+                            entities: [],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', undefined, data, {
+                    insertAfterSceneId: 'scene2',
+                });
+
+                expect(result!.operation.putMetadata!.sceneIds).toEqual([
+                    'scene1',
+                    'scene2',
+                    result!.sceneIds[0],
+                    'scene3',
+                ]);
+            });
+
+            it('should append scene to end when insertAfterSceneId is not found', () => {
+                const state = createBasicState();
+                state.metadata.raid1.sceneIds = ['scene1', 'scene2'];
+                state.scenes.scene2 = {
+                    id: 'scene2',
+                    raidId: 'raid1',
+                    name: 'Scene 2',
+                    shape: { type: 'rectangle', width: 40, height: 40 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const sceneToImport: RaidScene = {
+                    id: 'new-scene',
+                    raidId: 'raid1',
+                    name: 'New Scene',
+                    shape: { type: 'circle', radius: 20 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const data: Exports = {
+                    scenes: [
+                        {
+                            scene: sceneToImport,
+                            steps: [],
+                            entities: [],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', undefined, data, {
+                    insertAfterSceneId: 'nonexistent-scene',
+                });
+
+                expect(result!.operation.putMetadata!.sceneIds).toEqual(['scene1', 'scene2', result!.sceneIds[0]]);
+            });
+
+            it('should append scene to end when no option provided', () => {
+                const state = createBasicState();
+                state.metadata.raid1.sceneIds = ['scene1', 'scene2'];
+                state.scenes.scene2 = {
+                    id: 'scene2',
+                    raidId: 'raid1',
+                    name: 'Scene 2',
+                    shape: { type: 'rectangle', width: 40, height: 40 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const sceneToImport: RaidScene = {
+                    id: 'new-scene',
+                    raidId: 'raid1',
+                    name: 'New Scene',
+                    shape: { type: 'circle', radius: 20 },
+                    stepIds: [],
+                    entityIds: [],
+                };
+
+                const data: Exports = {
+                    scenes: [
+                        {
+                            scene: sceneToImport,
+                            steps: [],
+                            entities: [],
+                        },
+                    ],
+                };
+
+                const result = importOperation(state, 'raid1', undefined, data);
+
+                expect(result!.operation.putMetadata!.sceneIds).toEqual(['scene1', 'scene2', result!.sceneIds[0]]);
+            });
+        });
+    });
 });

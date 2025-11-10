@@ -67,7 +67,7 @@ const ListItem = ({ entity, isGroupExpanded, selectedEntityIds, level }: ListIte
                 onClick={(e) => {
                     if (e.shiftKey) {
                         fillSelection();
-                    } else if (e.ctrlKey) {
+                    } else if (e.ctrlKey || e.metaKey) {
                         // toggle selection, leaving other selections as they are
                         if (isSelected) {
                             dispatch.workspaces.select({

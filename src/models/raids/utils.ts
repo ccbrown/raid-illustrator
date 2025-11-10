@@ -1,3 +1,4 @@
+import { selectParentByChildId } from './selectors';
 import {
     Exports,
     Keyable,
@@ -379,11 +380,18 @@ interface ImportOperation {
     operation: RaidBatchOperation;
 }
 
+export interface ImportOperationOptions {
+    insertAfterSceneId?: string;
+    insertAfterStepId?: string;
+    insertBeforeEntityId?: string;
+}
+
 export const importOperation = (
     state: RaidsState,
     raidId: string,
     sceneId: string | undefined,
     data: Exports,
+    options?: ImportOperationOptions,
 ): ImportOperation | undefined => {
     const raid = state.metadata[raidId];
     if (!raid || (!data.scenes?.length && (!sceneId || (!data.steps?.length && !data.entities?.length)))) {
@@ -393,13 +401,16 @@ export const importOperation = (
     const pastedStepIds = [];
     const newSteps: RaidStep[] = [];
     const pastedEntityIds = [];
-    const newRootEntities: RaidEntity[] = [];
     let newEntities: RaidEntity[] = [];
     const newScenes = [];
     let updatedScene: RaidScene | undefined = undefined;
     let updatedRaid: RaidMetadata | undefined = undefined;
     const pastedSceneIds = [];
     const newStepIdMap = new Map<string, string>();
+
+    const parentForNewEntities = options?.insertBeforeEntityId
+        ? selectParentByChildId(state, options.insertBeforeEntityId)
+        : undefined;
 
     if (sceneId) {
         const scene = state.scenes[sceneId];
@@ -415,9 +426,15 @@ export const importOperation = (
             }
             if (pastedStepIds.length > 0) {
                 // update the scene to include the new steps
+                const insertAfterIndex = scene.stepIds.indexOf(options?.insertAfterStepId || '');
+                const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : scene.stepIds.length;
                 updatedScene = {
                     ...(updatedScene || scene),
-                    stepIds: [...scene.stepIds, ...pastedStepIds],
+                    stepIds: [
+                        ...scene.stepIds.slice(0, insertIndex),
+                        ...pastedStepIds,
+                        ...scene.stepIds.slice(insertIndex),
+                    ],
                 };
             }
 
@@ -432,18 +449,26 @@ export const importOperation = (
                     const [clone, descendants] = cloneEntityAndChildren(original, allEntities);
                     pastedEntityIds.push(clone.id);
                     newEntities.push(clone, ...descendants);
-                    newRootEntities.push(clone);
                 }
             }
             for (const e of newEntities) {
                 e.raidId = raidId;
                 e.sceneId = sceneId;
             }
-            for (const e of newRootEntities) {
-                // add the new root entities to the beginning of the scene's entity list
+            if (
+                !parentForNewEntities ||
+                (parentForNewEntities.type === 'scene' && parentForNewEntities.scene.id === sceneId)
+            ) {
+                // add the new root entities to the scene's entity list
+                const insertBeforeIndex = scene.entityIds.indexOf(options?.insertBeforeEntityId || '');
+                const insertIndex = insertBeforeIndex >= 0 ? insertBeforeIndex : 0;
                 updatedScene = {
                     ...(updatedScene || scene),
-                    entityIds: [e.id, ...(updatedScene || scene).entityIds],
+                    entityIds: [
+                        ...scene.entityIds.slice(0, insertIndex),
+                        ...pastedEntityIds,
+                        ...scene.entityIds.slice(insertIndex),
+                    ],
                 };
             }
             // now update any keyed values to point to the new step ids
@@ -499,9 +524,11 @@ export const importOperation = (
     }
 
     if (pastedSceneIds.length > 0) {
+        const insertAfterIndex = raid.sceneIds.indexOf(options?.insertAfterSceneId || '');
+        const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : raid.sceneIds.length;
         updatedRaid = {
             ...raid,
-            sceneIds: [...raid.sceneIds, ...pastedSceneIds],
+            sceneIds: [...raid.sceneIds.slice(0, insertIndex), ...pastedSceneIds, ...raid.sceneIds.slice(insertIndex)],
         };
     }
 
@@ -535,6 +562,31 @@ export const importOperation = (
         });
         if (updated !== entity) {
             updatedEntities.push(updated);
+        }
+    }
+
+    if (parentForNewEntities?.type === 'entity' && parentForNewEntities.entity.properties.type === 'group') {
+        // need to add the new entities to the parent's children
+        const existingChildren = parentForNewEntities.entity.properties.children;
+        const insertBeforeIndex = existingChildren.indexOf(options?.insertBeforeEntityId || '');
+        const insertIndex = insertBeforeIndex >= 0 ? insertBeforeIndex : 0;
+        const newChildren = [
+            ...existingChildren.slice(0, insertIndex),
+            ...pastedEntityIds,
+            ...existingChildren.slice(insertIndex),
+        ];
+        const alreadyUpdated = updatedEntities.find((e) => e.id === parentForNewEntities.entity.id);
+        if (alreadyUpdated && alreadyUpdated.properties.type === 'group') {
+            alreadyUpdated.properties.children = newChildren;
+        } else {
+            const updatedParent = {
+                ...parentForNewEntities.entity,
+                properties: {
+                    ...parentForNewEntities.entity.properties,
+                    children: newChildren,
+                },
+            };
+            updatedEntities.push(updatedParent);
         }
     }
 

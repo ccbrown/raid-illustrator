@@ -217,6 +217,15 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                                     raidId,
                                     sceneId,
                                     data,
+                                    options: {
+                                        insertAfterSceneId: selection?.sceneIds
+                                            ? selection.sceneIds[selection.sceneIds.length - 1]
+                                            : undefined,
+                                        insertAfterStepId: selection?.stepIds
+                                            ? selection.stepIds[selection.stepIds.length - 1]
+                                            : undefined,
+                                        insertBeforeEntityId: selection?.entityIds ? selection.entityIds[0] : undefined,
+                                    },
                                 });
                                 if (pastedIds.sceneIds.length > 0) {
                                     // switch to one of the new scenes
@@ -390,6 +399,9 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 {
                     ...hotKeyBase,
                     key: 'Backspace',
+                },
+                {
+                    key: 'Delete',
                 },
             ],
             execute: () => {

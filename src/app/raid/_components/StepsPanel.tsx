@@ -59,7 +59,7 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => 
             onClick={(e) => {
                 if (e.shiftKey) {
                     fillSelection();
-                } else if (e.ctrlKey) {
+                } else if (e.ctrlKey || e.metaKey) {
                     // don't open the step, just select or deselect it
                     if (isSelected) {
                         dispatch.workspaces.select({

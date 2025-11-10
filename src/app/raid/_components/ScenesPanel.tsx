@@ -59,7 +59,7 @@ const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) =>
             onClick={(e) => {
                 if (e.shiftKey) {
                     fillSelection();
-                } else if (e.ctrlKey) {
+                } else if (e.ctrlKey || e.metaKey) {
                     // don't open the scene, just select or deselect it
                     if (isSelected) {
                         dispatch.workspaces.select({

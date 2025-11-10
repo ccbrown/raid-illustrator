@@ -32,6 +32,7 @@ import {
     RaidsState,
 } from './types';
 import {
+    ImportOperationOptions,
     cloneEntityAndChildren,
     clonePersistedRaid,
     cloneSceneStepsAndEntities,
@@ -685,6 +686,7 @@ export const raids = createModel<RootModel>()({
                 raidId: string;
                 sceneId?: string;
                 data: Exports;
+                options?: ImportOperationOptions;
             },
             state,
         ): {
@@ -692,7 +694,7 @@ export const raids = createModel<RootModel>()({
             stepIds: string[];
             entityIds: string[];
         } {
-            const op = importOperation(state.raids, payload.raidId, payload.sceneId, payload.data);
+            const op = importOperation(state.raids, payload.raidId, payload.sceneId, payload.data, payload.options);
             if (!op) {
                 return { sceneIds: [], stepIds: [], entityIds: [] };
             }

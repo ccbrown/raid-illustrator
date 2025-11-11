@@ -5,16 +5,18 @@
     "scripts": {
         "dev": "next dev --turbopack",
         "check": "tsc --noEmit",
-        "build": "next build",
+        "build": "npm run prebuild && next build",
         "start": "next start",
-        "generate": "wrangler types --env-interface CloudflareEnv -e dev && next typegen",
+        "prebuild": "npm run wrangler-gen",
+        "wrangler-gen": "wrangler types --env-interface CloudflareEnv -e dev",
+        "generate": "npm run wrangler-gen && next typegen",
         "lint": "eslint",
         "format": "prettier --write .",
         "test": "vitest",
         "test:ui": "vitest --ui",
         "test:run": "vitest run",
-        "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-        "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+        "preview": "npm run prebuild && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+        "deploy": "npm run prebuild && opennextjs-cloudflare build && opennextjs-cloudflare deploy"
     },
     "dependencies": {
         "@diffusionstudio/core": "^3.8.3",

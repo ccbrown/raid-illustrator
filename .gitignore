@@ -43,6 +43,7 @@ next-env.d.ts
 
 # cloudflare
 .wrangler/
+worker-configuration.d.ts
 
 # claude
 /.claude/settings.local.json

@@ -7,6 +7,7 @@
         "check": "tsc --noEmit",
         "build": "next build",
         "start": "next start",
+        "generate": "wrangler types --env-interface CloudflareEnv -e dev && next typegen",
         "lint": "eslint",
         "format": "prettier --write .",
         "test": "vitest",

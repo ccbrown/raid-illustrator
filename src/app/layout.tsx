@@ -15,7 +15,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: 'Raid Illustrator',
+    title: {
+        template: '%s | Raid Illustrator',
+        default: 'Raid Illustrator',
+    },
+    robots: process.env.NEXT_PUBLIC_NO_INDEX
+        ? {
+              index: false,
+              follow: false,
+          }
+        : undefined,
 };
 
 export default function RootLayout({

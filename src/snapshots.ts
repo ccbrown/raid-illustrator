@@ -2,7 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 import { PersistedRaid } from '@/models/raids/types';
 
-const SIZE_LIMIT_MB = 5;
+const SIZE_LIMIT_MB = 10;
 const OBJECT_PREFIX = 'snapshots/';
 
 export class UserFacingError extends Error {

@@ -42,8 +42,12 @@ const EditorImpl = ({ raidId, isReadOnly }: { raidId: string; isReadOnly?: boole
         }
     }, [raidId, dispatch]);
 
+    const raid = useSelector((state) => state.raids.metadata[raidId]);
+    const pageTitle = raid ? `${raid.name} | Raid Illustrator` : 'Raid Illustrator';
+
     return (
         <EditorProvider value={{ raidId, isReadOnly }}>
+            <title>{pageTitle}</title>
             <CommandsProvider>
                 <div className="flex flex-col w-full h-screen">
                     <div className="flex flex-col h-full">

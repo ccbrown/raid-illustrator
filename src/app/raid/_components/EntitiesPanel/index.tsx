@@ -21,9 +21,7 @@ const Tab = ({ id, label, activeTabId }: { id: string; label: string; activeTabI
                 'text-white/50 hover:text-white': activeTabId !== id,
             })}
             onClick={() => {
-                if (raidId) {
-                    dispatch.workspaces.openEntitiesPanelTab({ raidId, tab: id as 'entities' | 'presets' });
-                }
+                dispatch.workspaces.openEntitiesPanelTab({ raidId, tab: id as 'entities' | 'presets' });
             }}
         >
             {label}
@@ -34,12 +32,8 @@ const Tab = ({ id, label, activeTabId }: { id: string; label: string; activeTabI
 export const EntitiesPanel = () => {
     const commands = useCommands();
     const raidId = useRaidId();
-    const workspace = useRaidWorkspace(raidId || '');
+    const workspace = useRaidWorkspace(raidId);
     const tab = workspace?.entitiesPanelTab || 'entities';
-
-    if (!raidId) {
-        return null;
-    }
 
     return (
         <div className="bg-elevation-1 rounded-lg shadow-lg flex flex-col min-h-0">

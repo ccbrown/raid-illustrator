@@ -272,7 +272,7 @@ const presets: Preset[] = [
 ];
 
 const PresetButton = ({ preset }: { preset: Preset }) => {
-    const raidId = useRaidId() || '';
+    const raidId = useRaidId();
     const dispatch = useDispatch();
 
     return (

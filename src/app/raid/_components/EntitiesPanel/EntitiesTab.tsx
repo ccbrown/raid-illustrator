@@ -158,11 +158,11 @@ const ListItems = ({ id, selectedEntityIds, level }: ListItemsProps) => {
 
 export const EntitiesTab = () => {
     const raidId = useRaidId();
-    const workspace = useRaidWorkspace(raidId || '');
+    const workspace = useRaidWorkspace(raidId);
     const scene = useScene(workspace?.openSceneId || '');
     const dispatch = useDispatch();
 
-    const selection = useSelection(raidId || '');
+    const selection = useSelection(raidId);
     const selectedEntityIds = selection?.entityIds;
 
     const onMove = useCallback(

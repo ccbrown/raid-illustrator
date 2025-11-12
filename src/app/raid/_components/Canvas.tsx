@@ -10,7 +10,7 @@ import { Hit, useSceneRenderer } from '@/renderer';
 import { useDispatch } from '@/store';
 
 import { useCommands } from '../commands';
-import { useRaidId } from '../hooks';
+import { useEditor } from './Editor';
 
 const PIXELS_PER_METER = 100;
 
@@ -21,15 +21,15 @@ const angle = (a: { x: number; y: number }, b: { x: number; y: number }): number
 };
 
 export const Canvas = () => {
-    const raidId = useRaidId();
-    const raidWorkspace = useRaidWorkspace(raidId || '');
+    const { raidId, isReadOnly } = useEditor();
+    const raidWorkspace = useRaidWorkspace(raidId);
     const scene = useScene(raidWorkspace?.openSceneId || '');
     const sceneId = scene?.id;
     const sceneWorkspace = useSceneWorkspace(sceneId || '');
     const stepId = sceneWorkspace?.openStepId;
 
     const dispatch = useDispatch();
-    const selection = useSelection(raidId || '');
+    const selection = useSelection(raidId);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -122,15 +122,15 @@ export const Canvas = () => {
             };
 
             // select the clicked entity immediately, if this is a normal click and it's not already selected
-            if (hit && hit.type === 'entity' && !e.shiftKey && !e.ctrlKey) {
+            if (!isReadOnly && hit && hit.type === 'entity' && !e.shiftKey && !e.ctrlKey) {
                 const entity = hit.entity;
                 const isSelected = selection?.entityIds?.includes(entity.id);
                 if (!isSelected) {
-                    dispatch.workspaces.select({ raidId: raidId || '', selection: { entityIds: [entity.id] } });
+                    dispatch.workspaces.select({ raidId, selection: { entityIds: [entity.id] } });
                 }
             }
         },
-        [renderer, pixelToSceneCoordinate, dispatch, raidId, selection, pixelsPerMeterZoomed],
+        [renderer, pixelToSceneCoordinate, dispatch, raidId, selection, pixelsPerMeterZoomed, isReadOnly],
     );
 
     const mouseMoveHandler = useCallback(
@@ -161,28 +161,30 @@ export const Canvas = () => {
                     }
                 }
 
-                // apply drag movement for selected entities
-                if (
-                    mouseDown.current.hit?.type === 'entity' &&
-                    selection?.entityIds &&
-                    selection.entityIds.length > 0
-                ) {
-                    for (const entityId of selection.entityIds) {
-                        renderer.setEntityDragMovement(entityId, movement);
+                if (!isReadOnly) {
+                    // apply drag movement for selected entities
+                    if (
+                        mouseDown.current.hit?.type === 'entity' &&
+                        selection?.entityIds &&
+                        selection.entityIds.length > 0
+                    ) {
+                        for (const entityId of selection.entityIds) {
+                            renderer.setEntityDragMovement(entityId, movement);
+                        }
                     }
-                }
 
-                // apply drag rotation for selected entities
-                if (
-                    mouseDown.current.hit?.type === 'rotation-handle' &&
-                    selection?.entityIds &&
-                    selection.entityIds.length > 0
-                ) {
-                    const startAngle = angle(mouseDown.current.scenePosition, mouseDown.current.hit.pivot);
-                    const currentAngle = angle(pos, mouseDown.current.hit.pivot);
-                    const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
-                    for (const entityId of selection.entityIds) {
-                        renderer.setEntityDragRotation(entityId, rotation);
+                    // apply drag rotation for selected entities
+                    if (
+                        mouseDown.current.hit?.type === 'rotation-handle' &&
+                        selection?.entityIds &&
+                        selection.entityIds.length > 0
+                    ) {
+                        const startAngle = angle(mouseDown.current.scenePosition, mouseDown.current.hit.pivot);
+                        const currentAngle = angle(pos, mouseDown.current.hit.pivot);
+                        const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
+                        for (const entityId of selection.entityIds) {
+                            renderer.setEntityDragRotation(entityId, rotation);
+                        }
                     }
                 }
 
@@ -192,7 +194,7 @@ export const Canvas = () => {
                 }
             }
         },
-        [selection, pixelToSceneCoordinate, renderer],
+        [selection, pixelToSceneCoordinate, renderer, isReadOnly],
     );
 
     const mouseUpHandler = useCallback(
@@ -217,32 +219,34 @@ export const Canvas = () => {
                     }
                 }
 
-                // apply the drag movement to the entities' positions
-                if (hit?.type === 'entity') {
-                    if (
-                        selection?.entityIds &&
-                        selection.entityIds.length > 0 &&
-                        (movement.x !== 0 || movement.y !== 0)
-                    ) {
-                        dispatch.raids.moveEntities({
-                            stepId: stepId || '',
-                            entityIds: selection.entityIds,
-                            offset: movement,
-                        });
+                if (!isReadOnly) {
+                    // apply the drag movement to the entities' positions
+                    if (hit?.type === 'entity') {
+                        if (
+                            selection?.entityIds &&
+                            selection.entityIds.length > 0 &&
+                            (movement.x !== 0 || movement.y !== 0)
+                        ) {
+                            dispatch.raids.moveEntities({
+                                stepId: stepId || '',
+                                entityIds: selection.entityIds,
+                                offset: movement,
+                            });
+                        }
                     }
-                }
 
-                // apply the drag rotation to the entities' rotations
-                if (hit?.type === 'rotation-handle' && selection?.entityIds && selection.entityIds.length > 0) {
-                    const startAngle = angle(mouseDown.current.scenePosition, hit.pivot);
-                    const currentAngle = angle(pos, hit.pivot);
-                    const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
-                    if (rotation) {
-                        dispatch.raids.rotateEntities({
-                            stepId: stepId || '',
-                            entityIds: selection.entityIds,
-                            rotation,
-                        });
+                    // apply the drag rotation to the entities' rotations
+                    if (hit?.type === 'rotation-handle' && selection?.entityIds && selection.entityIds.length > 0) {
+                        const startAngle = angle(mouseDown.current.scenePosition, hit.pivot);
+                        const currentAngle = angle(pos, hit.pivot);
+                        const rotation = e.shiftKey ? snapAngle(currentAngle - startAngle) : currentAngle - startAngle;
+                        if (rotation) {
+                            dispatch.raids.rotateEntities({
+                                stepId: stepId || '',
+                                entityIds: selection.entityIds,
+                                rotation,
+                            });
+                        }
                     }
                 }
 
@@ -256,7 +260,7 @@ export const Canvas = () => {
                         dispatch.workspaces.updateScene({ id: sceneId || '', center: newCenter });
                     }
                 }
-            } else if (hit) {
+            } else if (!isReadOnly && hit) {
                 // select the clicked entity
                 if (hit.type === 'entity') {
                     const entity = hit.entity;
@@ -266,28 +270,28 @@ export const Canvas = () => {
                         if (isSelected) {
                             const others = selection?.entityIds?.filter((id) => id !== entity.id) || [];
                             dispatch.workspaces.select({
-                                raidId: raidId || '',
+                                raidId,
                                 selection: { ...selection, entityIds: others.length > 0 ? others : undefined },
                             });
                         } else {
                             dispatch.workspaces.select({
-                                raidId: raidId || '',
+                                raidId,
                                 selection: { ...selection, entityIds: [...(selection?.entityIds || []), entity.id] },
                             });
                         }
                     } else if (!isSelected) {
-                        dispatch.workspaces.select({ raidId: raidId || '', selection: { entityIds: [entity.id] } });
+                        dispatch.workspaces.select({ raidId, selection: { entityIds: [entity.id] } });
                     }
                 }
             } else {
                 // click on empty space clears selection
-                dispatch.workspaces.select({ raidId: raidId || '', selection: undefined });
+                dispatch.workspaces.select({ raidId, selection: undefined });
             }
 
             renderer.resetDragMovementAndRotation();
             mouseDown.current = null;
         },
-        [renderer, pixelToSceneCoordinate, selection, dispatch, stepId, center, sceneId, raidId],
+        [renderer, pixelToSceneCoordinate, selection, dispatch, stepId, center, sceneId, raidId, isReadOnly],
     );
 
     const dragOverHandler = useCallback(
@@ -319,7 +323,7 @@ export const Canvas = () => {
 
                 dispatch.raids.createEntity({
                     name: data.name,
-                    raidId: raidId || '',
+                    raidId,
                     sceneId: sceneId || '',
                     properties: {
                         ...data.properties,

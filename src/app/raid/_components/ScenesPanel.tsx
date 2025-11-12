@@ -9,16 +9,17 @@ import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch } from '@/store';
 
 import { useCommands } from '../commands';
-import { useRaidId } from '../hooks';
+import { useEditor } from './Editor';
 
 interface ListItemProps {
     id: string;
+    isReadOnly?: boolean;
     openSceneId?: string;
     selectedSceneIds?: string[];
     raid: RaidMetadata;
 }
 
-const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) => {
+const ListItem = ({ id, openSceneId, selectedSceneIds, raid, isReadOnly }: ListItemProps) => {
     const scene = useScene(id);
     const dispatch = useDispatch();
 
@@ -79,7 +80,7 @@ const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) =>
         >
             <EditableText
                 className="text-sm"
-                disabled={!isSelected}
+                disabled={!isSelected || isReadOnly}
                 value={scene.name}
                 onChange={(newName) => {
                     dispatch.raids.updateScene({ id: scene.id, name: newName });
@@ -90,10 +91,10 @@ const ListItem = ({ id, openSceneId, selectedSceneIds, raid }: ListItemProps) =>
 };
 
 export const ScenesPanel = () => {
-    const raidId = useRaidId();
-    const raid = useRaid(raidId || '');
-    const raidWorkspace = useRaidWorkspace(raidId || '');
-    const selection = useSelection(raidId || '');
+    const { raidId, isReadOnly } = useEditor();
+    const raid = useRaid(raidId);
+    const raidWorkspace = useRaidWorkspace(raidId);
+    const selection = useSelection(raidId);
     const selectedSceneIds = selection?.sceneIds;
     const commands = useCommands();
     const dispatch = useDispatch();
@@ -116,24 +117,27 @@ export const ScenesPanel = () => {
             <div className="flex flex-row items-center py-2 border-b-1 border-elevation-2">
                 <div className="px-4 font-semibold text-sm">Scenes</div>
                 <div className="flex-grow" />
-                <div className="px-4">
-                    <Button
-                        icon={PlusIcon}
-                        size="small"
-                        onClick={() => {
-                            commands.newScene.execute();
-                        }}
-                        title="Add Scene"
-                    />
-                </div>
+                {!isReadOnly && (
+                    <div className="px-4">
+                        <Button
+                            icon={PlusIcon}
+                            size="small"
+                            onClick={() => {
+                                commands.newScene.execute();
+                            }}
+                            title="Add Scene"
+                        />
+                    </div>
+                )}
             </div>
             <ScrollList onMove={onMove}>
                 {raid?.sceneIds.map((id) => {
                     const isOpenOrSelected = id === raidWorkspace?.openSceneId || selectedSceneIds?.includes(id);
                     return (
-                        <ScrollListItem key={id} id={id} draggable scrollIntoView={isOpenOrSelected}>
+                        <ScrollListItem key={id} id={id} draggable={!isReadOnly} scrollIntoView={isOpenOrSelected}>
                             <ListItem
                                 id={id}
+                                isReadOnly={isReadOnly}
                                 openSceneId={raidWorkspace?.openSceneId}
                                 selectedSceneIds={selectedSceneIds || []}
                                 raid={raid}

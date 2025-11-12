@@ -9,16 +9,17 @@ import { fillSelectionRange } from '@/models/workspaces/utils';
 import { useDispatch } from '@/store';
 
 import { useCommands } from '../commands';
-import { useRaidId } from '../hooks';
+import { useEditor } from './Editor';
 
 interface ListItemProps {
     id: string;
+    isReadOnly?: boolean;
     openStepId?: string;
     selectedStepIds?: string[];
     scene: RaidScene;
 }
 
-const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => {
+const ListItem = ({ id, openStepId, selectedStepIds, scene, isReadOnly }: ListItemProps) => {
     const step = useStep(id);
     const dispatch = useDispatch();
 
@@ -79,7 +80,7 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => 
         >
             <EditableText
                 className="text-sm"
-                disabled={!isSelected}
+                disabled={!isSelected || isReadOnly}
                 value={step.name}
                 onChange={(newName) => {
                     dispatch.raids.updateStep({ id: step.id, name: newName });
@@ -90,11 +91,11 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene }: ListItemProps) => 
 };
 
 export const StepsPanel = () => {
-    const raidId = useRaidId();
-    const workspace = useRaidWorkspace(raidId || '');
+    const { raidId, isReadOnly } = useEditor();
+    const workspace = useRaidWorkspace(raidId);
     const scene = useScene(workspace?.openSceneId || '');
     const sceneWorkspace = useSceneWorkspace(scene?.id || '');
-    const selection = useSelection(raidId || '');
+    const selection = useSelection(raidId);
     const selectedStepIds = selection?.stepIds;
     const commands = useCommands();
     const dispatch = useDispatch();
@@ -117,24 +118,27 @@ export const StepsPanel = () => {
             <div className="flex flex-row items-center py-2 border-b-1 border-elevation-2">
                 <div className="px-4 font-semibold text-sm">Steps</div>
                 <div className="flex-grow" />
-                <div className="px-4">
-                    <Button
-                        icon={PlusIcon}
-                        size="small"
-                        onClick={() => {
-                            commands.newStep.execute();
-                        }}
-                        title="Add Step"
-                    />
-                </div>
+                {!isReadOnly && (
+                    <div className="px-4">
+                        <Button
+                            icon={PlusIcon}
+                            size="small"
+                            onClick={() => {
+                                commands.newStep.execute();
+                            }}
+                            title="Add Step"
+                        />
+                    </div>
+                )}
             </div>
             <ScrollList onMove={onMove}>
                 {scene?.stepIds.map((id) => {
                     const isOpenOrSelected = id === sceneWorkspace?.openStepId || selectedStepIds?.includes(id);
                     return (
-                        <ScrollListItem key={id} id={id} draggable scrollIntoView={isOpenOrSelected}>
+                        <ScrollListItem key={id} id={id} draggable={!isReadOnly} scrollIntoView={isOpenOrSelected}>
                             <ListItem
                                 id={id}
+                                isReadOnly={isReadOnly}
                                 openStepId={sceneWorkspace?.openStepId}
                                 selectedStepIds={selectedStepIds || []}
                                 scene={scene}

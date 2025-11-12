@@ -7,9 +7,9 @@ import { StepInspectorPanel } from './StepInspectorPanel';
 
 export const InspectorPanel = () => {
     const raidId = useRaidId();
-    const selection = useSelection(raidId || '');
+    const selection = useSelection(raidId);
 
-    if (!raidId || !selection) {
+    if (!selection) {
         return null;
     }
 

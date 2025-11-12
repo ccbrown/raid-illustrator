@@ -1,3 +1,3 @@
-import { useHashParam } from '@/hooks';
+import { useEditor } from './_components/Editor';
 
-export const useRaidId = () => useHashParam('id');
+export const useRaidId = (): string => useEditor().raidId;

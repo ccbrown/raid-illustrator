@@ -18,9 +18,10 @@ import { Selection } from '@/models/workspaces/types';
 import { store, useDispatch, usePersistence, useSelector } from '@/store';
 import { visualEffectDataFromClipboardElement } from '@/visual-effect';
 
+import { useEditor } from './_components/Editor';
 import { EffectSelectionDialog } from './_components/EffectSelectionDialog';
 import { RenderDialog } from './_components/RenderDialog';
-import { useRaidId } from './hooks';
+import { ShareDialog } from './_components/ShareDialog';
 
 export interface HotKey {
     key: string;
@@ -58,6 +59,7 @@ interface Commands {
     duplicate: Command;
     delete: Command;
     render: Command;
+    share: Command;
     zoomIn: Command;
     zoomOut: Command;
     zoomToFit: ZoomToFitCommand;
@@ -112,21 +114,22 @@ const shouldUseMacLikeHotKeys = () =>
 
 export const CommandsProvider = (props: CommandProviderProps) => {
     const bestFitZoomRef = useRef<number>(1);
-    const raidId = useRaidId();
+    const { raidId, isReadOnly } = useEditor();
     const router = useRouter();
     const dispatch = useDispatch();
     const useMacLikeHotKeys = shouldUseMacLikeHotKeys();
-    const raidWorkspace = useRaidWorkspace(raidId || '');
+    const raidWorkspace = useRaidWorkspace(raidId);
     const persistence = usePersistence();
 
     const sceneId = raidWorkspace?.openSceneId;
     const scene = useScene(sceneId || '');
     const sceneWorkspace = useSceneWorkspace(sceneId || '');
-    const selection = useSelection(raidId || '');
+    const selection = useSelection(raidId);
     const selectedEntity = useEntity(selection?.entityIds?.[0] || '');
 
     const [effectSelectionDialogOpen, setEffectSelectionDialogOpen] = useState(false);
     const [renderDialogOpen, setRenderDialogOpen] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     const undoAction = raidWorkspace?.undoStack?.slice(-1)[0];
     const redoAction = raidWorkspace?.redoStack?.slice(-1)[0];
@@ -171,7 +174,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
 
     const cut = useCallback(
         (e?: ClipboardEvent) => {
-            if (isInputTarget(e?.target as HTMLElement)) {
+            if (isReadOnly || isInputTarget(e?.target as HTMLElement)) {
                 return;
             }
 
@@ -180,12 +183,12 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 writeClipboard(e, data);
             }
         },
-        [dispatch, selection, writeClipboard],
+        [dispatch, selection, writeClipboard, isReadOnly],
     );
 
     const paste = useCallback(
         async (e?: ClipboardEvent) => {
-            if (isInputTarget(e?.target as HTMLElement)) {
+            if (isReadOnly || isInputTarget(e?.target as HTMLElement)) {
                 return;
             }
 
@@ -211,7 +214,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                             }
                         } else {
                             const serializedData = div.getAttribute('data-raid-illustrator');
-                            if (raidId && serializedData) {
+                            if (serializedData) {
                                 const data: Exports = JSON.parse(atob(serializedData));
                                 const pastedIds = dispatch.raids.paste({
                                     raidId,
@@ -250,7 +253,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 }
             }
         },
-        [dispatch, raidId, sceneId, selection],
+        [dispatch, raidId, sceneId, selection, isReadOnly],
     );
 
     const hotKeyBase = useMacLikeHotKeys
@@ -264,8 +267,9 @@ export const CommandsProvider = (props: CommandProviderProps) => {
     const commands: Commands = {
         deleteRaid: {
             name: 'Delete',
+            disabled: isReadOnly,
             execute: () => {
-                if (raidId && confirm('Are you sure you want to delete this raid? This action cannot be undone.')) {
+                if (confirm('Are you sure you want to delete this raid? This action cannot be undone.')) {
                     dispatch.raids.delete({ id: raidId });
                     dispatch.workspaces.delete({ raidId });
                     persistence.deleteRaid(raidId);
@@ -276,30 +280,26 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         duplicateRaid: {
             name: 'Duplicate',
             execute: async () => {
-                if (raidId) {
-                    const newRaid = dispatch.raids.duplicate(raidId);
-                    if (newRaid) {
-                        await persistence.persistRaid(newRaid.id);
-                        window.open(`/raid#id=${newRaid.id}`, '_blank');
-                    }
+                const newRaid = dispatch.raids.duplicate(raidId);
+                if (newRaid) {
+                    await persistence.persistRaid(newRaid.id);
+                    window.open(`/raid#id=${newRaid.id}`, '_blank');
                 }
             },
         },
         exportRaid: {
             name: 'Export',
             execute: () => {
-                if (raidId) {
-                    const persisted = selectPersistedRaid(store.getState().raids, raidId);
-                    if (persisted) {
-                        const dataStr = JSON.stringify(persisted, null, 2);
-                        const blob = new Blob([dataStr], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${persisted.metadata.name.replace(/[\/\?<>\\:\*\|":]/g, '')}.json`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    }
+                const persisted = selectPersistedRaid(store.getState().raids, raidId);
+                if (persisted) {
+                    const dataStr = JSON.stringify(persisted, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${persisted.metadata.name.replace(/[\/\?<>\\:\*\|":]/g, '')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 }
             },
         },
@@ -317,9 +317,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 key: 'z',
             },
             execute: () => {
-                if (raidId) {
-                    dispatch.workspaces.undo({ raidId });
-                }
+                dispatch.workspaces.undo({ raidId });
             },
         },
         redo: {
@@ -336,14 +334,14 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                       key: 'y',
                   },
             execute: () => {
-                if (raidId) {
-                    dispatch.workspaces.redo({ raidId });
-                }
+                dispatch.workspaces.redo({ raidId });
             },
         },
         cut: {
             name: 'Cut',
-            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
+            disabled:
+                isReadOnly ||
+                (!selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length),
             fakeHotKey: {
                 ...hotKeyBase,
                 key: 'x',
@@ -361,7 +359,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         paste: {
             name: 'Paste',
-            disabled: !raidId,
+            disabled: isReadOnly,
             fakeHotKey: {
                 ...hotKeyBase,
                 key: 'v',
@@ -370,7 +368,9 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         duplicate: {
             name: 'Duplicate',
-            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
+            disabled:
+                isReadOnly ||
+                (!selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length),
             hotKey: {
                 ...hotKeyBase,
                 key: 'd',
@@ -386,12 +386,14 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 if (selection?.sceneIds?.length) {
                     newSelection.sceneIds = dispatch.raids.duplicateScenes({ ids: selection.sceneIds });
                 }
-                dispatch.workspaces.select({ raidId: raidId || '', selection: newSelection });
+                dispatch.workspaces.select({ raidId, selection: newSelection });
             },
         },
         delete: {
             name: 'Delete',
-            disabled: !selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length,
+            disabled:
+                isReadOnly ||
+                (!selection?.entityIds?.length && !selection?.stepIds?.length && !selection?.sceneIds?.length),
             hotKey: {
                 key: 'Backspace',
             },
@@ -412,49 +414,47 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         newScene: {
             name: 'New Scene',
-            disabled: !raidId,
+            disabled: isReadOnly,
             execute: () => {
-                if (raidId) {
-                    const newScene = dispatch.raids.createScene({
-                        raidId,
-                        name: 'New Scene',
-                        shape: scene
-                            ? scene.shape
-                            : {
-                                  type: 'rectangle',
-                                  width: 40,
-                                  height: 40,
+                const newScene = dispatch.raids.createScene({
+                    raidId,
+                    name: 'New Scene',
+                    shape: scene
+                        ? scene.shape
+                        : {
+                              type: 'rectangle',
+                              width: 40,
+                              height: 40,
+                          },
+                    fill: scene
+                        ? scene.fill
+                        : {
+                              type: 'color',
+                              color: {
+                                  r: 40,
+                                  g: 42,
+                                  b: 54,
+                                  a: 1,
                               },
-                        fill: scene
-                            ? scene.fill
-                            : {
-                                  type: 'color',
-                                  color: {
-                                      r: 40,
-                                      g: 42,
-                                      b: 54,
-                                      a: 1,
-                                  },
-                              },
-                        afterSceneId: raidWorkspace?.openSceneId,
-                    });
-                    dispatch.workspaces.openScene({ id: newScene.id });
-                    if (newScene.stepIds[0]) {
-                        dispatch.workspaces.openStep({ sceneId: newScene.id, id: newScene.stepIds[0] });
-                    }
-                    dispatch.workspaces.select({ raidId, selection: { sceneIds: [newScene.id] } });
+                          },
+                    afterSceneId: raidWorkspace?.openSceneId,
+                });
+                dispatch.workspaces.openScene({ id: newScene.id });
+                if (newScene.stepIds[0]) {
+                    dispatch.workspaces.openStep({ sceneId: newScene.id, id: newScene.stepIds[0] });
                 }
+                dispatch.workspaces.select({ raidId, selection: { sceneIds: [newScene.id] } });
             },
         },
         newStep: {
             name: 'New Step',
-            disabled: !sceneId,
+            disabled: isReadOnly || !sceneId,
             hotKey: {
                 ...hotKeyBase,
                 key: 'ArrowRight',
             },
             execute: () => {
-                if (raidId && sceneId) {
+                if (sceneId) {
                     const id = dispatch.raids.createStep({
                         raidId,
                         sceneId,
@@ -473,7 +473,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 key: 'ArrowRight',
             },
             execute: () => {
-                if (raidId && sceneId && nextStepId) {
+                if (sceneId && nextStepId) {
                     dispatch.workspaces.openStep({ sceneId, id: nextStepId });
                 }
             },
@@ -485,16 +485,16 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 key: 'ArrowLeft',
             },
             execute: () => {
-                if (raidId && sceneId && previousStepId) {
+                if (sceneId && previousStepId) {
                     dispatch.workspaces.openStep({ sceneId, id: previousStepId });
                 }
             },
         },
         newShapeEntity: {
             name: 'New Shape Entity',
-            disabled: !sceneId,
+            disabled: isReadOnly || !sceneId,
             execute: () => {
-                if (raidId && sceneId) {
+                if (sceneId) {
                     const id = dispatch.raids.createEntity({
                         raidId,
                         sceneId,
@@ -527,9 +527,9 @@ export const CommandsProvider = (props: CommandProviderProps) => {
         },
         newTextEntity: {
             name: 'New Text Entity',
-            disabled: !sceneId,
+            disabled: isReadOnly || !sceneId,
             execute: () => {
-                if (raidId && sceneId) {
+                if (sceneId) {
                     const id = dispatch.raids.createEntity({
                         raidId,
                         sceneId,
@@ -559,15 +559,15 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             },
         },
         addEntityEffect: {
-            name: 'Add Effect',
-            disabled: !selectedEntity || selectedEntity.properties.type !== 'shape',
+            name: 'Add Effect...',
+            disabled: isReadOnly || !selectedEntity || selectedEntity.properties.type !== 'shape',
             execute: () => {
                 setEffectSelectionDialogOpen(true);
             },
         },
         groupEntities: {
             name: 'Group Entities',
-            disabled: (selection?.entityIds?.length || 0) < 2 || !selectedEntitiesHaveCommonParent,
+            disabled: isReadOnly || (selection?.entityIds?.length || 0) < 2 || !selectedEntitiesHaveCommonParent,
             hotKey: {
                 ...hotKeyBase,
                 key: 'g',
@@ -577,7 +577,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             },
         },
         render: {
-            name: 'Render',
+            name: 'Render...',
             disabled: !sceneId,
             hotKey: {
                 key: 'Enter',
@@ -585,6 +585,12 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             },
             execute: () => {
                 setRenderDialogOpen(true);
+            },
+        },
+        share: {
+            name: 'Share...',
+            execute: () => {
+                setShareDialogOpen(true);
             },
         },
         zoomIn: {
@@ -703,6 +709,8 @@ export const CommandsProvider = (props: CommandProviderProps) => {
             {sceneId && (
                 <RenderDialog isOpen={renderDialogOpen} onClose={() => setRenderDialogOpen(false)} sceneId={sceneId} />
             )}
+
+            <ShareDialog isOpen={shareDialogOpen} onClose={() => setShareDialogOpen(false)} />
 
             {props.children}
         </CommandsContext.Provider>

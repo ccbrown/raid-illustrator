@@ -13,9 +13,11 @@ import {
     Icon,
     MagnifyingGlassMinusIcon,
     MagnifyingGlassPlusIcon,
+    PencilSimpleIcon,
     PlusIcon,
     ScissorsIcon,
     ShapesIcon,
+    ShareIcon,
     SparkleIcon,
     StackIcon,
     StackSimpleIcon,
@@ -27,11 +29,11 @@ import { clsx } from 'clsx';
 import { Menubar as PrimeMenuBar } from 'primereact/menubar';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
 
-import { EditableText } from '@/components';
-import { useHashParam } from '@/hooks';
+import { Button, EditableText } from '@/components';
 import { useDispatch, useSelector } from '@/store';
 
 import { Command, HotKey, useCommands } from '../commands';
+import { useEditor } from './Editor';
 
 interface MenuItem extends PrimeMenuItem {
     icon?: Icon;
@@ -82,7 +84,7 @@ const menuItemForCommand = (command: Command, icon: Icon): MenuItem => ({
 });
 
 export const MenuBar = () => {
-    const raidId = useHashParam('id');
+    const { raidId, isReadOnly } = useEditor();
     const raid = useSelector((state) => state.raids.metadata[raidId || '']);
 
     const dispatch = useDispatch();
@@ -101,8 +103,12 @@ export const MenuBar = () => {
             label: 'File',
             items: [
                 menuItemForCommand(commands.duplicateRaid, StackSimpleIcon),
+                { separator: true },
+                menuItemForCommand(commands.share, ShareIcon),
                 menuItemForCommand(commands.exportRaid, ExportIcon),
+                { separator: true },
                 menuItemForCommand(commands.deleteRaid, TrashIcon),
+                { separator: true },
                 menuItemForCommand(commands.close, XIcon),
             ],
         },
@@ -158,6 +164,7 @@ export const MenuBar = () => {
                     <EditableText
                         value={raid?.name || ''}
                         onChange={saveName}
+                        disabled={isReadOnly}
                         className="text-xl font-bold hover:bg-black/20"
                     />
                 </div>
@@ -217,6 +224,16 @@ export const MenuBar = () => {
                     />
                 </div>
             </div>
+            <div className="flex-grow" />
+            {isReadOnly && (
+                <div>
+                    <Button
+                        text="Create Editable Copy"
+                        icon={PencilSimpleIcon}
+                        onClick={commands.duplicateRaid.execute}
+                    />
+                </div>
+            )}
         </div>
     );
 };

@@ -81,12 +81,16 @@ export const resolveProperties = (
             continue;
         }
 
-        if (!spec.keyable) {
-            result[spec.key] = v;
-            continue;
+        let currentValue = spec.keyable ? keyableValueAtStep(v as Keyable<unknown>, sceneStepIds, currentStepId) : v;
+        if (spec.type === 'array' && Array.isArray(currentValue)) {
+            const itemSpecs = spec.itemProperties;
+            const resolvedArray: AnyProperties[] = [];
+            for (const item of currentValue) {
+                const resolvedItem = resolveProperties(item as AnyProperties, itemSpecs, sceneStepIds, currentStepId);
+                resolvedArray.push(resolvedItem);
+            }
+            currentValue = resolvedArray;
         }
-
-        const currentValue = keyableValueAtStep(v as Keyable<unknown>, sceneStepIds, currentStepId);
         result[spec.key] = currentValue;
     }
     return result;

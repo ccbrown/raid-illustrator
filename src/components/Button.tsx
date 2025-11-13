@@ -7,7 +7,7 @@ interface Props {
     icon?: Icon;
     onClick?: () => void;
     disabled?: boolean;
-    size?: 'small' | 'medium';
+    size?: 'extra-small' | 'small' | 'medium';
     title?: string;
     type?: 'submit';
 }
@@ -29,7 +29,7 @@ export const Button = (props: Props) => {
             title={props.title}
             type={props.type}
         >
-            {props.icon && <props.icon size={props.size === 'small' ? 14 : 22} />}
+            {props.icon && <props.icon size={props.size === 'extra-small' ? 8 : props.size === 'small' ? 14 : 22} />}
             {props.text && <div className="font-semibold text-sm text-center flex-grow">{props.text}</div>}
         </button>
     );

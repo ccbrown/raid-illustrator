@@ -214,6 +214,58 @@ const PropertySpecPropertyEditor = ({
                 <StandaloneTextInput value={value as string} onChange={onChange} />
             );
             break;
+        case 'array':
+            return (
+                <>
+                    <div className="flex flex-row items-center gap-2">
+                        <div className="text-sm text-gray-300">{spec.name}</div>
+                        <div className="flex-grow" />
+                        <Button
+                            icon={PlusIcon}
+                            size="extra-small"
+                            onClick={() => {
+                                const newItem: AnyProperties = {};
+                                for (const itemSpec of spec.itemProperties) {
+                                    newItem[itemSpec.key] = itemSpec.default;
+                                }
+                                onChange([...(currentValue as AnyProperties[]), newItem]);
+                            }}
+                            title="Add Effect"
+                        />
+                    </div>
+                    {(currentValue as AnyProperties[]).map((item, index) => (
+                        <div key={index} className="flex flex-col gap-2 border border-1 border-elevation-2 p-2 rounded">
+                            <div className="flex flex-row items-center gap-2">
+                                <div className="text-xs font-semibold">Item {index + 1}</div>
+                                <div className="flex-grow" />
+                                <button
+                                    className="subtle"
+                                    onClick={() => {
+                                        const newArray = (currentValue as AnyProperties[]).filter(
+                                            (_, i) => i !== index,
+                                        );
+                                        onChange(newArray);
+                                    }}
+                                >
+                                    <TrashIcon size={16} />
+                                </button>
+                            </div>
+                            <PropertySpecPropertyEditors
+                                specs={spec.itemProperties}
+                                properties={item}
+                                sceneStepIds={sceneStepIds}
+                                stepId={stepId}
+                                onChange={(newProperties) => {
+                                    const newArray = (currentValue as AnyProperties[]).map((p, i) =>
+                                        i === index ? newProperties : p,
+                                    );
+                                    onChange(newArray);
+                                }}
+                            />
+                        </div>
+                    ))}
+                </>
+            );
         default:
             control = () => null;
     }

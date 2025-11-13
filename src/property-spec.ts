@@ -8,6 +8,12 @@ interface PropertySpecBase {
     keyable?: boolean;
 }
 
+interface PropertySpecArray extends PropertySpecBase {
+    type: 'array';
+    default: AnyProperties[];
+    itemProperties: PropertySpec[];
+}
+
 interface PropertySpecText extends PropertySpecBase {
     type: 'text';
     default: string;
@@ -57,7 +63,8 @@ export type PropertySpec =
     | PropertySpecColor
     | PropertySpecNumber
     | PropertySpecAngle
-    | PropertySpecCoordinate;
+    | PropertySpecCoordinate
+    | PropertySpecArray;
 
 // Returns the properties for the current step, resolving keyable values and adding defaults as needed.
 export const resolveProperties = (

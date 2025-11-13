@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useSelector } from '@/store';
 
@@ -105,13 +105,49 @@ export const useThrottledCallback = <T>(callback: (arg: T) => void, delay: numbe
     const callbackRef = useRef(callback);
     callbackRef.current = callback;
 
-    return (arg: T) => {
-        const now = Date.now();
-        if (now - lastCalledRef.current >= delay) {
-            lastCalledRef.current = now;
-            callbackRef.current(arg);
-        }
-    };
+    const scheduledValueRef = useRef<
+        | {
+              value: T;
+              timeoutId: ReturnType<typeof setTimeout>;
+          }
+        | undefined
+    >(undefined);
+
+    useEffect(() => {
+        return () => {
+            if (scheduledValueRef.current) {
+                clearTimeout(scheduledValueRef.current.timeoutId);
+            }
+        };
+    }, []);
+
+    return useCallback(
+        (arg: T) => {
+            const now = Date.now();
+            const elapsed = now - lastCalledRef.current;
+            if (elapsed >= delay) {
+                lastCalledRef.current = now;
+                callbackRef.current(arg);
+                if (scheduledValueRef.current) {
+                    clearTimeout(scheduledValueRef.current.timeoutId);
+                    scheduledValueRef.current = undefined;
+                }
+            } else if (!scheduledValueRef.current) {
+                const timeRemaining = delay - elapsed;
+                const timeoutId = setTimeout(() => {
+                    if (scheduledValueRef.current) {
+                        lastCalledRef.current = Date.now();
+                        callbackRef.current(scheduledValueRef.current.value);
+                        scheduledValueRef.current = undefined;
+                    }
+                }, timeRemaining);
+                scheduledValueRef.current = { value: arg, timeoutId };
+            } else {
+                scheduledValueRef.current.value = arg;
+            }
+        },
+        [delay],
+    );
 };
 
 // Like useState, but persists the state to localStorage.

@@ -24,6 +24,7 @@ export const Checkbox = (props: Props) => {
                         disabled={props.disabled}
                         checked={props.checked}
                         onChange={(e) => props.onChange(e.target.checked)}
+                        onMouseDown={(e) => e.preventDefault()}
                         className={`w-4 h-4 appearance-none rounded-md ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-500 ${props.disabled ? 'checked:bg-gray-300' : 'checked:bg-indigo-500'} cursor-pointer`}
                     />
                     {props.checked && (

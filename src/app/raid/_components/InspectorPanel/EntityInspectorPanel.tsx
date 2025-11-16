@@ -502,8 +502,12 @@ export const EntityInspectorPanel = ({ id }: Props) => {
         stepId,
     };
 
+    // We explicitly key the outer div with entity.id to ensure that no state is preserved when
+    // switching between entities.
+    const key = entity.id;
+
     return (
-        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col h-full overflow-auto">
+        <div className="bg-elevation-1 rounded-lg shadow-lg py-2 flex flex-col h-full overflow-auto" key={key}>
             <div className="flex flex-col gap-2 px-4">
                 <div className="font-semibold">{entity.name}</div>
                 <KeyableEntityPropertyEditor

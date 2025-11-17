@@ -135,7 +135,7 @@ export const workspaces = createModel<RootModel>()({
             if (!sceneWorkspace.openStepId) {
                 const raidScene = state.raids.scenes[payload.id];
                 if (raidScene && raidScene.stepIds.length > 0) {
-                    dispatch.workspaces.openStep({ id: raidScene.stepIds[0], sceneId: payload.id });
+                    dispatch.workspaces.openStep({ id: raidScene.stepIds[0] });
                 }
             }
         },
@@ -196,11 +196,14 @@ export const workspaces = createModel<RootModel>()({
         openStep(
             payload: {
                 id: string;
-                sceneId: string;
             },
             state,
         ) {
-            const scene = state.raids.scenes[payload.sceneId];
+            const step = state.raids.steps[payload.id];
+            if (!step) {
+                return;
+            }
+            const scene = state.raids.scenes[step.sceneId];
             if (!scene) {
                 return;
             }

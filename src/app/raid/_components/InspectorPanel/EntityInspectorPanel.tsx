@@ -1,4 +1,12 @@
-import { ClipboardIcon, CopyIcon, DiamondIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import {
+    CaretLeftIcon,
+    CaretRightIcon,
+    ClipboardIcon,
+    CopyIcon,
+    DiamondIcon,
+    PlusIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useCallback } from 'react';
 
 import {
@@ -13,7 +21,7 @@ import {
     RGBInput,
     StandaloneTextInput,
 } from '@/components';
-import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace } from '@/hooks';
+import { useEntity, useRaidWorkspace, useScene, useSceneWorkspace, useStep } from '@/hooks';
 import {
     AnyProperties,
     Keyable,
@@ -90,22 +98,54 @@ const KeyablePropertyEditor = <T,>({
         },
         [onChange, value, sceneStepIds, stepId],
     );
+    const dispatch = useDispatch();
+
+    const stepIndex = sceneStepIds.indexOf(stepId);
+    const stepsBefore = sceneStepIds.slice(0, stepIndex);
+    const stepsAfter = sceneStepIds.slice(stepIndex + 1);
+    const prevKeyedStepId = [...stepsBefore].reverse().find((sId) => keyableIsKeyedAtStep(value, sId));
+    const nextKeyedStepId = stepsAfter.find((sId) => keyableIsKeyedAtStep(value, sId));
+    const prevKeyedStep = useStep(prevKeyedStepId || '');
+    const nextKeyedStep = useStep(nextKeyedStepId || '');
 
     return (
-        <div className="flex flex-row items-center gap-2">
+        <div className="flex flex-row items-center gap-1">
             <div className="text-sm text-gray-300">{label}</div>
-            <DiamondIcon
-                size={12}
-                className={`${keyableIsKeyed(value) ? 'text-yellow-400' : 'text-white/40'} cursor-pointer`}
-                weight={currentStepIsKeyed ? 'fill' : 'regular'}
-                onClick={() => {
-                    if (currentStepIsKeyed) {
-                        onChange(keyableWithUnkeyedStep(value, stepId));
-                    } else {
-                        onChange(keyableWithKeyedStep(value, sceneStepIds, stepId));
-                    }
-                }}
-            />
+            <div className="flex flex-row items-center">
+                <CaretLeftIcon
+                    size={12}
+                    className={`${prevKeyedStepId ? 'cursor-pointer text-white/80' : 'text-white/20'}`}
+                    onClick={() => {
+                        if (prevKeyedStepId) {
+                            dispatch.workspaces.openStep({ id: prevKeyedStepId });
+                        }
+                    }}
+                    alt={prevKeyedStep?.name}
+                />
+                <DiamondIcon
+                    size={12}
+                    className={`${keyableIsKeyed(value) ? 'text-yellow-400' : 'text-white/40'} cursor-pointer`}
+                    weight={currentStepIsKeyed ? 'fill' : 'regular'}
+                    onClick={() => {
+                        if (currentStepIsKeyed) {
+                            onChange(keyableWithUnkeyedStep(value, stepId));
+                        } else {
+                            onChange(keyableWithKeyedStep(value, sceneStepIds, stepId));
+                        }
+                    }}
+                    alt="Key / Unkey Step"
+                />
+                <CaretRightIcon
+                    size={12}
+                    className={`${nextKeyedStepId ? 'cursor-pointer text-white/80' : 'text-white/20'}`}
+                    onClick={() => {
+                        if (nextKeyedStepId) {
+                            dispatch.workspaces.openStep({ id: nextKeyedStepId });
+                        }
+                    }}
+                    alt={nextKeyedStep?.name}
+                />
+            </div>
             <div className="flex-grow" />
             {control({
                 value: currentValue,

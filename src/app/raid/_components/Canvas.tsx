@@ -337,6 +337,35 @@ export const Canvas = () => {
         [renderer, pixelToSceneCoordinate, dispatch, raidId, sceneId],
     );
 
+    const wheelHandler = useCallback(
+        (e: React.WheelEvent) => {
+            // https://stackoverflow.com/questions/10744645/detect-touchpad-vs-mouse-in-javascript/62415754#62415754
+            const isProbablyTrackpad = e.deltaMode === 0 && e.deltaY === Math.round(e.wheelDeltaY / -3);
+            if (isProbablyTrackpad) {
+                // TODO: ideally trackpad users would pinch to zoom and scroll to pan
+                return;
+            }
+            console.log(isProbablyTrackpad, e.deltaMode, e.deltaY, e.wheelDeltaY);
+
+            e.preventDefault();
+
+            const speed = e.deltaMode === 0 ? 0.001 : e.deltaMode === 1 ? 0.03 : 0.3;
+            const newZoom = Math.max(Math.min(zoom + e.deltaY * speed, 4), 0.01);
+            dispatch.workspaces.updateScene({ id: sceneId, zoom: newZoom });
+        },
+        [dispatch, sceneId, zoom],
+    );
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            canvas.addEventListener('wheel', wheelHandler, { passive: false });
+            return () => {
+                canvas.removeEventListener('wheel', wheelHandler);
+            };
+        }
+    }, [wheelHandler]);
+
     return (
         <div className="w-full h-full" ref={containerRef}>
             <canvas

@@ -16,10 +16,11 @@ interface ListItemProps {
     isReadOnly?: boolean;
     openStepId?: string;
     selectedStepIds?: string[];
+    hasEntitySelection: boolean;
     scene: RaidScene;
 }
 
-const ListItem = ({ id, openStepId, selectedStepIds, scene, isReadOnly }: ListItemProps) => {
+const ListItem = ({ id, openStepId, selectedStepIds, scene, isReadOnly, hasEntitySelection }: ListItemProps) => {
     const step = useStep(id);
     const dispatch = useDispatch();
 
@@ -27,10 +28,19 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene, isReadOnly }: ListIt
         return null;
     }
 
+    const isOpen = step.id === openStepId;
+
     const openStep = () => {
         if (step) {
-            dispatch.workspaces.openStep({ id, sceneId: step.sceneId });
-            dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: [step.id] } });
+            if (isOpen) {
+                dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: [step.id] } });
+            } else {
+                dispatch.workspaces.openStep({ id });
+                // if there's an entity selection, we want users to be able to change step without deselecting them
+                if (!hasEntitySelection) {
+                    dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: [step.id] } });
+                }
+            }
         }
     };
 
@@ -39,7 +49,6 @@ const ListItem = ({ id, openStepId, selectedStepIds, scene, isReadOnly }: ListIt
         dispatch.workspaces.select({ raidId: step.raidId, selection: { stepIds: newSelection } });
     };
 
-    const isOpen = step.id === openStepId;
     const isSelected = selectedStepIds?.includes(step.id);
 
     return (
@@ -100,6 +109,8 @@ export const StepsPanel = () => {
     const commands = useCommands();
     const dispatch = useDispatch();
 
+    const hasEntitySelection = !!selection?.entityIds?.length;
+
     const onMove = useCallback(
         (movedId: string, targetId: string, position: 'above' | 'below') => {
             // if the moved item is part of the selection, move all selected items. otherwise just move the one
@@ -142,6 +153,7 @@ export const StepsPanel = () => {
                                 openStepId={sceneWorkspace?.openStepId}
                                 selectedStepIds={selectedStepIds || []}
                                 scene={scene}
+                                hasEntitySelection={hasEntitySelection}
                             />
                         </ScrollListItem>
                     );

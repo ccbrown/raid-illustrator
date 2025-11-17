@@ -188,7 +188,7 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
             />
             <RGBInput label="Background Color" value={backgroundColor} onChange={setBackgroundColor} />
             <div className="flex flex-row gap-2">
-                <NumberInput label="Margin (m)" value={margin} onChange={setMargin} />
+                <NumberInput label="Margin" value={margin} onChange={setMargin} />
                 <NumberInput label="Aspect Ratio" value={aspectRatio} onChange={setAspectRatio} maxFractionDigits={4} />
                 <NumberInput label="Pixels/Meter" value={pixelsPerMeter} onChange={setPixelsPerMeter} />
             </div>

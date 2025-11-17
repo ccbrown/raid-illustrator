@@ -48,7 +48,7 @@ export const ShapeEditor = ({ value, onChange }: Props) => (
         {value.type === 'rectangle' ? (
             <>
                 <NumberInput
-                    label="Width (m)"
+                    label="Width"
                     min={1}
                     value={value.width}
                     onChange={(w) => {
@@ -78,7 +78,7 @@ export const ShapeEditor = ({ value, onChange }: Props) => (
                     />
                 )}
                 <NumberInput
-                    label="Height (m)"
+                    label="Height"
                     min={1}
                     value={value.height}
                     onChange={(h) => {
@@ -97,7 +97,7 @@ export const ShapeEditor = ({ value, onChange }: Props) => (
             </>
         ) : (
             <NumberInput
-                label="Radius (m)"
+                label="Radius"
                 min={1}
                 value={value.radius}
                 onChange={(r) => {

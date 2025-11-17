@@ -236,7 +236,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                                     dispatch.workspaces.openScene({ id: pastedIds.sceneIds[0] });
                                 } else if (sceneId && pastedIds.stepIds.length > 0) {
                                     // switch to one of the new steps
-                                    dispatch.workspaces.openStep({ id: pastedIds.stepIds[0], sceneId });
+                                    dispatch.workspaces.openStep({ id: pastedIds.stepIds[0] });
                                 }
                                 // select the pasted items
                                 dispatch.workspaces.select({
@@ -442,7 +442,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 });
                 dispatch.workspaces.openScene({ id: newScene.id });
                 if (newScene.stepIds[0]) {
-                    dispatch.workspaces.openStep({ sceneId: newScene.id, id: newScene.stepIds[0] });
+                    dispatch.workspaces.openStep({ id: newScene.stepIds[0] });
                 }
                 dispatch.workspaces.select({ raidId, selection: { sceneIds: [newScene.id] } });
             },
@@ -462,7 +462,7 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                         name: 'New Step',
                         afterStepId: sceneWorkspace?.openStepId,
                     });
-                    dispatch.workspaces.openStep({ id, sceneId });
+                    dispatch.workspaces.openStep({ id });
                     dispatch.workspaces.select({ raidId, selection: { stepIds: [id] } });
                 }
             },
@@ -474,8 +474,8 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 key: 'ArrowRight',
             },
             execute: () => {
-                if (sceneId && nextStepId) {
-                    dispatch.workspaces.openStep({ sceneId, id: nextStepId });
+                if (nextStepId) {
+                    dispatch.workspaces.openStep({ id: nextStepId });
                 }
             },
         },
@@ -486,8 +486,8 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                 key: 'ArrowLeft',
             },
             execute: () => {
-                if (sceneId && previousStepId) {
-                    dispatch.workspaces.openStep({ sceneId, id: previousStepId });
+                if (previousStepId) {
+                    dispatch.workspaces.openStep({ id: previousStepId });
                 }
             },
         },

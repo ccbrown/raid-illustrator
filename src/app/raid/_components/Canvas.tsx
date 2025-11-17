@@ -20,6 +20,10 @@ const angle = (a: { x: number; y: number }, b: { x: number; y: number }): number
     return Math.atan2(b.y - a.y, b.x - a.x);
 };
 
+interface WheelEvent<T = Element> extends React.WheelEvent<T> {
+    wheelDeltaY?: number;
+}
+
 export const Canvas = () => {
     const { raidId, isReadOnly } = useEditor();
     const raidWorkspace = useRaidWorkspace(raidId);
@@ -338,19 +342,19 @@ export const Canvas = () => {
     );
 
     const wheelHandler = useCallback(
-        (e: React.WheelEvent) => {
+        (e: WheelEvent<HTMLCanvasElement>) => {
             // https://stackoverflow.com/questions/10744645/detect-touchpad-vs-mouse-in-javascript/62415754#62415754
-            const isProbablyTrackpad = e.deltaMode === 0 && e.deltaY === Math.round(e.wheelDeltaY / -3);
+            const isProbablyTrackpad =
+                e.deltaMode === 0 && e.wheelDeltaY !== undefined && e.deltaY === Math.round(e.wheelDeltaY / -3);
             if (isProbablyTrackpad) {
                 // TODO: ideally trackpad users would pinch to zoom and scroll to pan
                 return;
             }
-            console.log(isProbablyTrackpad, e.deltaMode, e.deltaY, e.wheelDeltaY);
 
             e.preventDefault();
 
-            const speed = e.deltaMode === 0 ? 0.001 : e.deltaMode === 1 ? 0.03 : 0.3;
-            const newZoom = Math.max(Math.min(zoom + e.deltaY * speed, 4), 0.01);
+            const speed = e.deltaMode === 0 ? 0.001 : e.deltaMode === 1 ? 0.01 : 0.1; // pixel, line, page
+            const newZoom = Math.max(Math.min(zoom * (1 - e.deltaY * speed), 4), 0.01);
             dispatch.workspaces.updateScene({ id: sceneId, zoom: newZoom });
         },
         [dispatch, sceneId, zoom],
@@ -359,9 +363,9 @@ export const Canvas = () => {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-            canvas.addEventListener('wheel', wheelHandler, { passive: false });
+            canvas.addEventListener('wheel', wheelHandler as unknown as EventListener, { passive: false });
             return () => {
-                canvas.removeEventListener('wheel', wheelHandler);
+                canvas.removeEventListener('wheel', wheelHandler as unknown as EventListener);
             };
         }
     }, [wheelHandler]);

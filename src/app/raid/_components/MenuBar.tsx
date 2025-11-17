@@ -11,6 +11,7 @@ import {
     ExportIcon,
     FrameCornersIcon,
     Icon,
+    ImageIcon,
     MagnifyingGlassMinusIcon,
     MagnifyingGlassPlusIcon,
     PencilSimpleIcon,
@@ -142,6 +143,7 @@ export const MenuBar = () => {
             items: [
                 menuItemForCommand(commands.newShapeEntity, ShapesIcon),
                 menuItemForCommand(commands.newTextEntity, TextAaIcon),
+                menuItemForCommand(commands.newEntityFromImage, ImageIcon),
                 { separator: true },
                 menuItemForCommand(commands.groupEntities, StackIcon),
                 menuItemForCommand(commands.addEntityEffect, SparkleIcon),

@@ -68,6 +68,7 @@ interface Commands {
     openNextStep: Command;
     openPreviousStep: Command;
     newShapeEntity: Command;
+    newEntityFromImage: Command;
     newTextEntity: Command;
     addEntityEffect: Command;
     groupEntities: Command;
@@ -523,6 +524,67 @@ export const CommandsProvider = (props: CommandProviderProps) => {
                         selection: { entityIds: [id] },
                     });
                 }
+            },
+        },
+        newEntityFromImage: {
+            name: 'New From Image...',
+            disabled: isReadOnly || !sceneId,
+            execute: () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onclick = (e) => {
+                    if (e.target) {
+                        (e.target as HTMLInputElement).value = '';
+                    }
+                };
+                input.onchange = (e) => {
+                    if (input.files && input.files[0] && sceneId) {
+                        const file = input.files[0];
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const result = reader.result;
+                            if (typeof result === 'string') {
+                                const img = new Image();
+                                img.onload = () => {
+                                    const aspectRatio = img.width / img.height;
+                                    const minDimension = 8;
+                                    const width = aspectRatio >= 1 ? minDimension : minDimension * aspectRatio;
+                                    const height = width / aspectRatio;
+                                    const id = dispatch.raids.createEntity({
+                                        raidId,
+                                        sceneId,
+                                        name: file.name.replace(/\.[^/.]+$/, ''),
+                                        properties: {
+                                            type: 'shape',
+                                            shape: {
+                                                type: 'rectangle',
+                                                width,
+                                                height,
+                                                fixedAspectRatio: true,
+                                            },
+                                            position: { x: 0, y: 0 },
+                                            fill: {
+                                                type: 'image',
+                                                url: result,
+                                            },
+                                        },
+                                    });
+                                    dispatch.workspaces.select({
+                                        raidId,
+                                        selection: { entityIds: [id] },
+                                    });
+                                };
+                                img.src = result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                    if (e.target) {
+                        (e.target as HTMLInputElement).value = '';
+                    }
+                };
+                input.click();
             },
         },
         newTextEntity: {

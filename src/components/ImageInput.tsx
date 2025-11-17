@@ -42,6 +42,7 @@ export const ImageInput = ({ className, disabled, label, value, onChange }: Prop
                         };
                         reader.readAsDataURL(file);
                     }
+                    e.target.value = '';
                 }}
             />
             <UploadIcon

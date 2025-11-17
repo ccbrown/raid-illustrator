@@ -1,3 +1,5 @@
+import { LinkSimpleHorizontalBreakIcon, LinkSimpleHorizontalIcon } from '@phosphor-icons/react';
+
 import { Dropdown, NumberInput } from '@/components';
 import { Shape } from '@/models/raids/types';
 
@@ -51,17 +53,44 @@ export const ShapeEditor = ({ value, onChange }: Props) => (
                     value={value.width}
                     onChange={(w) => {
                         if (value.type === 'rectangle') {
-                            onChange({ ...value, width: w });
+                            if (value.fixedAspectRatio) {
+                                if (value.height !== 0 && value.width !== 0) {
+                                    const aspectRatio = value.width / value.height;
+                                    onChange({ ...value, width: w, height: w / aspectRatio });
+                                }
+                            } else {
+                                onChange({ ...value, width: w });
+                            }
                         }
                     }}
                 />
+                {value.fixedAspectRatio ? (
+                    <LinkSimpleHorizontalIcon
+                        size={16}
+                        className="self-center cursor-pointer text-white/60"
+                        onClick={() => onChange({ ...value, fixedAspectRatio: false })}
+                    />
+                ) : (
+                    <LinkSimpleHorizontalBreakIcon
+                        size={16}
+                        className="self-center cursor-pointer text-white/40"
+                        onClick={() => onChange({ ...value, fixedAspectRatio: true })}
+                    />
+                )}
                 <NumberInput
                     label="Height (m)"
                     min={1}
                     value={value.height}
                     onChange={(h) => {
                         if (value.type === 'rectangle') {
-                            onChange({ ...value, height: h });
+                            if (value.fixedAspectRatio) {
+                                if (value.height !== 0 && value.width !== 0) {
+                                    const aspectRatio = value.width / value.height;
+                                    onChange({ ...value, height: h, width: h * aspectRatio });
+                                }
+                            } else {
+                                onChange({ ...value, height: h });
+                            }
                         }
                     }}
                 />

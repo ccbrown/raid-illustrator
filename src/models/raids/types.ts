@@ -9,6 +9,7 @@ export interface ShapeRectangle {
     type: 'rectangle';
     width: number;
     height: number;
+    fixedAspectRatio?: boolean;
 }
 
 export interface ShapeCircle {

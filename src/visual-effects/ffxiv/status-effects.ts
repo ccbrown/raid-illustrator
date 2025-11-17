@@ -11,7 +11,6 @@ class StatusEffects extends VisualEffect {
         // load new images if needed
         for (const statusEffect of properties.statusEffects) {
             if (statusEffect.imageId && !this.images.has(statusEffect.imageId)) {
-                console.log(statusEffect);
                 // e.g. https://assets.tomestone.gg/i/215000/215352_hr1.png
                 const image = new Image(
                     `https://assets.tomestone.gg/i/${Math.floor(statusEffect.imageId / 1000) * 1000}/${statusEffect.imageId}_hr1.png`,

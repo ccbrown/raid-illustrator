@@ -57,33 +57,6 @@ class RadialAttack extends VisualEffect {
         waveGradient.addColorStop(0, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.05)`);
         waveGradient.addColorStop(1, `rgba(${color1.r}, ${color1.g}, ${color1.b}, 0.2)`);
 
-        // edge glow
-        ctx.globalAlpha = enabled;
-        ctx.fillStyle = 'white';
-        ctx.shadowColor = `rgba(${color2.r}, ${color2.g}, ${color2.b}, 1)`;
-        ctx.shadowBlur = edgeGlowSize * scale;
-        ctx.beginPath();
-        ctx.arc(0, 0, outerRadius + 1, 0, Math.PI * 2);
-        ctx.moveTo(Math.cos(ccwAngle) * outerRadius, Math.sin(ccwAngle) * outerRadius);
-        ctx.arc(0, 0, outerRadius, ccwAngle, cwAngle);
-        ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
-        if (innerRadius > 1) {
-            ctx.moveTo(0, innerRadius - 1);
-            ctx.arc(0, 0, innerRadius - 1, 0, Math.PI * 2);
-        }
-        ctx.fill('evenodd');
-
-        // wave
-        ctx.globalAlpha = waveOpacity * enabled;
-        if (waveIsVisible) {
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = waveGradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, waveRadius, ccwAngle, cwAngle);
-            ctx.arc(0, 0, innerRadius, cwAngle, ccwAngle, true);
-            ctx.fill();
-        }
-
         ctx.globalCompositeOperation = 'lighter';
 
         // edge glow

@@ -53,24 +53,6 @@ class LineAttack extends VisualEffect {
 
         const edgeGlowSize = Math.min(1, Math.min(width, length) / 5);
 
-        // edge glow
-        ctx.globalAlpha = enabled;
-        ctx.fillStyle = 'white';
-        ctx.shadowColor = `rgba(${color2.r}, ${color2.g}, ${color2.b}, 1)`;
-        ctx.shadowBlur = edgeGlowSize * scale;
-        ctx.beginPath();
-        ctx.rect(left - 1, end - 1, width + 2, length + 2);
-        ctx.rect(left, end, width, length);
-        ctx.fill('evenodd');
-
-        // wave
-        ctx.globalAlpha = waveOpacity * enabled;
-        if (waveIsVisible) {
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = waveGradient;
-            ctx.fillRect(left, waveEnd, width, waveLength);
-        }
-
         ctx.globalCompositeOperation = 'lighter';
 
         // edge glow

@@ -11,9 +11,9 @@ class StatusEffects extends VisualEffect {
         // load new images if needed
         for (const statusEffect of properties.statusEffects) {
             if (statusEffect.imageId && !this.images.has(statusEffect.imageId)) {
-                // e.g. https://assets.tomestone.gg/i/215000/215352_hr1.png
+                // e.g. https://xivapi.com/i/217000/217242_hr1.png
                 const image = new Image(
-                    `https://assets.tomestone.gg/i/${Math.floor(statusEffect.imageId / 1000) * 1000}/${statusEffect.imageId}_hr1.png`,
+                    `https://xivapi.com/i/${Math.floor(statusEffect.imageId / 1000) * 1000}/${statusEffect.imageId}_hr1.png`,
                 );
                 this.images.set(statusEffect.imageId, image);
             }
@@ -89,7 +89,7 @@ interface Properties {
 
 export const statusEffects: VisualEffectFactory = {
     name: 'Status Effects',
-    description: 'This renders one or more status effect icons on top of the entity using Tomestone.gg.',
+    description: 'This renders one or more status effect icons on top of the entity using XIVAPI.',
     create: () => new StatusEffects(),
     properties: [
         {

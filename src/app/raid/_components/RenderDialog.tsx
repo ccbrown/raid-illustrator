@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Dialog, Dropdown, NumberInput, RGBInput } from '@/components';
 import { usePersistentState, useScene, useSceneWorkspace, useSelection } from '@/hooks';
 import { shapeDimensions } from '@/models/raids/utils';
-import { useSceneRenderer } from '@/renderer';
+import { useSceneRendererWithImageCors } from '@/renderer';
 import { useSelector } from '@/store';
 import { LoopDuration } from '@/visual-effect';
 
@@ -21,7 +21,7 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
     const scene = useScene(sceneId);
     const sceneWorkspace = useSceneWorkspace(sceneId);
     const stepId = sceneWorkspace?.openStepId;
-    const renderer = useSceneRenderer(sceneId);
+    const renderer = useSceneRendererWithImageCors(sceneId);
     const selection = useSelection(scene?.raidId);
 
     const [renderType, setRenderType] = usePersistentState<'png' | 'mp4'>('render-type', 'png');
@@ -36,6 +36,7 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
     const [aspectRatio, setAspectRatio] = usePersistentState('render-aspect-ratio', 1);
     const [defaultStepDuration, setDefaultStepDuration] = usePersistentState('render-default-step-duration', 5000);
     const [steps, setSteps] = usePersistentState<'all' | 'current' | 'selected'>('render-steps', 'current');
+    const [hasImageFailures, setHasImageFailures] = useState(false);
 
     const allSteps = useSelector((state) => state.raids.steps);
 
@@ -117,6 +118,16 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
         return () => clearInterval(interval);
     }, [renderer, pixelWidth, pixelHeight, pixelsPerMeter, backgroundColor, previewStepId]);
 
+    useEffect(() => {
+        const checkImageFailures = () => {
+            if (renderer.hasImageFailures) {
+                setHasImageFailures(true);
+            }
+        };
+        const interval = setInterval(checkImageFailures, 1000);
+        return () => clearInterval(interval);
+    }, [renderer]);
+
     const render = async () => {
         if (isBusy || !scene || !canvasRef.current || !renderer) {
             return;
@@ -174,13 +185,7 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
             }
         } catch (error) {
             if (error instanceof Error) {
-                if (error.name === 'SecurityError') {
-                    alert(
-                        'Rendering failed: The canvas contains images from another site, and your browser is preventing rendering for security reasons. As a workaround, try rendering your raid with a Chromium-based browser such as Brave.',
-                    );
-                } else {
-                    alert(`Rendering failed: ${error.message}`);
-                }
+                alert(`Rendering failed: ${error.message}`);
             } else {
                 alert('An unknown error occurred during rendering.');
             }
@@ -243,6 +248,14 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
                 {pixelWidth}×{pixelHeight}px
                 {renderType === 'mp4' ? `, ${renderDuration / 1000}s${isSeamlessLoop ? ' (seamless loop)' : ''}` : ''}
             </div>
+            {hasImageFailures && (
+                <div className="text-xs text-center text-yellow-500/60">
+                    Some images have failed to load. Note that for security reasons, browsers prevent rendering of
+                    images from hosts that block cross-origin resource sharing (CORS). If your render is missing images,
+                    ensure the URLs are valid and consider using a different host or embedding them into the project
+                    directly.
+                </div>
+            )}
             <div className="flex flex-row justify-end">
                 <Button text="Render" disabled={isBusy} onClick={render} />
             </div>

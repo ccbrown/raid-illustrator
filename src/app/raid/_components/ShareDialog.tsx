@@ -53,7 +53,7 @@ export const ShareDialog = (props: Props) => {
         <Dialog isOpen={props.isOpen} onClose={() => props.onClose()} title="Share">
             <div className="flex flex-col gap-4">
                 <div className="text-sm">
-                    You can share your raid via a temporary link, which will be valid for 24 hours.
+                    You can share your raid via a temporary link, which will be valid for one week.
                 </div>
                 <div>
                     {shareLink ? (

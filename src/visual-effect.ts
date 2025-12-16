@@ -24,7 +24,13 @@ export const loop = (now: number, duration: LoopDuration): number => {
     return (now % duration) / duration;
 };
 
+export interface Image {
+    get: () => HTMLImageElement | undefined;
+}
+
 interface VisualEffectRenderParamsRenderer {
+    loadImage: (url: string) => Image;
+    lazyLoadImage: (url: string) => Image;
     getEntityPositionByName: (name: string) => { x: number; y: number } | undefined;
 }
 

@@ -220,16 +220,29 @@ class RendererEntity {
     }
 }
 
+interface ImageOptions {
+    crossOrigin?: 'anonymous';
+    onError?: () => void;
+}
+
 export class Image {
     private broken?: boolean;
     private img: HTMLImageElement;
 
-    constructor(url: string) {
+    // Creates a new image. If the image is cross-origin, you will probably want to use
+    // `renderer.loadImage` instead, which sets the crossOrigin parameter appropriately.
+    constructor(url: string, opts?: ImageOptions) {
         this.img = document.createElement('img');
         this.img.src = url;
+        if (opts?.crossOrigin) {
+            this.img.crossOrigin = opts.crossOrigin;
+        }
         this.img.onerror = () => {
             console.error(`failed to load image: ${url}`);
             this.broken = true;
+            if (opts?.onError) {
+                opts.onError();
+            }
         };
     }
 
@@ -243,16 +256,20 @@ export class Image {
 
 // Like Image but does nothing until the image is first requested.
 export class LazyImage {
+    private options?: ImageOptions;
     private image?: Image;
     private url: string;
 
-    constructor(url: string) {
+    // Creates a new lazily loaded image. If the image is cross-origin, you will probably want to
+    // use `renderer.lazyLoadImage` instead, which sets the crossOrigin parameter appropriately.
+    constructor(url: string, opts?: ImageOptions) {
         this.url = url;
+        this.options = opts;
     }
 
     get(): HTMLImageElement | undefined {
         if (!this.image) {
-            this.image = new Image(this.url);
+            this.image = new Image(this.url, this.options);
         }
         return this.image.get();
     }
@@ -264,6 +281,7 @@ interface ImageManagerImage {
 }
 
 class ImageManager {
+    public options?: ImageOptions;
     private images: Map<string, ImageManagerImage> = new Map();
 
     use(url: string): HTMLImageElement | undefined {
@@ -273,7 +291,7 @@ class ImageManager {
 
         let entry = this.images.get(url);
         if (!entry) {
-            entry = { used: true, image: new Image(url) };
+            entry = { used: true, image: new Image(url, this.options) };
             this.images.set(url, entry);
         } else {
             entry.used = true;
@@ -310,6 +328,8 @@ class Renderer {
     scene?: RaidScene;
     selection?: Selection;
 
+    public hasImageFailures: boolean = false;
+    private imageOptions: ImageOptions = {};
     private images = new ImageManager();
     private sceneDragMovement: { x: number; y: number } = { x: 0, y: 0 };
     private entities: Map<string, RendererEntity> = new Map();
@@ -319,6 +339,25 @@ class Renderer {
 
     // When a preset is being dragged over the canvas, this can be used to render an indicator.
     private dropIndicator?: { position: { x: number; y: number }; shape: Shape };
+
+    constructor() {
+        this.imageOptions.onError = () => {
+            this.hasImageFailures = true;
+        };
+        this.images.options = this.imageOptions;
+    }
+
+    useImageCors() {
+        this.imageOptions.crossOrigin = 'anonymous';
+    }
+
+    loadImage(url: string): Image {
+        return new Image(url, this.imageOptions);
+    }
+
+    lazyLoadImage(url: string): LazyImage {
+        return new LazyImage(url, this.imageOptions);
+    }
 
     getEntityPositionByName(name: string): { x: number; y: number } | undefined {
         for (const e of this.entityIdsByName.get(name) || []) {
@@ -936,8 +975,15 @@ class Renderer {
     }
 }
 
-export const useSceneRenderer = (sceneId: string, stepId?: string): Renderer => {
-    const rendererRef = useRef(new Renderer());
+const useSceneRendererImpl = (sceneId: string, stepId?: string, imageCors?: boolean): Renderer => {
+    const rendererRef = useRef<null | Renderer>(null);
+    if (rendererRef.current === null) {
+        const renderer = new Renderer();
+        if (imageCors) {
+            renderer.useImageCors();
+        }
+        rendererRef.current = renderer;
+    }
     const renderer = rendererRef.current;
 
     const scene = useScene(sceneId);
@@ -953,4 +999,12 @@ export const useSceneRenderer = (sceneId: string, stepId?: string): Renderer => 
     }
 
     return renderer;
+};
+
+export const useSceneRenderer = (sceneId: string, stepId?: string): Renderer => {
+    return useSceneRendererImpl(sceneId, stepId, false);
+};
+
+export const useSceneRendererWithImageCors = (sceneId: string, stepId?: string): Renderer => {
+    return useSceneRendererImpl(sceneId, stepId, true);
 };

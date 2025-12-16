@@ -1,18 +1,17 @@
 import { shapeDimensions } from '@/models/raids/utils';
-import { Image } from '@/renderer';
-import { VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
+import { Image, VisualEffect, VisualEffectFactory, VisualEffectRenderParams } from '@/visual-effect';
 
 class StatusEffects extends VisualEffect {
     images: Map<number, Image> = new Map();
 
-    renderOverlay({ ctx, properties: anyProperties, shape, scale, center }: VisualEffectRenderParams) {
+    renderOverlay({ ctx, properties: anyProperties, shape, scale, center, renderer }: VisualEffectRenderParams) {
         const properties = anyProperties as Properties;
 
         // load new images if needed
         for (const statusEffect of properties.statusEffects) {
             if (statusEffect.imageId && !this.images.has(statusEffect.imageId)) {
                 // e.g. https://xivapi.com/i/217000/217242_hr1.png
-                const image = new Image(
+                const image = renderer.loadImage(
                     `https://xivapi.com/i/${Math.floor(statusEffect.imageId / 1000) * 1000}/${statusEffect.imageId}_hr1.png`,
                 );
                 this.images.set(statusEffect.imageId, image);

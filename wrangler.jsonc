@@ -20,6 +20,16 @@
             "vars": {
                 "NEXT_PUBLIC_NO_INDEX": "true"
             }
+        },
+        "prod": {
+            "route": {
+                "pattern": "raidillustrator.gg",
+                "custom_domain": true
+            },
+            "r2_buckets": [{
+                "binding": "R2",
+                "bucket_name": "raid-illustrator-prod"
+            }]
         }
     }
 }

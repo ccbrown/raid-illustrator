@@ -1,17 +1,11 @@
-# raid-illustrator/frontend
+# raid-illustrator
 
-## Getting Started
+This is a tool for illustrating raid encounters in MMOs. In particular, FFXIV.
 
-First, run the development server:
+You can access it online at [raidillustrator.gg](https://raidillustrator.gg).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Development
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Install dependencies: `npm install`
+- Start the development server: `npm run dev`
+- Open [http://localhost:3000](http://localhost:3000) in your browser.

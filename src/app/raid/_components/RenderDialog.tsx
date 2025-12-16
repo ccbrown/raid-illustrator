@@ -124,51 +124,65 @@ const RenderDialogContent = ({ sceneId, onClose }: RenderDialogContentProps) => 
         setIsBusy(true);
         setProgress(0);
 
-        const filename = scene.name.replace(/[\/\?<>\\:\*\|":]/g, '');
+        try {
+            const filename = scene.name.replace(/[\/\?<>\\:\*\|":]/g, '');
 
-        switch (renderType) {
-            case 'png': {
-                const link = document.createElement('a');
-                link.download = `${filename}.png`;
-                link.href = canvasRef.current.toDataURL('image/png');
-                link.click();
-                break;
-            }
-            case 'mp4': {
-                const frames = Math.round((renderDuration / 1000) * fps);
-
-                const composition = new core.Composition({
-                    width: pixelWidth,
-                    height: pixelHeight,
-                });
-                composition.duration = core.Timestamp.fromFrames(frames, fps);
-
-                pausePreviewRendering.current = true;
-                const canvasContext = canvasRef.current.getContext('2d');
-                if (canvasContext) {
-                    for (let i = 0; i < frames; i++) {
-                        canvasRef.current.width = pixelWidth;
-                        canvasRef.current.height = pixelHeight;
-                        const now = (i / fps) * 1000;
-                        renderer.update(stepForFrame(i), now);
-                        renderer.render(canvasContext, pixelsPerMeter, { now, backgroundColor });
-                        const url = canvasRef.current.toDataURL('image/png');
-                        await composition.add(new core.ImageClip(url, { delay: i, duration: 1 }));
-                        setProgress((i + 1) / frames);
-                    }
+            switch (renderType) {
+                case 'png': {
+                    const link = document.createElement('a');
+                    link.download = `${filename}.png`;
+                    link.href = canvasRef.current.toDataURL('image/png');
+                    link.click();
+                    break;
                 }
-                pausePreviewRendering.current = false;
+                case 'mp4': {
+                    const frames = Math.round((renderDuration / 1000) * fps);
 
-                const encoder = new core.Encoder(composition, {
-                    audio: {
-                        enabled: false,
-                    },
-                    video: {
-                        fps,
-                    },
-                });
-                await encoder.render(`${filename}.mp4`);
-                break;
+                    const composition = new core.Composition({
+                        width: pixelWidth,
+                        height: pixelHeight,
+                    });
+                    composition.duration = core.Timestamp.fromFrames(frames, fps);
+
+                    pausePreviewRendering.current = true;
+                    const canvasContext = canvasRef.current.getContext('2d');
+                    if (canvasContext) {
+                        for (let i = 0; i < frames; i++) {
+                            canvasRef.current.width = pixelWidth;
+                            canvasRef.current.height = pixelHeight;
+                            const now = (i / fps) * 1000;
+                            renderer.update(stepForFrame(i), now);
+                            renderer.render(canvasContext, pixelsPerMeter, { now, backgroundColor });
+                            const url = canvasRef.current.toDataURL('image/png');
+                            await composition.add(new core.ImageClip(url, { delay: i, duration: 1 }));
+                            setProgress((i + 1) / frames);
+                        }
+                    }
+                    pausePreviewRendering.current = false;
+
+                    const encoder = new core.Encoder(composition, {
+                        audio: {
+                            enabled: false,
+                        },
+                        video: {
+                            fps,
+                        },
+                    });
+                    await encoder.render(`${filename}.mp4`);
+                    break;
+                }
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.name === 'SecurityError') {
+                    alert(
+                        'Rendering failed: The canvas contains images from another site, and your browser is preventing rendering for security reasons. As a workaround, try rendering your raid with a Chromium-based browser such as Brave.',
+                    );
+                } else {
+                    alert(`Rendering failed: ${error.message}`);
+                }
+            } else {
+                alert('An unknown error occurred during rendering.');
             }
         }
 
